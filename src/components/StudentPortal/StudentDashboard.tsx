@@ -20,7 +20,18 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   onViewAttempt,
   onStartIndependentSimce,
 }) => {
-  const { currentStudent, setCurrentStudent, setRole, courses, assignments, attempts, teachers, activeTheme } = useApp();
+  const {
+    currentStudent,
+    setCurrentStudent,
+    setRole,
+    courses,
+    assignments,
+    attempts,
+    teachers,
+    activeTheme,
+    firebaseUser,
+    disconnectGoogleAccount,
+  } = useApp();
   const [isChangePinOpen, setIsChangePinOpen] = useState(false);
   const [isFirstLoginPrompt, setIsFirstLoginPrompt] = useState(false);
   const [showThemePicker, setShowThemePicker] = useState(false);
@@ -136,8 +147,15 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
           <button
             type="button"
-            onClick={() => setCurrentStudent(null)}
-            className="px-3 py-1.5 text-xs tq-text-2 tq-subtle hover:opacity-80 border rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+            onClick={() => {
+              if (firebaseUser) {
+                void disconnectGoogleAccount();
+              } else {
+                setCurrentStudent(null);
+              }
+            }}
+            className="px-3 py-1.5 text-xs bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/70 text-rose-700 dark:text-rose-200 border border-rose-200 dark:border-rose-800 rounded-lg flex items-center gap-1.5 font-bold transition-colors cursor-pointer"
+            title="Cerrar sesión del estudiante y desconectar correo Google"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Cerrar sesión</span>

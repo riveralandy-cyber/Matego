@@ -34,11 +34,14 @@ export const ThatQuizSidebar: React.FC = () => {
   return (
     <aside className="w-full md:w-64 shrink-0 tq-sidebar border-r p-4 font-sans text-xs flex flex-col justify-between gap-4 print:hidden shadow-xs">
       <div className="space-y-5">
-        {/* ThatQuiz Logo & Teacher Branding */}
+        {/* MateClic Logo & Teacher Branding */}
         <div className="p-3 tq-tint rounded-2xl border text-center md:text-left shadow-2xs">
           <div className="flex items-center justify-between">
-            <span className="text-lg font-black tracking-widest lowercase tq-text-accent font-mono">
-              t h a t q u i z
+            <span
+              translate="no"
+              className="notranslate text-lg font-black tracking-widest lowercase tq-text-accent font-mono"
+            >
+              mateclic
             </span>
           </div>
           <div className="mt-1 flex items-center justify-between gap-1">

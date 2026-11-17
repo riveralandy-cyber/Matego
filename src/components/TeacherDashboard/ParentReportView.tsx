@@ -154,22 +154,26 @@ export const ParentReportView: React.FC<ParentReportViewProps> = ({ initialStude
         </div>
 
         {/* Student Data Box */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-slate-50 border border-slate-200 rounded-lg text-xs font-sans mb-6">
+        <div className={`grid grid-cols-1 sm:grid-cols-2 ${student.rut ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-4 p-4 bg-slate-50 border border-slate-200 rounded-lg text-xs font-sans mb-6`}>
           <div>
             <span className="text-slate-400 uppercase text-[10px] font-bold block">Estudiante:</span>
             <span className="font-bold text-slate-900 text-sm">{student.name}</span>
           </div>
-          <div>
-            <span className="text-slate-400 uppercase text-[10px] font-bold block">RUN:</span>
-            <span className="font-mono font-medium text-slate-800">{student.rut}</span>
-          </div>
+          {student.rut && (
+            <div>
+              <span className="text-slate-400 uppercase text-[10px] font-bold block">RUN:</span>
+              <span className="font-mono font-medium text-slate-800">{student.rut}</span>
+            </div>
+          )}
           <div>
             <span className="text-slate-400 uppercase text-[10px] font-bold block">Curso:</span>
             <span className="font-bold text-slate-800">{selectedCourse?.section}</span>
           </div>
           <div>
             <span className="text-slate-400 uppercase text-[10px] font-bold block">Docente:</span>
-            <span className="font-medium text-slate-800">Prof. {currentTeacher?.name || selectedCourse?.teacherName}</span>
+            <span className="font-medium text-slate-800">
+              {currentTeacher?.name ? `Prof. ${currentTeacher.name}` : selectedCourse?.teacherName || 'Docente'}
+            </span>
           </div>
         </div>
 
@@ -319,7 +323,7 @@ export const ParentReportView: React.FC<ParentReportViewProps> = ({ initialStude
                 Toma de Conocimiento
               </span>
               <span className="text-[10px] text-slate-400 block mt-0.5">
-                RUN: _____________________
+                Nombre: ___________________
               </span>
             </div>
           </div>

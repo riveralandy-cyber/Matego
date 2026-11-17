@@ -12,6 +12,7 @@ import {
   RefreshCw,
   QrCode,
   X,
+  LogOut,
 } from 'lucide-react';
 import { ThemePaletteSelector } from '../ThemePaletteSelector';
 import { CourseJoinCodeDirectory } from '../../services/cloudSync';
@@ -30,6 +31,7 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
     isAuthReady,
     linkedCloudStudentSeats,
     connectStudentWithGoogle,
+    disconnectGoogleAccount,
     lookupCourseJoinCode,
     loginStudentCloudByAccessCode,
     setCurrentStudent,
@@ -142,6 +144,20 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
       if (!res.ok) {
         setErrorMessage(res.error || 'No se pudo conectar la cuenta Google.');
       }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDisconnectGoogle = async () => {
+    setErrorMessage('');
+    setIsSubmitting(true);
+    try {
+      await disconnectGoogleAccount();
+      setLoadedDirectory(null);
+      setSelectedAccessCodeFromDir('');
+      setPin('');
+      autoLookedUpQrRef.current = null;
     } finally {
       setIsSubmitting(false);
     }
@@ -337,15 +353,28 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
                   </span>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={handleConnectGoogle}
-                className="px-2.5 py-1 tq-card border rounded-lg text-[11px] font-bold tq-text-accent flex items-center gap-1 shrink-0 cursor-pointer"
-                title="Usar otro correo Google"
-              >
-                <RefreshCw className="w-3 h-3" />
-                <span>Cambiar</span>
-              </button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleConnectGoogle}
+                  disabled={isSubmitting}
+                  className="px-2.5 py-1 tq-card border rounded-lg text-[11px] font-bold tq-text-accent flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                  title="Usar otro correo Google"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  <span>Cambiar</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDisconnectGoogle}
+                  disabled={isSubmitting}
+                  className="px-2.5 py-1 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 text-rose-700 dark:text-rose-200 border border-rose-200 dark:border-rose-800 rounded-lg text-[11px] font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                  title="Cerrar sesión de este correo Google"
+                >
+                  <LogOut className="w-3 h-3" />
+                  <span>Salir</span>
+                </button>
+              </div>
             </div>
           )}
         </div>

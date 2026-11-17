@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import {
   Users,
@@ -51,6 +51,18 @@ export const CourseRosterView: React.FC = () => {
   const inlineQrCanvasWrapRef = useRef<HTMLButtonElement | null>(null);
   const modalQrCanvasWrapRef = useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsQrModalOpen(false);
+        setIsPrintCardsOpen(false);
+        setIsAddModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // Group courses by grade level with dark-aware pastel colors
   const GRADE_LEVELS: { id: GradeLevel; name: string; pastelActive: string; pastelIdle: string }[] = [
     { id: '1_basico', name: '1° Básico', pastelActive: 'bg-sky-100 dark:bg-sky-900/70 border-sky-400 text-sky-950 dark:text-sky-100 font-black', pastelIdle: 'hover:bg-sky-50/70 dark:hover:bg-sky-950/50 border-sky-200/80 dark:border-sky-800/70 text-sky-900 dark:text-sky-200' },
@@ -77,7 +89,6 @@ export const CourseRosterView: React.FC = () => {
   const courseStudents = teacherStudents.filter(s => s.courseId === selectedCourseId);
   const filteredStudents = courseStudents.filter(s =>
     s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.rut.toLowerCase().includes(searchQuery.toLowerCase()) ||
     s.accessCode.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -568,7 +579,7 @@ export const CourseRosterView: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Buscar estudiante, RUN o código..."
+              placeholder="Buscar estudiante o código..."
               className="w-full pl-9 pr-3 py-1.5 text-xs border tq-input rounded-xl focus:outline-hidden transition-all"
             />
           </div>
@@ -580,8 +591,7 @@ export const CourseRosterView: React.FC = () => {
               <tr className="tq-subtle border-b tq-border tq-text-2 font-bold">
                 <th className="py-3 px-4 w-12 text-center">N°</th>
                 <th className="py-3 px-4">Estudiante (Nombre y Apellidos)</th>
-                <th className="py-3 px-4">RUN</th>
-                <th className="py-3 px-4">Código ThatQuiz</th>
+                <th className="py-3 px-4">Código MateClic</th>
                 <th className="py-3 px-4">PIN Inicial</th>
                 <th className="py-3 px-4 text-center">Estado</th>
                 <th className="py-3 px-3 text-center w-14">Acción</th>
@@ -590,7 +600,7 @@ export const CourseRosterView: React.FC = () => {
             <tbody className="divide-y divide-[var(--tq-border)] tq-text-2 font-mono text-xs">
               {filteredStudents.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-10 text-center tq-text-muted font-sans">
+                  <td colSpan={6} className="py-10 text-center tq-text-muted font-sans">
                     No has cargado estudiantes en {selectedCourse?.section} con tu cuenta ({teacherDisplay}). Usa el botón "Cargar Lista de Curso" para pegar tu lista desde Excel y generar el código QR del curso.
                   </td>
                 </tr>
@@ -602,9 +612,6 @@ export const CourseRosterView: React.FC = () => {
                     </td>
                     <td className="py-2.5 px-4 font-bold font-sans tq-text">
                       {st.name}
-                    </td>
-                    <td className="py-2.5 px-4 tq-text-2">
-                      {st.rut}
                     </td>
                     <td className="py-2.5 px-4 font-bold">
                       <span className="px-2 py-0.5 rounded-md tq-accent-soft border tq-border">
@@ -677,7 +684,7 @@ export const CourseRosterView: React.FC = () => {
               Cargar Lista de Curso en {selectedCourse?.section}
             </h3>
             <p className="text-xs tq-text-muted mb-4">
-              Copia y pega la lista de alumnos desde Excel o el libro de clases (un alumno por línea). Se generarán automáticamente sus credenciales de acceso y el código QR del curso.
+              Copia y pega solo los nombres de tus estudiantes desde Excel o el libro de clases (un alumno por línea, sin necesidad de RUT). Se generarán automáticamente sus credenciales de acceso y el código QR del curso.
             </p>
 
             <form onSubmit={handleAddSubmit} className="space-y-4">
@@ -686,11 +693,11 @@ export const CourseRosterView: React.FC = () => {
                   rows={8}
                   value={rawStudentList}
                   onChange={e => setRawStudentList(e.target.value)}
-                  placeholder={`Ejemplo (un estudiante por línea):\nAPELLIDO NOMBRE\n22.345.678-9, APELLIDO NOMBRE`}
+                  placeholder={`Ejemplo (un estudiante por línea, sin RUT):\nAPELLIDO NOMBRE\nNOMBRE APELLIDO`}
                   className="w-full text-xs font-mono p-3 border tq-input rounded-xl focus:outline-hidden"
                 />
                 <span className="text-[11px] tq-text-muted mt-1 block">
-                  Acepta nombres en mayúsculas o minúsculas, con o sin RUN.
+                  Solo ingresa nombres en mayúsculas o minúsculas (puedes pegar 1 o 2 columnas directo desde Excel, sin RUT).
                 </span>
               </div>
 
@@ -717,95 +724,115 @@ export const CourseRosterView: React.FC = () => {
 
       {/* Modal: Enlarged QR Poster / Share with Parents & Students */}
       {isQrModalOpen && courseStudents.length > 0 && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/65 p-4 flex items-center justify-center backdrop-blur-2xs">
-          <div className="bg-white rounded-3xl shadow-2xl border border-indigo-100 max-w-lg w-full p-6 sm:p-7 text-slate-900 relative">
-            <button
-              type="button"
-              onClick={() => setIsQrModalOpen(false)}
-              className="absolute right-4 top-4 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer print:hidden"
-              title="Cerrar"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="text-center space-y-1 pb-4 border-b border-slate-200">
-              <span className="text-[11px] uppercase font-bold tracking-wider text-indigo-700 block">
-                Escuela Ricardo Silva Arriagada · SLEP Chinchorro
-              </span>
-              <h3 className="text-xl font-black text-slate-900">
-                Acceso por QR · {selectedCourse?.section}
-              </h3>
-              <p className="text-xs text-slate-600 font-medium">
-                {teacherDisplay} · Comparte este código con estudiantes y apoderados
-              </p>
+        <div
+          onClick={e => {
+            if (e.target === e.currentTarget) setIsQrModalOpen(false);
+          }}
+          className="fixed inset-0 z-50 bg-slate-900/65 p-3 sm:p-4 flex items-center justify-center backdrop-blur-2xs"
+        >
+          <div className="bg-white rounded-3xl shadow-2xl border border-indigo-100 max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden text-slate-900">
+            {/* Pinned Header (never scrolls out of view) */}
+            <div className="px-5 py-3.5 border-b border-slate-200 flex items-start justify-between gap-3 shrink-0 bg-white">
+              <div className="min-w-0">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-indigo-700 block">
+                  Escuela Ricardo Silva Arriagada · SLEP Chinchorro
+                </span>
+                <h3 className="text-lg font-black text-slate-900 leading-tight">
+                  Acceso por QR · {selectedCourse?.section}
+                </h3>
+                <p className="text-[11px] text-slate-600 font-medium truncate">
+                  {teacherDisplay} · Comparte con estudiantes y apoderados
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsQrModalOpen(false)}
+                className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1 cursor-pointer shrink-0 print:hidden"
+                title="Cerrar ventana"
+              >
+                <X className="w-4 h-4" />
+                <span>Cerrar</span>
+              </button>
             </div>
 
-            <div className="my-5 flex flex-col items-center">
+            {/* Scrollable Center Body */}
+            <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col items-center">
               <div
                 ref={modalQrCanvasWrapRef}
-                className="bg-white p-4 rounded-2xl border-2 border-indigo-200 shadow-sm"
+                className="bg-white p-3.5 rounded-2xl border-2 border-indigo-200 shadow-sm shrink-0"
               >
                 <QRCodeCanvas
                   value={qrShareUrl}
-                  size={220}
+                  size={184}
                   level="M"
                   bgColor="#ffffff"
                   fgColor="#0f172a"
                 />
               </div>
 
-              <div className="mt-4 px-4 py-2 bg-indigo-50 border border-indigo-200 rounded-xl text-center">
+              <div className="mt-3 px-4 py-1.5 bg-indigo-50 border border-indigo-200 rounded-xl text-center">
                 <span className="text-[10px] uppercase font-bold text-indigo-700 block">
                   Código del Curso
                 </span>
-                <span className="font-mono font-black text-lg text-indigo-950 select-all">
+                <span className="font-mono font-black text-base text-indigo-950 select-all">
                   {shareCourseCode}
                 </span>
               </div>
 
-              <ol className="mt-4 text-xs text-slate-600 space-y-1 text-left bg-slate-50 border border-slate-200 rounded-2xl p-3.5 w-full">
+              <ol className="mt-3 text-xs text-slate-600 space-y-1 text-left bg-slate-50 border border-slate-200 rounded-2xl p-3 w-full">
                 <li><strong>1.</strong> Escanea el código QR con la cámara del celular o abre el enlace compartido.</li>
                 <li><strong>2.</strong> Conecta la cuenta Google del estudiante o apoderado.</li>
                 <li><strong>3.</strong> Selecciona el nombre del estudiante en la lista e ingresa su PIN de 4 dígitos.</li>
               </ol>
             </div>
 
-            <div className="grid grid-cols-2 gap-2.5 pt-3 border-t border-slate-200 print:hidden">
-              <a
-                href={whatsAppHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
-              >
-                <Share2 className="w-4 h-4" />
-                <span>Enviar por WhatsApp</span>
-              </a>
+            {/* Pinned Footer Actions */}
+            <div className="px-5 py-3.5 border-t border-slate-200 shrink-0 bg-slate-50/70 space-y-2 print:hidden">
+              <div className="grid grid-cols-2 gap-2">
+                <a
+                  href={whatsAppHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span>Enviar por WhatsApp</span>
+                </a>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadQrPng}
+                  className="py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Descargar PNG</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCopyQrUrl}
+                  className="py-2 px-3 bg-white border border-slate-200 hover:bg-slate-100 text-slate-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  {copiedQrUrl ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Link2 className="w-3.5 h-3.5 text-indigo-600" />}
+                  <span>{copiedQrUrl ? 'Enlace copiado' : 'Copiar enlace'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handlePrint}
+                  className="py-2 px-3 bg-white border border-slate-200 hover:bg-slate-100 text-slate-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5 text-slate-700" />
+                  <span>Imprimir Afiche</span>
+                </button>
+              </div>
 
               <button
                 type="button"
-                onClick={handleDownloadQrPng}
-                className="py-2.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                onClick={() => setIsQrModalOpen(false)}
+                className="w-full py-2 px-3 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
               >
-                <Download className="w-4 h-4" />
-                <span>Descargar Imagen PNG</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleCopyQrUrl}
-                className="py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-              >
-                {copiedQrUrl ? <Check className="w-4 h-4 text-emerald-600" /> : <Link2 className="w-4 h-4 text-indigo-600" />}
-                <span>{copiedQrUrl ? 'Enlace copiado' : 'Copiar enlace'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handlePrint}
-                className="py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <Printer className="w-4 h-4 text-slate-700" />
-                <span>Imprimir Afiche</span>
+                Cerrar y ver lista de estudiantes con sus PIN
               </button>
             </div>
           </div>
@@ -814,12 +841,17 @@ export const CourseRosterView: React.FC = () => {
 
       {/* Modal / Printable Sheet: Student Credential Cards (kept crisp white paper for printing) */}
       {isPrintCardsOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 p-4 flex justify-center backdrop-blur-2xs">
-          <div className="bg-white rounded-2xl shadow-2xl border border-indigo-100 max-w-4xl w-full p-6 my-8 text-slate-900">
+        <div
+          onClick={e => {
+            if (e.target === e.currentTarget) setIsPrintCardsOpen(false);
+          }}
+          className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 p-4 flex items-start justify-center backdrop-blur-2xs"
+        >
+          <div className="bg-white rounded-2xl shadow-2xl border border-indigo-100 max-w-4xl w-full p-6 my-4 text-slate-900">
             <div className="flex items-center justify-between pb-4 border-b border-slate-200 mb-5 print:hidden">
               <div>
                 <h3 className="text-lg font-bold text-slate-900">
-                  Tarjetas de Acceso ThatQuiz - {selectedCourse?.section}
+                  Tarjetas de Acceso MateClic - {selectedCourse?.section}
                 </h3>
                 <p className="text-xs text-slate-500">
                   Escuela Ricardo Silva Arriagada · SLEP Chinchorro
@@ -884,7 +916,9 @@ export const CourseRosterView: React.FC = () => {
                     <span className="font-bold text-slate-900 text-sm block leading-tight">
                       {st.name}
                     </span>
-                    <span className="text-[11px] text-slate-500 font-mono">RUN: {st.rut}</span>
+                    {st.rut && (
+                      <span className="text-[11px] text-slate-500 font-mono">RUN: {st.rut}</span>
+                    )}
                   </div>
 
                   <div className="bg-white border border-indigo-100 p-2.5 rounded-lg flex items-center justify-between shadow-2xs">

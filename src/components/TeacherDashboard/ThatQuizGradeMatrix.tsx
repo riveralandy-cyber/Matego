@@ -197,7 +197,6 @@ export const ThatQuizGradeMatrix: React.FC<ThatQuizGradeMatrixProps> = ({ onSele
     const headers = [
       'Apellido',
       'Nombre',
-      'RUN',
       ...courseAssignments.map(q => q.title),
       'Promedio',
       'Desempeño',
@@ -211,7 +210,6 @@ export const ThatQuizGradeMatrix: React.FC<ThatQuizGradeMatrixProps> = ({ onSele
       return [
         `"${p.apellido}"`,
         `"${p.nombre}"`,
-        `"${p.student.rut}"`,
         ...examGrades,
         p.average !== null ? formatGrade(p.average) : '',
         `"${p.descriptorObj.text}"`,
@@ -689,7 +687,8 @@ export const ThatQuizGradeMatrix: React.FC<ThatQuizGradeMatrixProps> = ({ onSele
                   {selectedStudentDetail.name}
                 </h3>
                 <span className="text-xs tq-text-muted font-mono">
-                  RUN: {selectedStudentDetail.rut} · Código: {selectedStudentDetail.accessCode} · PIN: {selectedStudentDetail.pin}
+                  {selectedStudentDetail.rut ? `RUN: ${selectedStudentDetail.rut} · ` : ''}
+                  Código: {selectedStudentDetail.accessCode} · PIN: {selectedStudentDetail.pin}
                 </span>
               </div>
               <button

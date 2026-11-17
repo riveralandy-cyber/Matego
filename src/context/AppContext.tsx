@@ -923,27 +923,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const newStudents: Student[] = [];
 
+    const rutPattern = /^\d{1,2}\.?\d{3}\.?\d{3}-[\dkK]$/i;
+
     for (const line of lines) {
       let name = line;
-      let rut = '';
-      if (line.includes(',') || line.includes(';')) {
-        const parts = line.split(/[,;]/);
-        if (parts[0].includes('-') || parts[0].length < 13) {
-          rut = parts[0].trim();
-          name = parts.slice(1).join(' ').trim();
-        } else {
-          name = parts[0].trim();
-          rut = parts.slice(1).join(' ').trim();
+      if (line.includes('\t') || line.includes(',') || line.includes(';')) {
+        const parts = line
+          .split(/[\t,;]+/)
+          .map(p => p.trim())
+          .filter(p => p.length > 0 && !rutPattern.test(p));
+        if (parts.length > 0) {
+          name = parts.join(' ');
         }
       }
-
-      if (!rut) {
-        const r1 = Math.floor(Math.random() * (24 - 21 + 1)) + 21;
-        const r2 = Math.floor(Math.random() * 900) + 100;
-        const r3 = Math.floor(Math.random() * 900) + 100;
-        const dv = Math.floor(Math.random() * 10);
-        rut = `${r1}.${r2}.${r3}-${dv === 10 ? 'K' : dv}`;
-      }
+      name = name.replace(/\s+/g, ' ').trim();
+      if (!name) continue;
 
       let seqStr = counter < 10 ? `0${counter}` : `${counter}`;
       let accessCode = `MAT-${gradeShort}-${seqStr}`;
@@ -959,7 +953,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       newStudents.push({
         id: `st-${Date.now()}-${counter}-${Math.random().toString(36).substring(2, 6)}`,
         name,
-        rut,
+        rut: '',
         courseId,
         teacherId: currentTeacher.id,
         ownerUid: isCloudTeacher && firebaseUser ? firebaseUser.uid : undefined,
