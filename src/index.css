@@ -1,0 +1,340 @@
+@import "tailwindcss";
+@custom-variant dark (&:where([data-theme="nocturno"], [data-theme="nocturno"] *));
+
+/* =========================================================
+   ThatQuiz Escolar · 5-Palette Semantic Theme System
+   ========================================================= */
+
+:root,
+[data-theme="estandar"] {
+  color-scheme: light;
+  --tq-page-bg: linear-gradient(135deg, #f8fafc 0%, #f0f9ff 50%, #eef2ff 100%);
+  --tq-main-bg: linear-gradient(135deg, #ffffff 0%, rgba(240, 249, 255, 0.35) 50%, rgba(238, 242, 255, 0.25) 100%);
+  --tq-header-bg: rgba(255, 255, 255, 0.95);
+  --tq-header-border: #e0e7ff;
+  --tq-sidebar-bg: #ffffff;
+  --tq-sidebar-border: #e0e7ff;
+  --tq-card-bg: #ffffff;
+  --tq-subtle-bg: #f8fafc;
+  --tq-muted-bg: #f1f5f9;
+  --tq-tint-bg: #eef2ff;
+  --tq-tint-border: #c7d2fe;
+  --tq-border: #e2e8f0;
+  --tq-border-strong: #c7d2fe;
+  --tq-text: #0f172a;
+  --tq-text-2: #334155;
+  --tq-text-muted: #64748b;
+  --tq-text-accent: #4338ca;
+  --tq-accent: #4f46e5;
+  --tq-accent-hover: #4338ca;
+  --tq-accent-ink: #ffffff;
+  --tq-accent-soft: #e0e7ff;
+  --tq-accent-soft-text: #312e81;
+  --tq-cta-gradient: linear-gradient(90deg, #38bdf8 0%, #6366f1 50%, #ec4899 100%);
+  --tq-cta-gradient-2: linear-gradient(90deg, #34d399 0%, #14b8a6 100%);
+  --tq-brand-badge-bg: linear-gradient(45deg, #bae6fd 0%, #c7d2fe 50%, #fbcfe8 100%);
+  --tq-brand-badge-ink: #4338ca;
+  --tq-input-bg: #f8fafc;
+  --tq-input-focus-bg: #ffffff;
+  --tq-input-border: #cbd5e1;
+  --tq-input-text: #0f172a;
+}
+
+/* 1. Paleta Colores Pasteles */
+[data-theme="pastel"] {
+  color-scheme: light;
+  --tq-page-bg: linear-gradient(135deg, #fdf4ff 0%, #f0f9ff 50%, #f0fdf4 100%);
+  --tq-main-bg: linear-gradient(135deg, #fffbfe 0%, #f5f3ff 50%, #ecfdf5 100%);
+  --tq-header-bg: rgba(255, 250, 253, 0.96);
+  --tq-header-border: #f3d8f8;
+  --tq-sidebar-bg: #fffcff;
+  --tq-sidebar-border: #e9d5ff;
+  --tq-card-bg: #ffffff;
+  --tq-subtle-bg: #faf5ff;
+  --tq-muted-bg: #f3e8ff;
+  --tq-tint-bg: #fce7f3;
+  --tq-tint-border: #f5d0fe;
+  --tq-border: #e9d5ff;
+  --tq-border-strong: #d8b4fe;
+  --tq-text: #2e2042;
+  --tq-text-2: #4a3764;
+  --tq-text-muted: #6b5885;
+  --tq-text-accent: #7e22ce;
+  --tq-accent: #8b5cf6;
+  --tq-accent-hover: #7c3aed;
+  --tq-accent-ink: #ffffff;
+  --tq-accent-soft: #f3e8ff;
+  --tq-accent-soft-text: #581c87;
+  --tq-cta-gradient: linear-gradient(90deg, #a78bfa 0%, #f472b6 55%, #6ee7b7 100%);
+  --tq-cta-gradient-2: linear-gradient(90deg, #6ee7b7 0%, #5eead4 100%);
+  --tq-brand-badge-bg: linear-gradient(45deg, #fbcfe8 0%, #ddd6fe 50%, #bbf7d0 100%);
+  --tq-brand-badge-ink: #6b21a8;
+  --tq-input-bg: #faf5ff;
+  --tq-input-focus-bg: #ffffff;
+  --tq-input-border: #d8b4fe;
+  --tq-input-text: #2e2042;
+}
+
+/* 2. Paleta Colores Claros y Blanco */
+[data-theme="claro"] {
+  color-scheme: light;
+  --tq-page-bg: #f8fafc;
+  --tq-main-bg: #ffffff;
+  --tq-header-bg: #ffffff;
+  --tq-header-border: #e2e8f0;
+  --tq-sidebar-bg: #ffffff;
+  --tq-sidebar-border: #e2e8f0;
+  --tq-card-bg: #ffffff;
+  --tq-subtle-bg: #f8fafc;
+  --tq-muted-bg: #f1f5f9;
+  --tq-tint-bg: #f0f9ff;
+  --tq-tint-border: #bae6fd;
+  --tq-border: #e2e8f0;
+  --tq-border-strong: #94a3b8;
+  --tq-text: #0f172a;
+  --tq-text-2: #334155;
+  --tq-text-muted: #64748b;
+  --tq-text-accent: #0369a1;
+  --tq-accent: #0284c7;
+  --tq-accent-hover: #0369a1;
+  --tq-accent-ink: #ffffff;
+  --tq-accent-soft: #e0f2fe;
+  --tq-accent-soft-text: #0c4a6e;
+  --tq-cta-gradient: linear-gradient(90deg, #0284c7 0%, #0ea5e9 100%);
+  --tq-cta-gradient-2: linear-gradient(90deg, #0f172a 0%, #334155 100%);
+  --tq-brand-badge-bg: linear-gradient(45deg, #f1f5f9 0%, #e0f2fe 100%);
+  --tq-brand-badge-ink: #0369a1;
+  --tq-input-bg: #ffffff;
+  --tq-input-focus-bg: #ffffff;
+  --tq-input-border: #cbd5e1;
+  --tq-input-text: #0f172a;
+}
+
+/* 3. Paleta Colores Vivos y Negro (Modo Nocturno) */
+[data-theme="nocturno"] {
+  color-scheme: dark;
+  --tq-page-bg: linear-gradient(135deg, #05080f 0%, #0b1120 60%, #10162b 100%);
+  --tq-main-bg: linear-gradient(135deg, #070b14 0%, #0d1526 100%);
+  --tq-header-bg: rgba(11, 17, 32, 0.96);
+  --tq-header-border: #1e293b;
+  --tq-sidebar-bg: #0b1120;
+  --tq-sidebar-border: #1e293b;
+  --tq-card-bg: #111a2e;
+  --tq-subtle-bg: #17233b;
+  --tq-muted-bg: #1e293b;
+  --tq-tint-bg: #0f293a;
+  --tq-tint-border: #155e75;
+  --tq-border: #22304a;
+  --tq-border-strong: #06b6d4;
+  --tq-text: #f8fafc;
+  --tq-text-2: #cbd5e1;
+  --tq-text-muted: #94a3b8;
+  --tq-text-accent: #22d3ee;
+  --tq-accent: #06b6d4;
+  --tq-accent-hover: #22d3ee;
+  --tq-accent-ink: #04121b;
+  --tq-accent-soft: #164e63;
+  --tq-accent-soft-text: #cffafe;
+  --tq-cta-gradient: linear-gradient(90deg, #06b6d4 0%, #3b82f6 50%, #10b981 100%);
+  --tq-cta-gradient-2: linear-gradient(90deg, #10b981 0%, #06b6d4 100%);
+  --tq-brand-badge-bg: linear-gradient(45deg, #0891b2 0%, #7c3aed 100%);
+  --tq-brand-badge-ink: #ffffff;
+  --tq-input-bg: #0b1222;
+  --tq-input-focus-bg: #131e34;
+  --tq-input-border: #334155;
+  --tq-input-text: #f8fafc;
+}
+
+/* 4. Paleta Colores Más Vibrantes */
+[data-theme="vibrante"] {
+  color-scheme: light;
+  --tq-page-bg: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 45%, #fff7ed 100%);
+  --tq-main-bg: linear-gradient(135deg, #ffffff 0%, #f5f3ff 55%, #fffbeb 100%);
+  --tq-header-bg: rgba(255, 255, 255, 0.96);
+  --tq-header-border: #c4b5fd;
+  --tq-sidebar-bg: #ffffff;
+  --tq-sidebar-border: #c4b5fd;
+  --tq-card-bg: #ffffff;
+  --tq-subtle-bg: #f5f3ff;
+  --tq-muted-bg: #ede9fe;
+  --tq-tint-bg: #fff7ed;
+  --tq-tint-border: #fdba74;
+  --tq-border: #ddd6fe;
+  --tq-border-strong: #7c3aed;
+  --tq-text: #111827;
+  --tq-text-2: #312e81;
+  --tq-text-muted: #4b5563;
+  --tq-text-accent: #6d28d9;
+  --tq-accent: #7c3aed;
+  --tq-accent-hover: #6d28d9;
+  --tq-accent-ink: #ffffff;
+  --tq-accent-soft: #ede9fe;
+  --tq-accent-soft-text: #4c1d95;
+  --tq-cta-gradient: linear-gradient(90deg, #2563eb 0%, #7c3aed 50%, #f97316 100%);
+  --tq-cta-gradient-2: linear-gradient(90deg, #0d9488 0%, #2563eb 100%);
+  --tq-brand-badge-bg: linear-gradient(45deg, #2563eb 0%, #7c3aed 55%, #f97316 100%);
+  --tq-brand-badge-ink: #ffffff;
+  --tq-input-bg: #f5f3ff;
+  --tq-input-focus-bg: #ffffff;
+  --tq-input-border: #a78bfa;
+  --tq-input-text: #111827;
+}
+
+body {
+  background: var(--tq-page-bg);
+  color: var(--tq-text);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Semantic layout surfaces used across roles & components */
+.tq-page {
+  background: var(--tq-page-bg);
+  color: var(--tq-text);
+}
+
+.tq-main-pane {
+  background: var(--tq-main-bg);
+  color: var(--tq-text);
+}
+
+.tq-header {
+  background-color: var(--tq-header-bg);
+  border-color: var(--tq-header-border);
+  color: var(--tq-text);
+}
+
+.tq-sidebar {
+  background-color: var(--tq-sidebar-bg);
+  border-color: var(--tq-sidebar-border);
+  color: var(--tq-text);
+}
+
+.tq-card {
+  background-color: var(--tq-card-bg);
+  border-color: var(--tq-border);
+  color: var(--tq-text);
+}
+
+.tq-subtle {
+  background-color: var(--tq-subtle-bg);
+  border-color: var(--tq-border);
+  color: var(--tq-text-2);
+}
+
+.tq-muted {
+  background-color: var(--tq-muted-bg);
+  border-color: var(--tq-border);
+  color: var(--tq-text-2);
+}
+
+.tq-tint {
+  background-color: var(--tq-tint-bg);
+  border-color: var(--tq-tint-border);
+  color: var(--tq-text);
+}
+
+.tq-border {
+  border-color: var(--tq-border);
+}
+
+@utility tq-text {
+  color: var(--tq-text);
+}
+
+.tq-text-2 {
+  color: var(--tq-text-2);
+}
+
+.tq-text-muted {
+  color: var(--tq-text-muted);
+}
+
+@utility tq-text-accent {
+  color: var(--tq-text-accent);
+}
+
+.tq-btn-primary {
+  background-color: var(--tq-accent);
+  color: var(--tq-accent-ink);
+}
+
+.tq-btn-primary:hover {
+  background-color: var(--tq-accent-hover);
+}
+
+.tq-btn-gradient {
+  background-image: var(--tq-cta-gradient);
+  color: #ffffff;
+}
+
+.tq-btn-gradient-alt {
+  background-image: var(--tq-cta-gradient-2);
+  color: #ffffff;
+}
+
+.tq-brand-badge {
+  background-image: var(--tq-brand-badge-bg);
+  color: var(--tq-brand-badge-ink);
+}
+
+.tq-accent-soft {
+  background-color: var(--tq-accent-soft);
+  color: var(--tq-accent-soft-text);
+}
+
+.tq-input {
+  background-color: var(--tq-input-bg);
+  border-color: var(--tq-input-border);
+  color: var(--tq-input-text);
+}
+
+.tq-input:focus {
+  background-color: var(--tq-input-focus-bg);
+  border-color: var(--tq-accent);
+}
+
+/* Dark-mode optical compensation & native select dropdown readability */
+[data-theme="nocturno"] h1,
+[data-theme="nocturno"] h2,
+[data-theme="nocturno"] h3 {
+  letter-spacing: 0.01em;
+}
+
+[data-theme="nocturno"] select option {
+  background-color: #111a2e;
+  color: #f8fafc;
+}
+
+@media print {
+  body,
+  .tq-page,
+  .tq-main-pane,
+  .tq-card {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  header, nav, button {
+    display: none !important;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+
+  .print\:block {
+    display: block !important;
+  }
+}
+
+/* Hide scrollbars on small tab navigation */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

@@ -1,0 +1,6 @@
+{
+  "name": "MatemáticaChile - ThatQuiz Escolar MINEDUC",
+  "description": "Plataforma de ejercitación y evaluación matemática estilo ThatQuiz para Educación Básica chilena, con alineación curricular MINEDUC, generación de credenciales, corrección inmediata y reportes en PDF para apoderados.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
