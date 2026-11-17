@@ -15,6 +15,7 @@ import {
   Eye,
   EyeOff,
   Palette,
+  Cloud,
 } from 'lucide-react';
 import { ThemePaletteSelector } from '../ThemePaletteSelector';
 
@@ -23,6 +24,9 @@ export const TeacherLoginModal: React.FC = () => {
     teachers,
     currentTeacher,
     isTeacherAuthenticated,
+    isCloudTeacher,
+    cloudSyncMessage,
+    loginTeacherWithGoogle,
     isTeacherLoginModalOpen,
     setIsTeacherLoginModalOpen,
     loginTeacher,
@@ -178,6 +182,40 @@ export const TeacherLoginModal: React.FC = () => {
             <LogOut className="w-3.5 h-3.5" />
             <span>Cerrar sesión</span>
           </button>
+        </div>
+
+        {/* Cloud Sync Banner inside Modal */}
+        <div
+          className={`mt-4 p-3 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs ${
+            isCloudTeacher
+              ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-100'
+              : 'tq-tint border-[var(--tq-border-strong)] tq-text'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Cloud className="w-4 h-4 shrink-0" />
+            <div>
+              <span className="font-bold block">
+                {isCloudTeacher
+                  ? 'Base de Datos en la Nube Activa'
+                  : 'Modo Local (cambios no se sincronizan a otros equipos)'}
+              </span>
+              <span className="text-[11px] opacity-80 block">
+                {isCloudTeacher
+                  ? cloudSyncMessage || 'Cambios sincronizados automáticamente.'
+                  : 'Conecta tu cuenta Google para sincronizar con todos tus alumnos.'}
+              </span>
+            </div>
+          </div>
+          {!isCloudTeacher && (
+            <button
+              type="button"
+              onClick={() => void loginTeacherWithGoogle()}
+              className="px-3 py-1.5 tq-btn-gradient rounded-xl text-xs font-bold shrink-0 cursor-pointer"
+            >
+              Conectar Google
+            </button>
+          )}
         </div>
 
         {/* Navigation Tabs */}

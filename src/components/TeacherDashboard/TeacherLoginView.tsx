@@ -13,6 +13,7 @@ import {
   AlertCircle,
   KeyRound,
   PlayCircle,
+  Cloud,
 } from 'lucide-react';
 import { ThemePaletteSelector } from '../ThemePaletteSelector';
 
@@ -21,16 +22,19 @@ export const TeacherLoginView: React.FC = () => {
     teachers,
     currentTeacher,
     loginTeacher,
+    loginTeacherWithGoogle,
     registerTeacher,
     setRole,
   } = useApp();
 
+  const [showLocalDemo, setShowLocalDemo] = useState(false);
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>(
     currentTeacher?.id || teachers[0]?.id || ''
   );
   const [password, setPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState<boolean>(false);
 
   // Register fields
   const [regName, setRegName] = useState<string>('');
@@ -41,6 +45,19 @@ export const TeacherLoginView: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const selectedTeacherObj = teachers.find(t => t.id === selectedTeacherId);
+
+  const handleGoogleLogin = async () => {
+    setErrorMsg(null);
+    setIsGoogleLoading(true);
+    try {
+      const res = await loginTeacherWithGoogle();
+      if (!res.ok) {
+        setErrorMsg(res.error || 'No se pudo iniciar sesión con Google.');
+      }
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,192 +91,238 @@ export const TeacherLoginView: React.FC = () => {
           Escuela Ricardo Silva Arriagada · SLEP Chinchorro
         </span>
         <h1 className="text-2xl font-black tq-text mt-2">
-          Acceso Docente Protegido
+          Acceso Docente en la Nube
         </h1>
         <p className="text-xs tq-text-muted mt-1">
-          Ingresa con tu cuenta y clave personal para administrar tus cursos, notas y evaluaciones.
+          Conecta tu cuenta Google para sincronizar tus listas, evaluaciones y calificaciones en tiempo real con todos tus estudiantes.
         </p>
       </div>
 
-      {/* Mode Tabs */}
-      <div className="flex tq-muted p-1 rounded-2xl mb-5 border">
-        <button
-          type="button"
-          onClick={() => {
-            setMode('login');
-            setErrorMsg(null);
-          }}
-          className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-            mode === 'login'
-              ? 'tq-card tq-text-accent shadow-xs'
-              : 'tq-text-muted hover:tq-text'
-          }`}
-        >
-          <ShieldCheck className="w-3.5 h-3.5" />
-          <span>Iniciar Sesión</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setMode('register');
-            setErrorMsg(null);
-          }}
-          className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-            mode === 'register'
-              ? 'tq-card tq-text-accent shadow-xs'
-              : 'tq-text-muted hover:tq-text'
-          }`}
-        >
-          <UserPlus className="w-3.5 h-3.5" />
-          <span>Nuevo Docente</span>
-        </button>
-      </div>
-
       {errorMsg && (
-        <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-2xl font-semibold flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+        <div className="mb-4 p-3 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs rounded-2xl font-semibold flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
-      {mode === 'login' ? (
-        <form onSubmit={handleLoginSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold tq-text-2 mb-1.5">
-              Cuenta Docente:
-            </label>
-            <div className="relative">
-              <User className="w-4 h-4 tq-text-muted absolute left-3.5 top-3.5" />
-              <select
-                value={selectedTeacherId}
-                onChange={e => {
-                  setSelectedTeacherId(e.target.value);
-                  setPassword('');
-                  setErrorMsg(null);
-                }}
-                className="w-full pl-10 pr-3.5 py-3 text-sm font-bold border-2 tq-input rounded-2xl focus:outline-hidden transition-all"
-              >
-                {teachers.map(t => (
-                  <option key={t.id} value={t.id}>
-                    Prof. {t.name} {t.email ? `(${t.email})` : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+      {/* Primary Cloud Google Login */}
+      <div className="p-4 tq-tint border-2 border-[var(--tq-border-strong)] rounded-2xl space-y-3 mb-5">
+        <div className="flex items-center gap-2 text-xs font-bold tq-text">
+          <Cloud className="w-4 h-4 tq-text-accent shrink-0" />
+          <span>Sincronización en Tiempo Real (Recomendado)</span>
+        </div>
+        <p className="text-[11px] tq-text-2 leading-relaxed">
+          Tus pruebas nuevas, eliminaciones de notas y listas de curso aparecerán al instante en los dispositivos de tus alumnos, y verás sus resultados apenas terminen.
+        </p>
+        <button
+          type="button"
+          onClick={handleGoogleLogin}
+          disabled={isGoogleLoading}
+          className="w-full py-3.5 tq-btn-gradient disabled:opacity-50 font-bold text-sm rounded-2xl shadow-xs flex items-center justify-center gap-2.5 transition-all cursor-pointer"
+        >
+          <Cloud className="w-4 h-4" />
+          <span>
+            {isGoogleLoading ? 'Conectando con Google...' : 'Ingresar con Google (Base de Datos en la Nube)'}
+          </span>
+        </button>
+      </div>
 
-          <div>
-            <label className="block text-xs font-bold tq-text-2 mb-1.5">
-              Clave de Acceso Docente:
-            </label>
-            <div className="relative">
-              <KeyRound className="w-4 h-4 tq-text-muted absolute left-3.5 top-3.5" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="Ingresa tu clave personal"
-                autoComplete="current-password"
-                className="w-full pl-10 pr-10 py-3 text-sm font-bold border-2 tq-input rounded-2xl focus:outline-hidden transition-all"
-              />
+      {/* Collapsible Local Demo Fallback */}
+      <div className="border tq-border rounded-2xl p-3.5 tq-subtle">
+        <button
+          type="button"
+          onClick={() => {
+            setShowLocalDemo(prev => !prev);
+            setErrorMsg(null);
+          }}
+          className="w-full flex items-center justify-between text-xs font-bold tq-text-2 cursor-pointer"
+        >
+          <span className="flex items-center gap-1.5">
+            <KeyRound className="w-3.5 h-3.5 tq-text-muted" />
+            <span>Modo Local sin Nube (solo en este navegador)</span>
+          </span>
+          <span className="text-[11px] tq-text-accent underline">
+            {showLocalDemo ? 'Ocultar' : 'Abrir'}
+          </span>
+        </button>
+
+        {showLocalDemo && (
+          <div className="mt-4 pt-3 border-t tq-border">
+            {/* Mode Tabs */}
+            <div className="flex tq-muted p-1 rounded-2xl mb-4 border">
               <button
                 type="button"
-                onClick={() => setShowPassword(prev => !prev)}
-                className="absolute right-3 top-3 tq-text-muted hover:tq-text p-0.5 cursor-pointer"
-                title={showPassword ? 'Ocultar clave' : 'Ver clave'}
+                onClick={() => {
+                  setMode('login');
+                  setErrorMsg(null);
+                }}
+                className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  mode === 'login'
+                    ? 'tq-card tq-text-accent shadow-xs'
+                    : 'tq-text-muted hover:tq-text'
+                }`}
               >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Iniciar Sesión</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMode('register');
+                  setErrorMsg(null);
+                }}
+                className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  mode === 'register'
+                    ? 'tq-card tq-text-accent shadow-xs'
+                    : 'tq-text-muted hover:tq-text'
+                }`}
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>Nuevo Docente</span>
               </button>
             </div>
 
-            {selectedTeacherObj && selectedTeacherObj.hasCustomPassword === false && (
-              <p className="text-[11px] text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2 mt-2 font-medium">
-                Primer ingreso: utiliza la clave inicial asignada (<strong>1234</strong>) y cámbiala por tu clave privada al entrar en tu perfil docente.
-              </p>
+            {mode === 'login' ? (
+              <form onSubmit={handleLoginSubmit} className="space-y-3.5">
+                <div>
+                  <label className="block text-xs font-bold tq-text-2 mb-1">
+                    Cuenta Docente Local:
+                  </label>
+                  <div className="relative">
+                    <User className="w-4 h-4 tq-text-muted absolute left-3.5 top-3" />
+                    <select
+                      value={selectedTeacherId}
+                      onChange={e => {
+                        setSelectedTeacherId(e.target.value);
+                        setPassword('');
+                        setErrorMsg(null);
+                      }}
+                      className="w-full pl-10 pr-3.5 py-2.5 text-xs font-bold border-2 tq-input rounded-xl focus:outline-hidden transition-all"
+                    >
+                      {teachers.map(t => (
+                        <option key={t.id} value={t.id}>
+                          Prof. {t.name} {t.email ? `(${t.email})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold tq-text-2 mb-1">
+                    Clave de Acceso Local:
+                  </label>
+                  <div className="relative">
+                    <KeyRound className="w-4 h-4 tq-text-muted absolute left-3.5 top-3" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      placeholder="Ingresa tu clave (demo: 1234)"
+                      autoComplete="current-password"
+                      className="w-full pl-10 pr-10 py-2.5 text-xs font-bold border-2 tq-input rounded-xl focus:outline-hidden transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(prev => !prev)}
+                      className="absolute right-3 top-2.5 tq-text-muted hover:tq-text p-0.5 cursor-pointer"
+                      title={showPassword ? 'Ocultar clave' : 'Ver clave'}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+
+                  {selectedTeacherObj && selectedTeacherObj.hasCustomPassword === false && (
+                    <p className="text-[11px] text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2 mt-2 font-medium">
+                      Clave demo local inicial: <strong>1234</strong>. Para que tus alumnos se conecten desde otros dispositivos, usa "Ingresar con Google" arriba.
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={!selectedTeacherId || !password.trim()}
+                  className="w-full py-3 tq-btn-primary disabled:opacity-40 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Ingresar en Modo Local</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleRegisterSubmit} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-bold tq-text-2 mb-1">
+                    Nombre y Apellidos del Docente:
+                  </label>
+                  <div className="relative">
+                    <User className="w-4 h-4 tq-text-muted absolute left-3.5 top-2.5" />
+                    <input
+                      type="text"
+                      value={regName}
+                      onChange={e => setRegName(e.target.value)}
+                      placeholder="Ej: María José Rojas"
+                      className="w-full pl-10 pr-3.5 py-2 text-xs font-bold border-2 tq-input rounded-xl focus:outline-hidden"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold tq-text-2 mb-1">
+                    Correo Electrónico (opcional):
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 tq-text-muted absolute left-3.5 top-2.5" />
+                    <input
+                      type="email"
+                      value={regEmail}
+                      onChange={e => setRegEmail(e.target.value)}
+                      placeholder="nombre@slepchinchorro.cl"
+                      className="w-full pl-10 pr-3.5 py-2 text-xs font-medium border-2 tq-input rounded-xl focus:outline-hidden"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs font-bold tq-text-2 mb-1">
+                      Crear Clave (mín. 4):
+                    </label>
+                    <input
+                      type="password"
+                      value={regPassword}
+                      onChange={e => setRegPassword(e.target.value)}
+                      placeholder="Clave secreta"
+                      className="w-full px-3 py-2 text-xs font-bold border-2 tq-input rounded-xl focus:outline-hidden"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold tq-text-2 mb-1">
+                      Confirmar Clave:
+                    </label>
+                    <input
+                      type="password"
+                      value={regConfirmPassword}
+                      onChange={e => setRegConfirmPassword(e.target.value)}
+                      placeholder="Repetir clave"
+                      className="w-full px-3 py-2 text-xs font-bold border-2 tq-input rounded-xl focus:outline-hidden"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={!regName.trim() || regPassword.trim().length < 4}
+                  className="w-full py-3 tq-btn-primary disabled:opacity-40 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>Crear Cuenta Local e Ingresar</span>
+                </button>
+              </form>
             )}
           </div>
-
-          <button
-            type="submit"
-            disabled={!selectedTeacherId || !password.trim()}
-            className="w-full py-3.5 tq-btn-gradient disabled:opacity-40 font-bold text-sm rounded-2xl shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
-          >
-            <ShieldCheck className="w-4 h-4" />
-            <span>Ingresar al Panel Docente</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        </form>
-      ) : (
-        <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
-          <div>
-            <label className="block text-xs font-bold tq-text-2 mb-1">
-              Nombre y Apellidos del Docente:
-            </label>
-            <div className="relative">
-              <User className="w-4 h-4 tq-text-muted absolute left-3.5 top-3" />
-              <input
-                type="text"
-                value={regName}
-                onChange={e => setRegName(e.target.value)}
-                placeholder="Ej: María José Rojas"
-                className="w-full pl-10 pr-3.5 py-2.5 text-sm font-bold border-2 tq-input rounded-2xl focus:outline-hidden"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold tq-text-2 mb-1">
-              Correo Electrónico (opcional):
-            </label>
-            <div className="relative">
-              <Mail className="w-4 h-4 tq-text-muted absolute left-3.5 top-3" />
-              <input
-                type="email"
-                value={regEmail}
-                onChange={e => setRegEmail(e.target.value)}
-                placeholder="nombre@slepchinchorro.cl"
-                className="w-full pl-10 pr-3.5 py-2.5 text-xs font-medium border-2 tq-input rounded-2xl focus:outline-hidden"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            <div>
-              <label className="block text-xs font-bold tq-text-2 mb-1">
-                Crear Clave (mín. 4):
-              </label>
-              <input
-                type="password"
-                value={regPassword}
-                onChange={e => setRegPassword(e.target.value)}
-                placeholder="Clave secreta"
-                className="w-full px-3.5 py-2.5 text-xs font-bold border-2 tq-input rounded-2xl focus:outline-hidden"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold tq-text-2 mb-1">
-                Confirmar Clave:
-              </label>
-              <input
-                type="password"
-                value={regConfirmPassword}
-                onChange={e => setRegConfirmPassword(e.target.value)}
-                placeholder="Repetir clave"
-                className="w-full px-3.5 py-2.5 text-xs font-bold border-2 tq-input rounded-2xl focus:outline-hidden"
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={!regName.trim() || regPassword.trim().length < 4}
-            className="w-full py-3.5 tq-btn-primary disabled:opacity-40 font-bold text-sm rounded-2xl shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer mt-1"
-          >
-            <UserPlus className="w-4 h-4" />
-            <span>Crear Cuenta e Ingresar</span>
-          </button>
-        </form>
-      )}
+        )}
+      </div>
 
       {/* Theme Palette Configurator right from Teacher Entry */}
       <div className="mt-5">

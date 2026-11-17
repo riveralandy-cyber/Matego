@@ -78,6 +78,8 @@ export interface Student {
   rut: string;
   courseId: string;
   teacherId: string; // owner teacher who loaded this student list
+  ownerUid?: string; // Firebase UID of owning teacher
+  linkedStudentUid?: string; // Firebase UID claimed by the student
   accessCode: string; // e.g. MAT-5A-01
   pin: string; // e.g. 4821
   hasCustomPin?: boolean; // indicates if the student has set their personal PIN
@@ -93,6 +95,7 @@ export interface Teacher {
   schoolName: string;
   commune: string;
   rbd: string;
+  uid?: string;
 }
 
 export interface Course {
@@ -112,6 +115,7 @@ export interface QuizAssignment {
   title: string;
   courseId: string;
   teacherId: string; // owner teacher who created/sent this exam
+  ownerUid?: string;
   teacherName?: string;
   gradeLevel: GradeLevel;
   axis: ThematicAxis;
@@ -139,13 +143,16 @@ export interface QuestionAnswer {
 export interface QuizAttempt {
   id: string;
   quizId: string;
+  assignmentDocId?: string;
   quizTitle: string;
   oaCode: string;
   axis: ThematicAxis;
   studentId: string;
+  studentUid?: string;
   studentName: string;
   courseId: string;
   teacherId?: string;
+  ownerUid?: string;
   answers: QuestionAnswer[];
   score: number;
   totalQuestions: number;

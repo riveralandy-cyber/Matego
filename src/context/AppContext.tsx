@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
+import { User, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 import { Course, Student, QuizAssignment, QuizAttempt, Teacher, TeacherTab, ThemePaletteId } from '../types';
 import { INITIAL_COURSES, INITIAL_STUDENTS, INITIAL_ASSIGNMENTS, INITIAL_ATTEMPTS } from '../data/initialData';
 import { calculateChileanGrade, getMineducPerformanceLevel } from '../utils/chileanGrades';
@@ -9,6 +10,28 @@ import {
   saveStoredThemePreferences,
   applyThemeToDocument,
 } from '../utils/themes';
+import { auth, googleProvider, makeAssignmentDocId, makeCourseJoinCode } from '../firebase';
+import {
+  addQuizAssignmentCloud,
+  addStudentsCloud,
+  backfillStudentUidOnAttemptsCloud,
+  claimStudentWithAccessCodeCloud,
+  CourseJoinCodeDirectory,
+  deleteQuizAssignmentCloud,
+  deleteQuizAttemptsCloud,
+  ensureTeacherProfileCloud,
+  lookupCourseJoinCodeCloud,
+  recordQuizAttemptCloud,
+  removeStudentsCloud,
+  seedTeacherWorkspaceCloud,
+  subscribeLinkedStudentSeatsCloud,
+  subscribeStudentCourseAndAttemptsCloud,
+  subscribeTeacherWorkspaceCloud,
+  unlinkStudentGoogleCloud,
+  updateQuizAttemptGradeCloud,
+  updateStudentPinCloud,
+  updateTeacherThemeCloud,
+} from '../services/cloudSync';
 
 export const DEFAULT_INITIAL_TEACHER_PASSWORD = '1234';
 
@@ -52,19 +75,36 @@ export const DEFAULT_TEACHERS: Teacher[] = [
     schoolName: 'Escuela Ricardo Silva Arriagada',
     commune: 'SLEP Chinchorro · Arica',
     rbd: '102-4',
-  }
+  },
 ];
 
-interface AuthActionResult {
+export interface AuthActionResult {
   ok: boolean;
   error?: string;
 }
+
+export type CloudSyncStatus = 'local' | 'connecting' | 'synced' | 'error';
 
 interface AppContextType {
   role: 'teacher' | 'student' | 'practice';
   setRole: (role: 'teacher' | 'student' | 'practice') => void;
   activeTeacherTab: TeacherTab;
   setActiveTeacherTab: (tab: TeacherTab) => void;
+
+  // Firebase Auth & Cloud Sync state
+  firebaseUser: User | null;
+  isAuthReady: boolean;
+  isCloudTeacher: boolean;
+  cloudSyncStatus: CloudSyncStatus;
+  cloudSyncMessage: string | null;
+  linkedCloudStudentSeats: Student[];
+  loginTeacherWithGoogle: () => Promise<AuthActionResult>;
+  connectStudentWithGoogle: () => Promise<AuthActionResult>;
+  disconnectGoogleAccount: () => Promise<void>;
+  lookupCourseJoinCode: (joinCode: string) => Promise<{ ok: boolean; directory?: CourseJoinCodeDirectory; error?: string }>;
+  loginStudentCloudByAccessCode: (accessCode: string, pin: string, quizDirectCode?: string) => Promise<AuthActionResult>;
+  unlinkStudentGoogleAccount: (studentId: string) => void;
+  getCourseJoinCode: (courseId: string) => string | null;
 
   // Teacher session & authentication
   teachers: Teacher[];
@@ -87,7 +127,7 @@ interface AppContextType {
   assignments: QuizAssignment[];
   attempts: QuizAttempt[];
 
-  // Strictly scoped to currentTeacher.id (used by Teacher Dashboard)
+  // Strictly scoped to currentTeacher (used by Teacher Dashboard)
   teacherStudents: Student[];
   teacherAssignments: QuizAssignment[];
   teacherAttempts: QuizAttempt[];
@@ -98,7 +138,7 @@ interface AppContextType {
 
   // Student portal state
   currentStudent: Student | null;
-  setCurrentStudent: (student: Student | null) => void;
+  setCurrentStudent: React.Dispatch<React.SetStateAction<Student | null>>;
   activeQuizTaking: QuizAssignment | null;
   setActiveQuizTaking: (quiz: QuizAssignment | null) => void;
   latestCompletedAttempt: QuizAttempt | null;
@@ -127,6 +167,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const STORAGE_KEY_PREFIX = 'thatquiz_chile_';
 const SESSION_AUTH_KEY = 'thatquiz_chile_teacher_auth_session';
+const CLOUD_TEACHER_UID_KEY = 'thatquiz_chile_cloud_teacher_uid';
 
 function normalizeTeacherRecord(t: Teacher): Teacher {
   return {
@@ -140,6 +181,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [role, setRole] = useState<'teacher' | 'student' | 'practice'>('teacher');
   const [activeTeacherTab, setActiveTeacherTab] = useState<TeacherTab>('matrix');
   const [activeOAForCreation, setActiveOAForCreation] = useState<string | null>(null);
+
+  // Firebase Auth & Cloud Sync state
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
+  const [cloudTeacherUid, setCloudTeacherUid] = useState<string | null>(() =>
+    localStorage.getItem(CLOUD_TEACHER_UID_KEY)
+  );
+  const [cloudSyncStatus, setCloudSyncStatus] = useState<CloudSyncStatus>('local');
+  const [cloudSyncMessage, setCloudSyncMessage] = useState<string | null>(null);
+  const [fatalCloudError, setFatalCloudError] = useState<Error | null>(null);
+
+  // Cloud teacher workspace collections
+  const [cloudTeacherStudents, setCloudTeacherStudents] = useState<Student[]>([]);
+  const [cloudTeacherAssignments, setCloudTeacherAssignments] = useState<QuizAssignment[]>([]);
+  const [cloudTeacherAttempts, setCloudTeacherAttempts] = useState<QuizAttempt[]>([]);
+
+  // Cloud student collections
+  const [linkedCloudStudentSeats, setLinkedCloudStudentSeats] = useState<Student[]>([]);
+  const [cloudStudentAssignments, setCloudStudentAssignments] = useState<QuizAssignment[]>([]);
+  const [cloudStudentAttempts, setCloudStudentAttempts] = useState<QuizAttempt[]>([]);
+  const [pendingDirectQuizCode, setPendingDirectQuizCode] = useState<string | null>(null);
 
   const [teachers, setTeachers] = useState<Teacher[]>(() => {
     const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}teachers`);
@@ -158,7 +220,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return DEFAULT_TEACHERS[0];
   });
 
-  // Security: teacher starts unauthenticated on fresh browser session until entering password
   const [isTeacherAuthenticated, setIsTeacherAuthenticated] = useState<boolean>(() => {
     return sessionStorage.getItem(SESSION_AUTH_KEY) === 'true';
   });
@@ -179,7 +240,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved || 'course-7a';
   });
 
-  const [students, setStudents] = useState<Student[]>(() => {
+  const [localStudents, setLocalStudents] = useState<Student[]>(() => {
     const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}students`);
     if (saved) {
       const parsed: Student[] = JSON.parse(saved);
@@ -191,7 +252,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return INITIAL_STUDENTS;
   });
 
-  const [assignments, setAssignments] = useState<QuizAssignment[]>(() => {
+  const [localAssignments, setLocalAssignments] = useState<QuizAssignment[]>(() => {
     const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}assignments`);
     if (saved) {
       const parsed: QuizAssignment[] = JSON.parse(saved);
@@ -204,7 +265,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return INITIAL_ASSIGNMENTS;
   });
 
-  const [attempts, setAttempts] = useState<QuizAttempt[]>(() => {
+  const [localAttempts, setLocalAttempts] = useState<QuizAttempt[]>(() => {
     const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}attempts`);
     if (saved) {
       const parsed: QuizAttempt[] = JSON.parse(saved);
@@ -238,6 +299,266 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Per-user & guest palette preferences (defaults to 'estandar')
   const [themePrefs, setThemePrefs] = useState<StoredThemePreferences>(() => loadStoredThemePreferences());
   const [pendingEntryTheme, setPendingEntryTheme] = useState<ThemePaletteId | null>(null);
+
+  const reportCloudError = (err: unknown) => {
+    const wrapped = err instanceof Error ? err : new Error(String(err));
+    setCloudSyncStatus('error');
+    setCloudSyncMessage(wrapped.message);
+    setFatalCloudError(wrapped);
+  };
+
+  if (fatalCloudError) {
+    throw fatalCloudError;
+  }
+
+  const isCloudTeacher = Boolean(
+    isAuthReady &&
+      firebaseUser &&
+      firebaseUser.emailVerified &&
+      isTeacherAuthenticated &&
+      cloudTeacherUid === firebaseUser.uid
+  );
+
+  const isCloudStudent = Boolean(
+    role === 'student' &&
+      isAuthReady &&
+      firebaseUser &&
+      firebaseUser.emailVerified &&
+      currentStudent?.ownerUid
+  );
+
+  // Firebase Auth listener
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, user => {
+      setFirebaseUser(user);
+      setIsAuthReady(true);
+
+      const savedTeacherUid = localStorage.getItem(CLOUD_TEACHER_UID_KEY);
+      if (user && user.emailVerified && savedTeacherUid === user.uid) {
+        setCloudTeacherUid(user.uid);
+        setCurrentTeacher({
+          id: user.uid,
+          uid: user.uid,
+          name: user.displayName || 'Docente',
+          email: user.email || '',
+          schoolName: 'Escuela Ricardo Silva Arriagada',
+          commune: 'SLEP Chinchorro · Arica',
+          rbd: '102-4',
+        });
+        setIsTeacherAuthenticated(true);
+      } else if (!user) {
+        setCloudTeacherStudents([]);
+        setCloudTeacherAssignments([]);
+        setCloudTeacherAttempts([]);
+        setLinkedCloudStudentSeats([]);
+        setCloudStudentAssignments([]);
+        setCloudStudentAttempts([]);
+        setCloudSyncStatus('local');
+        setCloudSyncMessage(null);
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  // Teacher Cloud Realtime Subscription
+  const seededCheckRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!isCloudTeacher || !firebaseUser) return;
+
+    const uid = firebaseUser.uid;
+    setCloudSyncStatus('connecting');
+    setCloudSyncMessage('Sincronizando datos en la nube...');
+
+    let cancelled = false;
+
+    const initAndSubscribe = async () => {
+      try {
+        const profile = await ensureTeacherProfileCloud({
+          uid,
+          name: firebaseUser.displayName || currentTeacher.name || 'Docente',
+          email: firebaseUser.email || '',
+          activeTheme: themePrefs.teachers[uid] || DEFAULT_THEME_ID,
+        });
+
+        if (cancelled) return;
+
+        setCurrentTeacher(prev => ({
+          ...prev,
+          id: uid,
+          uid,
+          name: profile.name,
+          email: profile.email,
+          schoolName: profile.schoolName,
+          commune: profile.commune,
+          rbd: profile.rbd,
+        }));
+
+        if (profile.activeTheme && !themePrefs.teachers[uid]) {
+          setThemePrefs(tp => ({
+            ...tp,
+            teachers: { ...tp.teachers, [uid]: profile.activeTheme },
+          }));
+        }
+
+        if (!profile.seededInitialData && !seededCheckRef.current.has(uid)) {
+          seededCheckRef.current.add(uid);
+          setCloudSyncMessage('Inicializando cursos y evaluaciones en la nube por primera vez...');
+          await seedTeacherWorkspaceCloud(uid, profile.name, courses);
+        }
+      } catch (err) {
+        if (!cancelled) reportCloudError(err);
+      }
+    };
+
+    void initAndSubscribe();
+
+    const unsub = subscribeTeacherWorkspaceCloud(uid, {
+      onStudents: list => {
+        setCloudTeacherStudents(list);
+        setCloudSyncStatus('synced');
+        setCloudSyncMessage(`Nube activa · ${firebaseUser.email || ''}`);
+      },
+      onAssignments: list => {
+        setCloudTeacherAssignments(list);
+        setCloudSyncStatus('synced');
+      },
+      onAttempts: list => {
+        setCloudTeacherAttempts(list);
+        setCloudSyncStatus('synced');
+      },
+      onProfile: profile => {
+        setCurrentTeacher(prev => ({
+          ...prev,
+          id: uid,
+          uid,
+          name: profile.name,
+          email: profile.email,
+        }));
+      },
+      onError: err => reportCloudError(err),
+    });
+
+    return () => {
+      cancelled = true;
+      unsub();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCloudTeacher, firebaseUser?.uid]);
+
+  // Auto-backfill studentUid on seeded/historical attempts whenever a student claims their seat
+  useEffect(() => {
+    if (!isCloudTeacher || !firebaseUser) return;
+    const uid = firebaseUser.uid;
+
+    const linkedMap = new Map<string, string>();
+    cloudTeacherStudents.forEach(st => {
+      if (st.linkedStudentUid) {
+        linkedMap.set(st.id, st.linkedStudentUid);
+      }
+    });
+    if (linkedMap.size === 0) return;
+
+    const byStudentUid = new Map<string, string[]>();
+    cloudTeacherAttempts.forEach(att => {
+      const targetStudentUid = linkedMap.get(att.studentId);
+      if (targetStudentUid && !att.studentUid) {
+        const arr = byStudentUid.get(targetStudentUid) || [];
+        arr.push(att.id);
+        byStudentUid.set(targetStudentUid, arr);
+      }
+    });
+
+    byStudentUid.forEach((attemptIds, studentUid) => {
+      void backfillStudentUidOnAttemptsCloud(uid, attemptIds, studentUid).catch(err => {
+        console.error('Backfill attempts studentUid failed:', err);
+      });
+    });
+  }, [isCloudTeacher, firebaseUser, cloudTeacherStudents, cloudTeacherAttempts]);
+
+  // Student Cloud Linked Seats Discovery (auto-detect previously linked seats for Google account)
+  useEffect(() => {
+    if (role !== 'student' || !isAuthReady || !firebaseUser || !firebaseUser.emailVerified) {
+      return;
+    }
+
+    const unsub = subscribeLinkedStudentSeatsCloud(firebaseUser.uid, {
+      onSeats: seats => {
+        setLinkedCloudStudentSeats(seats);
+        setCurrentStudentState(prev => {
+          if (!prev) return prev;
+          const refreshed = seats.find(s => s.id === prev.id && s.ownerUid === prev.ownerUid);
+          return refreshed || prev;
+        });
+      },
+      onError: err => reportCloudError(err),
+    });
+
+    return () => unsub();
+  }, [role, isAuthReady, firebaseUser]);
+
+  // Student Cloud Live Feed & Attempts Listener
+  useEffect(() => {
+    if (!isCloudStudent || !firebaseUser || !currentStudent?.ownerUid) {
+      return;
+    }
+
+    setCloudSyncStatus('connecting');
+    setCloudSyncMessage('Conectando evaluaciones en tiempo real...');
+
+    const unsub = subscribeStudentCourseAndAttemptsCloud(
+      {
+        studentUid: firebaseUser.uid,
+        ownerUid: currentStudent.ownerUid,
+        courseId: currentStudent.courseId,
+      },
+      {
+        onAssignments: list => {
+          setCloudStudentAssignments(list);
+          setCloudSyncStatus('synced');
+          setCloudSyncMessage(`Nube activa · ${currentStudent.accessCode}`);
+        },
+        onAttempts: list => {
+          setCloudStudentAttempts(list);
+          setCloudSyncStatus('synced');
+        },
+        onError: err => reportCloudError(err),
+      }
+    );
+
+    return () => unsub();
+  }, [isCloudStudent, firebaseUser, currentStudent?.ownerUid, currentStudent?.courseId, currentStudent?.accessCode]);
+
+  // Handle direct quiz code navigation after cloud assignments arrive
+  useEffect(() => {
+    if (!pendingDirectQuizCode || !currentStudent) return;
+    const match = cloudStudentAssignments.find(
+      a => a.code.toUpperCase() === pendingDirectQuizCode.toUpperCase()
+    );
+    if (match) {
+      setActiveQuizTaking(match);
+      setPendingDirectQuizCode(null);
+    }
+  }, [pendingDirectQuizCode, cloudStudentAssignments, currentStudent]);
+
+  // Unified collections depending on active mode (Cloud Teacher, Cloud Student, or Local Demo)
+  const students = useMemo(() => {
+    if (isCloudTeacher) return cloudTeacherStudents;
+    if (isCloudStudent && currentStudent) return [currentStudent];
+    return localStudents;
+  }, [isCloudTeacher, cloudTeacherStudents, isCloudStudent, currentStudent, localStudents]);
+
+  const assignments = useMemo(() => {
+    if (isCloudTeacher) return cloudTeacherAssignments;
+    if (isCloudStudent) return cloudStudentAssignments;
+    return localAssignments;
+  }, [isCloudTeacher, cloudTeacherAssignments, isCloudStudent, cloudStudentAssignments, localAssignments]);
+
+  const attempts = useMemo(() => {
+    if (isCloudTeacher) return cloudTeacherAttempts;
+    if (isCloudStudent) return cloudStudentAttempts;
+    return localAttempts;
+  }, [isCloudTeacher, cloudTeacherAttempts, isCloudStudent, cloudStudentAttempts, localAttempts]);
 
   const activeTheme: ThemePaletteId = useMemo(() => {
     if (role === 'student') {
@@ -278,9 +599,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         teachers: { ...prev.teachers, [currentTeacher.id]: themeId },
       }));
       setPendingEntryTheme(null);
+      if (isCloudTeacher && firebaseUser) {
+        void updateTeacherThemeCloud(firebaseUser.uid, themeId).catch(reportCloudError);
+      }
       return;
     }
-    // Choosing from login screen ("desde su ingreso") or Free Practice
     if (role === 'student' || role === 'teacher') {
       setPendingEntryTheme(themeId);
     }
@@ -307,24 +630,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Scoped views strictly for the authenticated teacher
-  const teacherStudents = useMemo(
-    () => (isTeacherAuthenticated ? students.filter(s => s.teacherId === currentTeacher.id) : []),
-    [students, currentTeacher.id, isTeacherAuthenticated]
-  );
+  const teacherStudents = useMemo(() => {
+    if (!isTeacherAuthenticated) return [];
+    if (isCloudTeacher) return cloudTeacherStudents;
+    return localStudents.filter(s => s.teacherId === currentTeacher.id);
+  }, [isTeacherAuthenticated, isCloudTeacher, cloudTeacherStudents, localStudents, currentTeacher.id]);
 
-  const teacherAssignments = useMemo(
-    () => (isTeacherAuthenticated ? assignments.filter(a => a.teacherId === currentTeacher.id) : []),
-    [assignments, currentTeacher.id, isTeacherAuthenticated]
-  );
+  const teacherAssignments = useMemo(() => {
+    if (!isTeacherAuthenticated) return [];
+    if (isCloudTeacher) return cloudTeacherAssignments;
+    return localAssignments.filter(a => a.teacherId === currentTeacher.id);
+  }, [isTeacherAuthenticated, isCloudTeacher, cloudTeacherAssignments, localAssignments, currentTeacher.id]);
 
   const teacherAttempts = useMemo(() => {
     if (!isTeacherAuthenticated) return [];
+    if (isCloudTeacher) return cloudTeacherAttempts;
     const myQuizIds = new Set(teacherAssignments.map(a => a.id));
     const myStudentIds = new Set(teacherStudents.map(s => s.id));
-    return attempts.filter(att => myQuizIds.has(att.quizId) && myStudentIds.has(att.studentId));
-  }, [attempts, teacherAssignments, teacherStudents, isTeacherAuthenticated]);
+    return localAttempts.filter(att => myQuizIds.has(att.quizId) && myStudentIds.has(att.studentId));
+  }, [isTeacherAuthenticated, isCloudTeacher, cloudTeacherAttempts, localAttempts, teacherAssignments, teacherStudents]);
 
-  // Sync to localStorage / sessionStorage
+  // Sync local storage (for demo/offline convenience)
   useEffect(() => {
     localStorage.setItem(`${STORAGE_KEY_PREFIX}current_teacher`, JSON.stringify(currentTeacher));
   }, [currentTeacher]);
@@ -350,23 +676,140 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [selectedCourseId]);
 
   useEffect(() => {
-    localStorage.setItem(`${STORAGE_KEY_PREFIX}students`, JSON.stringify(students));
-  }, [students]);
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}students`, JSON.stringify(localStudents));
+  }, [localStudents]);
 
   useEffect(() => {
-    localStorage.setItem(`${STORAGE_KEY_PREFIX}assignments`, JSON.stringify(assignments));
-  }, [assignments]);
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}assignments`, JSON.stringify(localAssignments));
+  }, [localAssignments]);
 
   useEffect(() => {
-    localStorage.setItem(`${STORAGE_KEY_PREFIX}attempts`, JSON.stringify(attempts));
-  }, [attempts]);
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}attempts`, JSON.stringify(localAttempts));
+  }, [localAttempts]);
 
-  const focusTeacherDefaultCourse = (teacherId: string) => {
-    const newTeacherStudents = students.filter(s => s.teacherId === teacherId);
+  const focusTeacherDefaultCourse = (teacherId: string, sourceStudents: Student[]) => {
+    const newTeacherStudents = sourceStudents.filter(s => s.teacherId === teacherId);
     const hasInCurrent = newTeacherStudents.some(s => s.courseId === selectedCourseId);
     if (!hasInCurrent && newTeacherStudents.length > 0) {
       setSelectedCourseId(newTeacherStudents[0].courseId);
     }
+  };
+
+  // Cloud Auth Helpers
+  const loginTeacherWithGoogle = async (): Promise<AuthActionResult> => {
+    try {
+      const cred = await signInWithPopup(auth, googleProvider);
+      const user = cred.user;
+      if (!user.emailVerified) {
+        return {
+          ok: false,
+          error: 'Tu cuenta Google debe tener el correo verificado para acceder a la base de datos en la nube.',
+        };
+      }
+
+      const teacherObj: Teacher = {
+        id: user.uid,
+        uid: user.uid,
+        name: user.displayName || user.email?.split('@')[0] || 'Docente',
+        email: user.email || '',
+        schoolName: 'Escuela Ricardo Silva Arriagada',
+        commune: 'SLEP Chinchorro · Arica',
+        rbd: '102-4',
+      };
+
+      if (pendingEntryTheme) {
+        setThemePrefs(prev => ({
+          ...prev,
+          teachers: { ...prev.teachers, [user.uid]: pendingEntryTheme },
+        }));
+        setPendingEntryTheme(null);
+      }
+
+      localStorage.setItem(CLOUD_TEACHER_UID_KEY, user.uid);
+      setCloudTeacherUid(user.uid);
+      setCurrentTeacher(teacherObj);
+      setIsTeacherAuthenticated(true);
+      setIsTeacherLoginModalOpen(false);
+      setActiveQuizTaking(null);
+      setRole('teacher');
+      return { ok: true };
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes('popup-closed-by-user') || msg.includes('cancelled-popup-request')) {
+        return { ok: false, error: 'Ventana de Google cerrada antes de completar el ingreso.' };
+      }
+      if (msg.includes('popup-blocked')) {
+        return {
+          ok: false,
+          error: 'Tu navegador bloqueó la ventana emergente de Google. Permite ventanas emergentes e intenta nuevamente.',
+        };
+      }
+      return { ok: false, error: `Error al conectar con Google: ${msg}` };
+    }
+  };
+
+  const connectStudentWithGoogle = async (): Promise<AuthActionResult> => {
+    try {
+      const cred = await signInWithPopup(auth, googleProvider);
+      if (!cred.user.emailVerified) {
+        return { ok: false, error: 'Se requiere una cuenta Google con correo verificado.' };
+      }
+      // Ensure teacher cloud mode is cleared if switching to student Google auth
+      localStorage.removeItem(CLOUD_TEACHER_UID_KEY);
+      setCloudTeacherUid(null);
+      setIsTeacherAuthenticated(false);
+      return { ok: true };
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes('popup-closed-by-user') || msg.includes('cancelled-popup-request')) {
+        return { ok: false, error: 'Ventana de Google cerrada antes de conectar tu cuenta.' };
+      }
+      return { ok: false, error: `No se pudo conectar la cuenta Google: ${msg}` };
+    }
+  };
+
+  const disconnectGoogleAccount = async (): Promise<void> => {
+    localStorage.removeItem(CLOUD_TEACHER_UID_KEY);
+    setCloudTeacherUid(null);
+    setIsTeacherAuthenticated(false);
+    setCurrentStudentState(null);
+    setActiveQuizTaking(null);
+    setLatestCompletedAttempt(null);
+    setCloudSyncStatus('local');
+    setCloudSyncMessage(null);
+    await signOut(auth);
+  };
+
+  const lookupCourseJoinCode = async (joinCode: string) => {
+    return lookupCourseJoinCodeCloud(joinCode);
+  };
+
+  const loginStudentCloudByAccessCode = async (
+    accessCode: string,
+    pin: string,
+    quizDirectCode?: string
+  ): Promise<AuthActionResult> => {
+    if (!firebaseUser || !firebaseUser.emailVerified) {
+      return { ok: false, error: 'Primero conecta tu cuenta Google en el Paso 1.' };
+    }
+    const res = await claimStudentWithAccessCodeCloud({
+      accessCode,
+      pin,
+      firebaseUid: firebaseUser.uid,
+    });
+    if (!res.ok || !res.student) {
+      return { ok: false, error: res.error || 'Credenciales inválidas.' };
+    }
+    if (quizDirectCode?.trim()) {
+      setPendingDirectQuizCode(quizDirectCode.trim().toUpperCase());
+    }
+    setCurrentStudent(res.student);
+    return { ok: true };
+  };
+
+  const getCourseJoinCode = (courseId: string): string | null => {
+    if (!isCloudTeacher || !firebaseUser) return null;
+    return makeCourseJoinCode(firebaseUser.uid, courseId);
   };
 
   const loginTeacher = (teacherIdOrIdentifier: string, password: string): AuthActionResult => {
@@ -403,12 +846,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setPendingEntryTheme(null);
     }
 
+    localStorage.removeItem(CLOUD_TEACHER_UID_KEY);
+    setCloudTeacherUid(null);
     setCurrentTeacher(found);
     setIsTeacherAuthenticated(true);
     setIsTeacherLoginModalOpen(false);
     setActiveQuizTaking(null);
     setRole('teacher');
-    focusTeacherDefaultCourse(found.id);
+    focusTeacherDefaultCourse(found.id, localStudents);
     return { ok: true };
   };
 
@@ -455,6 +900,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setPendingEntryTheme(null);
     }
 
+    localStorage.removeItem(CLOUD_TEACHER_UID_KEY);
+    setCloudTeacherUid(null);
     setTeachers(prev => [newTeacher, ...prev]);
     setCurrentTeacher(newTeacher);
     setIsTeacherAuthenticated(true);
@@ -465,11 +912,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const logoutTeacher = () => {
+    localStorage.removeItem(CLOUD_TEACHER_UID_KEY);
+    setCloudTeacherUid(null);
     setIsTeacherAuthenticated(false);
     setIsTeacherLoginModalOpen(false);
     setActiveQuizTaking(null);
     setPendingEntryTheme(null);
     setRole('teacher');
+    if (firebaseUser) {
+      void signOut(auth);
+    }
   };
 
   const updateTeacherPassword = (currentPassword: string, newPassword: string): AuthActionResult => {
@@ -503,10 +955,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const course = courses.find(c => c.id === courseId);
     const gradeShort = course ? course.section.replace(/\s+/g, '').replace('°Básico', 'B').substring(0, 4) : 'MAT';
 
-    const existingTeacherCourseStudents = students.filter(
-      s => s.courseId === courseId && s.teacherId === currentTeacher.id
-    );
-    const existingAccessCodes = new Set(students.map(s => s.accessCode.toUpperCase()));
+    const existingTeacherCourseStudents = teacherStudents.filter(s => s.courseId === courseId);
+    const existingAccessCodes = new Set(teacherStudents.map(s => s.accessCode.toUpperCase()));
     let counter = existingTeacherCourseStudents.length + 1;
 
     const newStudents: Student[] = [];
@@ -533,7 +983,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         rut = `${r1}.${r2}.${r3}-${dv === 10 ? 'K' : dv}`;
       }
 
-      // Generate globally unique access code across all teachers
       let seqStr = counter < 10 ? `0${counter}` : `${counter}`;
       let accessCode = `MAT-${gradeShort}-${seqStr}`;
       while (existingAccessCodes.has(accessCode.toUpperCase())) {
@@ -546,11 +995,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const pin = Math.floor(1000 + Math.random() * 9000).toString();
 
       newStudents.push({
-        id: `st-${Date.now()}-${counter}-${Math.random().toString(36).substr(2, 4)}`,
+        id: `st-${Date.now()}-${counter}-${Math.random().toString(36).substring(2, 6)}`,
         name,
         rut,
         courseId,
         teacherId: currentTeacher.id,
+        ownerUid: isCloudTeacher && firebaseUser ? firebaseUser.uid : undefined,
+        linkedStudentUid: '',
         accessCode,
         pin,
       });
@@ -558,61 +1009,152 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       counter++;
     }
 
-    setStudents(prev => [...prev, ...newStudents]);
+    if (isCloudTeacher && firebaseUser) {
+      const courseStudentsAfter = [...existingTeacherCourseStudents, ...newStudents];
+      void addStudentsCloud(
+        firebaseUser.uid,
+        currentTeacher.name,
+        courseId,
+        course?.section || courseId,
+        newStudents,
+        courseStudentsAfter
+      ).catch(reportCloudError);
+    } else {
+      setLocalStudents(prev => [...prev, ...newStudents]);
+    }
+
     return newStudents.length;
   };
 
   const removeStudentFromCourse = (studentId: string) => {
     if (!isTeacherAuthenticated) return;
-    setStudents(prev =>
+    if (isCloudTeacher && firebaseUser) {
+      const target = cloudTeacherStudents.find(s => s.id === studentId);
+      if (!target) return;
+      const courseObj = courses.find(c => c.id === target.courseId);
+      const remaining = cloudTeacherStudents.filter(
+        s => s.courseId === target.courseId && s.id !== studentId
+      );
+      void removeStudentsCloud(
+        firebaseUser.uid,
+        currentTeacher.name,
+        target.courseId,
+        courseObj?.section || target.courseId,
+        [target],
+        remaining
+      ).catch(reportCloudError);
+      return;
+    }
+
+    setLocalStudents(prev =>
       prev.filter(s => !(s.id === studentId && s.teacherId === currentTeacher.id))
     );
   };
 
   const clearCourseStudentsForTeacher = (courseId: string) => {
     if (!isTeacherAuthenticated) return;
-    setStudents(prev =>
+    if (isCloudTeacher && firebaseUser) {
+      const removed = cloudTeacherStudents.filter(s => s.courseId === courseId);
+      if (removed.length === 0) return;
+      const courseObj = courses.find(c => c.id === courseId);
+      void removeStudentsCloud(
+        firebaseUser.uid,
+        currentTeacher.name,
+        courseId,
+        courseObj?.section || courseId,
+        removed,
+        []
+      ).catch(reportCloudError);
+      return;
+    }
+
+    setLocalStudents(prev =>
       prev.filter(s => !(s.courseId === courseId && s.teacherId === currentTeacher.id))
     );
+  };
+
+  const unlinkStudentGoogleAccount = (studentId: string) => {
+    if (!isCloudTeacher || !firebaseUser) return;
+    const target = cloudTeacherStudents.find(s => s.id === studentId);
+    if (!target) return;
+    void unlinkStudentGoogleCloud(firebaseUser.uid, target).catch(reportCloudError);
   };
 
   const addQuizAssignment = (assignment: QuizAssignment) => {
     if (!isTeacherAuthenticated) return;
     const ownedAssignment: QuizAssignment = {
       ...assignment,
-      teacherId: assignment.teacherId || currentTeacher.id,
+      teacherId: currentTeacher.id,
+      ownerUid: isCloudTeacher && firebaseUser ? firebaseUser.uid : undefined,
       teacherName: assignment.teacherName || currentTeacher.name,
     };
-    setAssignments(prev => [ownedAssignment, ...prev]);
+
+    if (isCloudTeacher && firebaseUser) {
+      const courseAfter = [
+        ownedAssignment,
+        ...cloudTeacherAssignments.filter(a => a.courseId === ownedAssignment.courseId),
+      ];
+      void addQuizAssignmentCloud(firebaseUser.uid, ownedAssignment, courseAfter).catch(reportCloudError);
+    } else {
+      setLocalAssignments(prev => [ownedAssignment, ...prev]);
+    }
   };
 
   const deleteQuizAssignment = (id: string) => {
     if (!isTeacherAuthenticated) return;
-    setAssignments(prev =>
+    if (isCloudTeacher && firebaseUser) {
+      const target = cloudTeacherAssignments.find(a => a.id === id);
+      if (!target) return;
+      const remaining = cloudTeacherAssignments.filter(
+        a => a.courseId === target.courseId && a.id !== id
+      );
+      void deleteQuizAssignmentCloud(firebaseUser.uid, target, remaining).catch(reportCloudError);
+      return;
+    }
+
+    setLocalAssignments(prev =>
       prev.filter(a => !(a.id === id && a.teacherId === currentTeacher.id))
     );
   };
 
   const recordQuizAttempt = (attempt: QuizAttempt) => {
     const targetQuiz = assignments.find(q => q.id === attempt.quizId);
+    const ownerUid = targetQuiz?.ownerUid || currentStudent?.ownerUid || (isCloudTeacher && firebaseUser ? firebaseUser.uid : undefined);
+
     const ownedAttempt: QuizAttempt = {
       ...attempt,
       teacherId: attempt.teacherId || targetQuiz?.teacherId || currentTeacher.id,
+      ownerUid,
+      assignmentDocId: ownerUid ? makeAssignmentDocId(ownerUid, attempt.quizId) : undefined,
+      studentUid: firebaseUser && role === 'student' ? firebaseUser.uid : '',
     };
-    setAttempts(prev => [ownedAttempt, ...prev]);
+
     setLatestCompletedAttempt(ownedAttempt);
+
+    if (ownerUid && firebaseUser && firebaseUser.emailVerified) {
+      void recordQuizAttemptCloud({
+        attempt: ownedAttempt,
+        ownerUid,
+        studentUid: role === 'student' ? firebaseUser.uid : '',
+      }).catch(reportCloudError);
+    } else {
+      setLocalAttempts(prev => [ownedAttempt, ...prev]);
+    }
   };
 
   const deleteQuizAttempts = (attemptIds: string[]) => {
     if (!isTeacherAuthenticated || attemptIds.length === 0) return;
     const requestedIds = new Set(attemptIds);
-    const allowedIds = new Set(
-      teacherAttempts.filter(att => requestedIds.has(att.id)).map(att => att.id)
-    );
-    if (allowedIds.size === 0) return;
+    const allowedIds = teacherAttempts.filter(att => requestedIds.has(att.id)).map(att => att.id);
+    if (allowedIds.length === 0) return;
+    const allowedSet = new Set(allowedIds);
 
-    setAttempts(prev => prev.filter(att => !allowedIds.has(att.id)));
-    setLatestCompletedAttempt(prev => (prev && allowedIds.has(prev.id) ? null : prev));
+    if (isCloudTeacher && firebaseUser) {
+      void deleteQuizAttemptsCloud(firebaseUser.uid, allowedIds).catch(reportCloudError);
+    } else {
+      setLocalAttempts(prev => prev.filter(att => !allowedSet.has(att.id)));
+    }
+    setLatestCompletedAttempt(prev => (prev && allowedSet.has(prev.id) ? null : prev));
   };
 
   const deleteQuizAttempt = (attemptId: string) => {
@@ -640,18 +1182,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const nextLevel = getMineducPerformanceLevel(nextGrade);
 
-    setAttempts(prev =>
-      prev.map(att =>
-        att.id === attemptId
-          ? {
-              ...att,
-              chileanGrade: nextGrade,
-              percentage: nextPercentage,
-              performanceLevel: nextLevel,
-            }
-          : att
-      )
-    );
+    if (isCloudTeacher && firebaseUser) {
+      void updateQuizAttemptGradeCloud(
+        firebaseUser.uid,
+        attemptId,
+        nextGrade,
+        nextPercentage,
+        nextLevel
+      ).catch(reportCloudError);
+    } else {
+      setLocalAttempts(prev =>
+        prev.map(att =>
+          att.id === attemptId
+            ? {
+                ...att,
+                chileanGrade: nextGrade,
+                percentage: nextPercentage,
+                performanceLevel: nextLevel,
+              }
+            : att
+        )
+      );
+    }
 
     setLatestCompletedAttempt(prev =>
       prev && prev.id === attemptId
@@ -667,15 +1219,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const resetDemoData = () => {
     if (!isTeacherAuthenticated) return;
+    if (isCloudTeacher) {
+      setSelectedCourseId('course-7a');
+      setActiveTeacherTab('matrix');
+      return;
+    }
     localStorage.clear();
     sessionStorage.removeItem(SESSION_AUTH_KEY);
     setTeachers(DEFAULT_TEACHERS);
     setCurrentTeacher(DEFAULT_TEACHERS[0]);
     setIsTeacherAuthenticated(false);
     setCourses(INITIAL_COURSES.map(c => ({ ...c, teacherName: DEFAULT_TEACHERS[0].name })));
-    setStudents(INITIAL_STUDENTS);
-    setAssignments(INITIAL_ASSIGNMENTS);
-    setAttempts(INITIAL_ATTEMPTS);
+    setLocalStudents(INITIAL_STUDENTS);
+    setLocalAssignments(INITIAL_ASSIGNMENTS);
+    setLocalAttempts(INITIAL_ATTEMPTS);
     setSelectedCourseId('course-7a');
     setActiveTeacherTab('matrix');
     setCurrentStudent(null);
@@ -685,8 +1242,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const startQuizAsStudent = (quizId: string, studentId: string) => {
     if (!isTeacherAuthenticated) return;
-    const quiz = assignments.find(a => a.id === quizId && a.teacherId === currentTeacher.id);
-    const student = students.find(s => s.id === studentId && s.teacherId === currentTeacher.id);
+    const quiz = teacherAssignments.find(a => a.id === quizId);
+    const student = teacherStudents.find(s => s.id === studentId);
     if (quiz && student) {
       setCurrentStudent(student);
       setActiveQuizTaking(quiz);
@@ -698,14 +1255,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const cleanPin = newPin.trim();
     if (!cleanPin || cleanPin.length < 4) return false;
 
-    setStudents(prev =>
-      prev.map(s => {
-        if (s.id === studentId) {
-          return { ...s, pin: cleanPin, hasCustomPin: true };
-        }
-        return s;
-      })
-    );
+    const target =
+      (currentStudent && currentStudent.id === studentId ? currentStudent : null) ||
+      students.find(s => s.id === studentId) ||
+      null;
+
+    if (target?.ownerUid && firebaseUser && firebaseUser.emailVerified) {
+      void updateStudentPinCloud(target, cleanPin).catch(reportCloudError);
+    } else {
+      setLocalStudents(prev =>
+        prev.map(s => (s.id === studentId ? { ...s, pin: cleanPin, hasCustomPin: true } : s))
+      );
+    }
 
     if (currentStudent && currentStudent.id === studentId) {
       setCurrentStudent(prev => (prev ? { ...prev, pin: cleanPin, hasCustomPin: true } : null));
@@ -721,6 +1282,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setRole,
         activeTeacherTab,
         setActiveTeacherTab,
+        firebaseUser,
+        isAuthReady,
+        isCloudTeacher,
+        cloudSyncStatus,
+        cloudSyncMessage,
+        linkedCloudStudentSeats,
+        loginTeacherWithGoogle,
+        connectStudentWithGoogle,
+        disconnectGoogleAccount,
+        lookupCourseJoinCode,
+        loginStudentCloudByAccessCode,
+        unlinkStudentGoogleAccount,
+        getCourseJoinCode,
         teachers,
         currentTeacher,
         isTeacherAuthenticated,

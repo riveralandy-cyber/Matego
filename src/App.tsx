@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Navigation } from './components/Navigation';
 import { ThatQuizSidebar } from './components/TeacherDashboard/ThatQuizSidebar';
 import { ThatQuizGradeMatrix } from './components/TeacherDashboard/ThatQuizGradeMatrix';
@@ -260,8 +261,10 @@ const MainAppContent: React.FC = () => {
 
 export default function App() {
   return (
-    <AppProvider>
-      <MainAppContent />
-    </AppProvider>
+    <ErrorBoundary>
+      <AppProvider>
+        <MainAppContent />
+      </AppProvider>
+    </ErrorBoundary>
   );
 }

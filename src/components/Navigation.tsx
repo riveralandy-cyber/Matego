@@ -1,12 +1,14 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { UserCheck, GraduationCap, RotateCcw, Sparkles, LogOut, Lock, PlayCircle } from 'lucide-react';
+import { UserCheck, GraduationCap, RotateCcw, Sparkles, LogOut, Lock, PlayCircle, Cloud } from 'lucide-react';
 
 export const Navigation: React.FC = () => {
   const {
     role,
     setRole,
     isTeacherAuthenticated,
+    isCloudTeacher,
+    cloudSyncStatus,
     logoutTeacher,
     activeTeacherTab,
     setActiveTeacherTab,
@@ -101,6 +103,16 @@ export const Navigation: React.FC = () => {
         <div className="flex items-center gap-2 shrink-0">
           {showTeacherControls && (
             <>
+              {isCloudTeacher && (
+                <span
+                  className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800 whitespace-nowrap"
+                  title="Base de datos en tiempo real conectada con Firebase Firestore"
+                >
+                  <Cloud className="w-3.5 h-3.5" />
+                  <span>{cloudSyncStatus === 'connecting' ? 'Sincronizando...' : 'Nube en vivo'}</span>
+                </span>
+              )}
+
               <button
                 type="button"
                 onClick={() => setIsTeacherLoginModalOpen(true)}
@@ -123,14 +135,16 @@ export const Navigation: React.FC = () => {
                 <span className="hidden sm:inline whitespace-nowrap">Cerrar sesión</span>
               </button>
 
-              <button
-                type="button"
-                onClick={resetDemoData}
-                title="Restablecer datos demo"
-                className="p-2 tq-text-muted hover:tq-text hover:bg-[var(--tq-muted-bg)] rounded-lg transition-colors cursor-pointer"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </button>
+              {!isCloudTeacher && (
+                <button
+                  type="button"
+                  onClick={resetDemoData}
+                  title="Restablecer datos demo locales"
+                  className="p-2 tq-text-muted hover:tq-text hover:bg-[var(--tq-muted-bg)] rounded-lg transition-colors cursor-pointer"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </button>
+              )}
             </>
           )}
 

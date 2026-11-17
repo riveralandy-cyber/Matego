@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { BookOpen, Calendar, Clock, Play, CheckCircle2, RotateCcw, LogOut, FileText, KeyRound, Sparkles, Palette, Award } from 'lucide-react';
+import { BookOpen, Calendar, Clock, Play, CheckCircle2, RotateCcw, LogOut, FileText, KeyRound, Sparkles, Palette, Award, Cloud } from 'lucide-react';
 import { formatGrade, getGradeColorClass, formatAxisName, formatGradeLevelName } from '../../utils/chileanGrades';
 import { THEME_PALETTES } from '../../utils/themes';
 import { QuizAssignment, QuizAttempt, SimceGradeLevel, ThematicAxis } from '../../types';
@@ -42,6 +42,11 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   const studentAssignments = assignments.filter(
     a => a.courseId === currentStudent.courseId && a.teacherId === currentStudent.teacherId
   );
+  const resolvedTeacherName =
+    studentTeacher?.name ||
+    studentAssignments.find(a => a.teacherName)?.teacherName ||
+    course?.teacherName ||
+    'Docente';
   const studentAttempts = attempts.filter(att => att.studentId === currentStudent.id);
 
   const completedQuizIds = new Set(studentAttempts.map(a => a.quizId));
@@ -104,9 +109,15 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 <Palette className="w-3 h-3" />
                 <span>Tema: {activePaletteObj.shortLabel}</span>
               </button>
+              {currentStudent.ownerUid && (
+                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-lg border bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800 inline-flex items-center gap-1">
+                  <Cloud className="w-3 h-3" />
+                  <span>Nube en vivo</span>
+                </span>
+              )}
             </div>
             <p className="text-xs tq-text-muted mt-1">
-              {course?.section} · Prof. {studentTeacher?.name || course?.teacherName} · {course?.schoolName} · RUN: {currentStudent.rut}
+              {course?.section} · Prof. {resolvedTeacherName} · {course?.schoolName} {currentStudent.rut ? `· RUN: ${currentStudent.rut}` : ''}
             </p>
           </div>
         </div>

@@ -1,0 +1,568 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ---------------------------------------------------------
+    // Global Hardened Primitives
+    // ---------------------------------------------------------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isStringRange(val, minLen, maxLen) {
+      return val is string && val.size() >= minLen && val.size() <= maxLen;
+    }
+
+    function isEnrolledInCourse(ownerUid, courseId) {
+      return exists(/databases/$(database)/documents/courseMembers/$(ownerUid + '__' + courseId + '__' + request.auth.uid));
+    }
+
+    // ---------------------------------------------------------
+    // Entity Validation Blueprints
+    // ---------------------------------------------------------
+    function isValidTeacherProfile(data) {
+      return data.keys().hasAll([
+          'uid', 'teacherId', 'name', 'email', 'schoolName', 'commune', 'rbd',
+          'activeTheme', 'seededInitialData', 'serverCreatedAt', 'serverUpdatedAt'
+        ])
+        && data.keys().hasOnly([
+          'uid', 'teacherId', 'name', 'email', 'schoolName', 'commune', 'rbd',
+          'activeTheme', 'seededInitialData', 'serverCreatedAt', 'serverUpdatedAt'
+        ])
+        && isValidId(data.uid)
+        && isValidId(data.teacherId)
+        && isStringRange(data.name, 2, 120)
+        && isStringRange(data.email, 0, 160)
+        && isStringRange(data.schoolName, 1, 160)
+        && isStringRange(data.commune, 1, 120)
+        && isStringRange(data.rbd, 1, 24)
+        && data.activeTheme in ['estandar', 'pastel', 'claro', 'nocturno', 'vibrante']
+        && data.seededInitialData is bool
+        && data.serverCreatedAt is timestamp
+        && data.serverUpdatedAt is timestamp;
+    }
+
+    function isValidRosterStudent(data) {
+      return data.keys().hasAll([
+          'id', 'ownerUid', 'teacherId', 'name', 'rut', 'courseId',
+          'accessCode', 'pin', 'hasCustomPin', 'linkedStudentUid',
+          'serverCreatedAt', 'serverUpdatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerUid', 'teacherId', 'name', 'rut', 'courseId',
+          'accessCode', 'pin', 'hasCustomPin', 'linkedStudentUid',
+          'serverCreatedAt', 'serverUpdatedAt'
+        ])
+        && isValidId(data.id)
+        && isValidId(data.ownerUid)
+        && isValidId(data.teacherId)
+        && isStringRange(data.name, 2, 120)
+        && isStringRange(data.rut, 0, 24)
+        && isValidId(data.courseId) && data.courseId.size() <= 64
+        && isValidId(data.accessCode) && data.accessCode.size() >= 3 && data.accessCode.size() <= 32
+        && data.pin is string && data.pin.matches('^[0-9]{4,16}$')
+        && data.hasCustomPin is bool
+        && (data.linkedStudentUid == '' || isValidId(data.linkedStudentUid))
+        && data.serverCreatedAt is timestamp
+        && data.serverUpdatedAt is timestamp;
+    }
+
+    function isValidStudentDirectory(data) {
+      return data.keys().hasAll([
+          'accessCode', 'studentDocId', 'studentId', 'studentName', 'courseId',
+          'teacherId', 'teacherName', 'ownerUid', 'pinHash', 'hasCustomPin',
+          'linkedStudentUid', 'serverCreatedAt', 'serverUpdatedAt'
+        ])
+        && data.keys().hasOnly([
+          'accessCode', 'studentDocId', 'studentId', 'studentName', 'courseId',
+          'teacherId', 'teacherName', 'ownerUid', 'pinHash', 'hasCustomPin',
+          'linkedStudentUid', 'serverCreatedAt', 'serverUpdatedAt'
+        ])
+        && isValidId(data.accessCode) && data.accessCode.size() >= 3 && data.accessCode.size() <= 32
+        && isValidId(data.studentDocId)
+        && isValidId(data.studentId)
+        && isStringRange(data.studentName, 2, 120)
+        && isValidId(data.courseId) && data.courseId.size() <= 64
+        && isValidId(data.teacherId)
+        && isStringRange(data.teacherName, 2, 120)
+        && isValidId(data.ownerUid)
+        && data.pinHash is string && data.pinHash.matches('^[a-f0-9]{64}$')
+        && data.hasCustomPin is bool
+        && (data.linkedStudentUid == '' || isValidId(data.linkedStudentUid))
+        && data.serverCreatedAt is timestamp
+        && data.serverUpdatedAt is timestamp;
+    }
+
+    function isValidCourseJoinCode(data) {
+      return data.keys().hasAll([
+          'joinCode', 'ownerUid', 'teacherId', 'teacherName', 'courseId',
+          'courseSection', 'studentsPreview', 'serverCreatedAt', 'serverUpdatedAt'
+        ])
+        && data.keys().hasOnly([
+          'joinCode', 'ownerUid', 'teacherId', 'teacherName', 'courseId',
+          'courseSection', 'studentsPreview', 'serverCreatedAt', 'serverUpdatedAt'
+        ])
+        && isValidId(data.joinCode) && data.joinCode.size() >= 4 && data.joinCode.size() <= 48
+        && isValidId(data.ownerUid)
+        && isValidId(data.teacherId)
+        && isStringRange(data.teacherName, 2, 120)
+        && isValidId(data.courseId) && data.courseId.size() <= 64
+        && isStringRange(data.courseSection, 2, 64)
+        && data.studentsPreview is list
+        && data.studentsPreview.size() <= 80
+        && (data.studentsPreview.size() == 0 || (
+          data.studentsPreview[0] is map
+          && data.studentsPreview[0].keys().hasOnly(['studentId', 'name', 'accessCode'])
+          && data.studentsPreview[0].studentId is string
+          && data.studentsPreview[0].name is string
+          && data.studentsPreview[0].accessCode is string
+        ))
+        && data.serverCreatedAt is timestamp
+        && data.serverUpdatedAt is timestamp;
+    }
+
+    function isValidCourseMember(data) {
+      return data.keys().hasAll([
+          'memberId', 'ownerUid', 'courseId', 'studentUid', 'studentDocId',
+          'accessCode', 'serverCreatedAt', 'serverUpdatedAt'
+        ])
+        && data.keys().hasOnly([
+          'memberId', 'ownerUid', 'courseId', 'studentUid', 'studentDocId',
+          'accessCode', 'serverCreatedAt', 'serverUpdatedAt'
+        ])
+        && isValidId(data.memberId)
+        && isValidId(data.ownerUid)
+        && isValidId(data.courseId) && data.courseId.size() <= 64
+        && isValidId(data.studentUid)
+        && isValidId(data.studentDocId)
+        && isValidId(data.accessCode) && data.accessCode.size() >= 3 && data.accessCode.size() <= 32
+        && data.serverCreatedAt is timestamp
+        && data.serverUpdatedAt is timestamp;
+    }
+
+    function isValidCourseFeed(data) {
+      return data.keys().hasAll([
+          'feedId', 'ownerUid', 'courseId', 'assignmentIds', 'serverCreatedAt', 'serverUpdatedAt'
+        ])
+        && data.keys().hasOnly([
+          'feedId', 'ownerUid', 'courseId', 'assignmentIds', 'serverCreatedAt', 'serverUpdatedAt'
+        ])
+        && isValidId(data.feedId)
+        && isValidId(data.ownerUid)
+        && isValidId(data.courseId) && data.courseId.size() <= 64
+        && data.assignmentIds is list
+        && data.assignmentIds.size() <= 100
+        && (data.assignmentIds.size() == 0 || isValidId(data.assignmentIds[0]))
+        && data.serverCreatedAt is timestamp
+        && data.serverUpdatedAt is timestamp;
+    }
+
+    function isValidQuizAssignment(data) {
+      return data.keys().hasAll([
+          'id', 'ownerUid', 'code', 'title', 'courseId', 'teacherId', 'teacherName',
+          'gradeLevel', 'axis', 'oaCode', 'difficulty', 'totalQuestions', 'deadline',
+          'timeLimitMinutes', 'questions', 'createdAt', 'isSimce', 'simceAxisFilter',
+          'serverCreatedAt', 'serverUpdatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerUid', 'code', 'title', 'courseId', 'teacherId', 'teacherName',
+          'gradeLevel', 'axis', 'oaCode', 'difficulty', 'totalQuestions', 'deadline',
+          'timeLimitMinutes', 'questions', 'createdAt', 'isSimce', 'simceAxisFilter',
+          'serverCreatedAt', 'serverUpdatedAt'
+        ])
+        && isValidId(data.id)
+        && isValidId(data.ownerUid)
+        && isStringRange(data.code, 2, 40)
+        && isStringRange(data.title, 2, 200)
+        && isValidId(data.courseId) && data.courseId.size() <= 64
+        && isValidId(data.teacherId)
+        && isStringRange(data.teacherName, 1, 120)
+        && data.gradeLevel in ['1_basico', '2_basico', '3_basico', '4_basico', '5_basico', '6_basico', '7_basico', '8_basico']
+        && data.axis in ['numeros_operaciones', 'patrones_algebra', 'geometria', 'medicion', 'datos_probabilidades']
+        && isStringRange(data.oaCode, 1, 40)
+        && data.difficulty in ['facil', 'medio', 'dificil', 'progresivo']
+        && data.totalQuestions is number && data.totalQuestions >= 1 && data.totalQuestions <= 50
+        && isStringRange(data.deadline, 0, 32)
+        && data.timeLimitMinutes is number && data.timeLimitMinutes >= 0 && data.timeLimitMinutes <= 240
+        && data.questions is list && data.questions.size() >= 1 && data.questions.size() <= 50
+        && data.questions[0] is map
+        && isStringRange(data.createdAt, 1, 40)
+        && data.isSimce is bool
+        && isStringRange(data.simceAxisFilter, 0, 32)
+        && data.serverCreatedAt is timestamp
+        && data.serverUpdatedAt is timestamp;
+    }
+
+    function isValidQuizAttempt(data) {
+      return data.keys().hasAll([
+          'id', 'ownerUid', 'studentUid', 'quizId', 'assignmentDocId', 'quizTitle',
+          'oaCode', 'axis', 'studentId', 'studentName', 'courseId', 'teacherId',
+          'answers', 'score', 'totalQuestions', 'percentage', 'chileanGrade',
+          'performanceLevel', 'completedAt', 'durationSeconds', 'isSimce',
+          'simceScore', 'simceLevel', 'serverCreatedAt', 'serverUpdatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerUid', 'studentUid', 'quizId', 'assignmentDocId', 'quizTitle',
+          'oaCode', 'axis', 'studentId', 'studentName', 'courseId', 'teacherId',
+          'answers', 'score', 'totalQuestions', 'percentage', 'chileanGrade',
+          'performanceLevel', 'completedAt', 'durationSeconds', 'isSimce',
+          'simceScore', 'simceLevel', 'serverCreatedAt', 'serverUpdatedAt'
+        ])
+        && isValidId(data.id)
+        && isValidId(data.ownerUid)
+        && (data.studentUid == '' || isValidId(data.studentUid))
+        && isValidId(data.quizId)
+        && isValidId(data.assignmentDocId)
+        && isStringRange(data.quizTitle, 1, 200)
+        && isStringRange(data.oaCode, 1, 40)
+        && data.axis in ['numeros_operaciones', 'patrones_algebra', 'geometria', 'medicion', 'datos_probabilidades']
+        && isValidId(data.studentId)
+        && isStringRange(data.studentName, 2, 120)
+        && isValidId(data.courseId) && data.courseId.size() <= 64
+        && isValidId(data.teacherId)
+        && data.answers is list && data.answers.size() <= 50
+        && (data.answers.size() == 0 || data.answers[0] is map)
+        && data.score is number && data.score >= 0 && data.score <= data.totalQuestions
+        && data.totalQuestions is number && data.totalQuestions >= 1 && data.totalQuestions <= 50
+        && data.percentage is number && data.percentage >= 0 && data.percentage <= 100
+        && data.chileanGrade is number && data.chileanGrade >= 1.0 && data.chileanGrade <= 7.0
+        && data.performanceLevel in ['Insuficiente', 'Elemental', 'Adecuado']
+        && isStringRange(data.completedAt, 1, 40)
+        && data.durationSeconds is number && data.durationSeconds >= 0 && data.durationSeconds <= 86400
+        && data.isSimce is bool
+        && data.simceScore is number && data.simceScore >= 0 && data.simceScore <= 450
+        && isStringRange(data.simceLevel, 0, 24)
+        && data.serverCreatedAt is timestamp
+        && data.serverUpdatedAt is timestamp;
+    }
+
+    // ---------------------------------------------------------
+    // Collection Match Blocks
+    // ---------------------------------------------------------
+
+    // Connection diagnostic doc
+    match /test/{docId} {
+      allow get: if isVerifiedUser() && docId == 'connection';
+    }
+
+    // 1. Private Teacher Profile
+    match /teachers/{teacherUid} {
+      allow get: if isVerifiedUser() && isValidId(teacherUid) && request.auth.uid == teacherUid;
+      allow list: if false;
+      allow create: if isVerifiedUser()
+        && isValidId(teacherUid)
+        && request.auth.uid == teacherUid
+        && isValidTeacherProfile(incoming())
+        && incoming().uid == request.auth.uid
+        && incoming().serverCreatedAt == request.time
+        && incoming().serverUpdatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(teacherUid)
+        && isValidTeacherProfile(incoming())
+        && request.auth.uid == teacherUid
+        && existing().uid == request.auth.uid
+        && incoming().uid == existing().uid
+        && incoming().teacherId == existing().teacherId
+        && incoming().serverCreatedAt == existing().serverCreatedAt
+        && incoming().serverUpdatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'email', 'schoolName', 'commune', 'rbd', 'activeTheme', 'seededInitialData', 'serverUpdatedAt'
+        ]);
+      allow delete: if false;
+    }
+
+    // 2. Teacher Roster Students (PII Isolated to Owner Teacher & Linked Student)
+    match /teacherRosterStudents/{studentDocId} {
+      allow get: if isVerifiedUser()
+        && isValidId(studentDocId)
+        && (existing().ownerUid == request.auth.uid || existing().linkedStudentUid == request.auth.uid);
+      allow list: if isVerifiedUser()
+        && (existing().ownerUid == request.auth.uid || existing().linkedStudentUid == request.auth.uid);
+      allow create: if isVerifiedUser()
+        && isValidId(studentDocId)
+        && isValidRosterStudent(incoming())
+        && incoming().ownerUid == request.auth.uid
+        && incoming().serverCreatedAt == request.time
+        && incoming().serverUpdatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(studentDocId)
+        && isValidRosterStudent(incoming())
+        && incoming().id == existing().id
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().teacherId == existing().teacherId
+        && incoming().serverCreatedAt == existing().serverCreatedAt
+        && incoming().serverUpdatedAt == request.time
+        && (
+          // Tier 1: Owner teacher updates roster info or links/syncs student
+          (
+            existing().ownerUid == request.auth.uid
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'name', 'rut', 'courseId', 'accessCode', 'pin', 'hasCustomPin', 'linkedStudentUid', 'serverUpdatedAt'
+            ])
+          )
+          // Tier 2a: Student claims their seat matching studentDirectory
+          || (
+            (existing().linkedStudentUid == '' || existing().linkedStudentUid == request.auth.uid)
+            && incoming().linkedStudentUid == request.auth.uid
+            && incoming().diff(existing()).affectedKeys().hasOnly(['linkedStudentUid', 'serverUpdatedAt'])
+            && getAfter(/databases/$(database)/documents/studentDirectory/$(existing().accessCode)).data.linkedStudentUid == request.auth.uid
+          )
+          // Tier 2b: Linked student updates only their personal PIN
+          || (
+            existing().linkedStudentUid == request.auth.uid
+            && incoming().diff(existing()).affectedKeys().hasOnly(['pin', 'hasCustomPin', 'serverUpdatedAt'])
+          )
+        );
+      allow delete: if isVerifiedUser()
+        && isValidId(studentDocId)
+        && existing().ownerUid == request.auth.uid;
+    }
+
+    // 3. Student Directory (Non-PII lookup keyed by uppercase accessCode)
+    match /studentDirectory/{accessCode} {
+      allow get: if isVerifiedUser() && isValidId(accessCode);
+      allow list: if isVerifiedUser()
+        && (existing().ownerUid == request.auth.uid || existing().linkedStudentUid == request.auth.uid);
+      allow create: if isVerifiedUser()
+        && isValidId(accessCode)
+        && isValidStudentDirectory(incoming())
+        && incoming().accessCode == accessCode
+        && incoming().ownerUid == request.auth.uid
+        && incoming().serverCreatedAt == request.time
+        && incoming().serverUpdatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(accessCode)
+        && isValidStudentDirectory(incoming())
+        && incoming().accessCode == existing().accessCode
+        && incoming().studentDocId == existing().studentDocId
+        && incoming().studentId == existing().studentId
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().teacherId == existing().teacherId
+        && incoming().serverCreatedAt == existing().serverCreatedAt
+        && incoming().serverUpdatedAt == request.time
+        && (
+          // Tier 1: Owner teacher updates directory metadata or pinHash
+          (
+            existing().ownerUid == request.auth.uid
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'studentName', 'courseId', 'teacherName', 'pinHash', 'hasCustomPin', 'linkedStudentUid', 'serverUpdatedAt'
+            ])
+          )
+          // Tier 2a: Student claims directory entry
+          || (
+            (existing().linkedStudentUid == '' || existing().linkedStudentUid == request.auth.uid)
+            && incoming().linkedStudentUid == request.auth.uid
+            && incoming().diff(existing()).affectedKeys().hasOnly(['linkedStudentUid', 'serverUpdatedAt'])
+          )
+          // Tier 2b: Linked student updates pinHash
+          || (
+            existing().linkedStudentUid == request.auth.uid
+            && incoming().diff(existing()).affectedKeys().hasOnly(['pinHash', 'hasCustomPin', 'serverUpdatedAt'])
+          )
+        );
+      allow delete: if isVerifiedUser()
+        && isValidId(accessCode)
+        && existing().ownerUid == request.auth.uid;
+    }
+
+    // 4. Course Join Codes (Class directory without PII)
+    match /courseJoinCodes/{joinCode} {
+      allow get: if isVerifiedUser() && isValidId(joinCode);
+      allow list: if isVerifiedUser() && existing().ownerUid == request.auth.uid;
+      allow create: if isVerifiedUser()
+        && isValidId(joinCode)
+        && isValidCourseJoinCode(incoming())
+        && incoming().joinCode == joinCode
+        && incoming().ownerUid == request.auth.uid
+        && incoming().serverCreatedAt == request.time
+        && incoming().serverUpdatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(joinCode)
+        && isValidCourseJoinCode(incoming())
+        && existing().ownerUid == request.auth.uid
+        && incoming().joinCode == existing().joinCode
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().teacherId == existing().teacherId
+        && incoming().courseId == existing().courseId
+        && incoming().serverCreatedAt == existing().serverCreatedAt
+        && incoming().serverUpdatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'teacherName', 'courseSection', 'studentsPreview', 'serverUpdatedAt'
+        ]);
+      allow delete: if isVerifiedUser()
+        && isValidId(joinCode)
+        && existing().ownerUid == request.auth.uid;
+    }
+
+    // 5. Verified Course Memberships
+    match /courseMembers/{memberDocId} {
+      allow get: if isVerifiedUser()
+        && isValidId(memberDocId)
+        && (existing().ownerUid == request.auth.uid || existing().studentUid == request.auth.uid);
+      allow list: if isVerifiedUser()
+        && (existing().ownerUid == request.auth.uid || existing().studentUid == request.auth.uid);
+      allow create: if isVerifiedUser()
+        && isValidId(memberDocId)
+        && isValidCourseMember(incoming())
+        && memberDocId == (incoming().ownerUid + '__' + incoming().courseId + '__' + request.auth.uid)
+        && incoming().memberId == memberDocId
+        && incoming().studentUid == request.auth.uid
+        && incoming().serverCreatedAt == request.time
+        && incoming().serverUpdatedAt == request.time
+        && getAfter(/databases/$(database)/documents/studentDirectory/$(incoming().accessCode)).data.linkedStudentUid == request.auth.uid
+        && getAfter(/databases/$(database)/documents/studentDirectory/$(incoming().accessCode)).data.ownerUid == incoming().ownerUid
+        && getAfter(/databases/$(database)/documents/studentDirectory/$(incoming().accessCode)).data.courseId == incoming().courseId;
+      allow update: if false;
+      allow delete: if isVerifiedUser()
+        && isValidId(memberDocId)
+        && (existing().ownerUid == request.auth.uid || existing().studentUid == request.auth.uid);
+    }
+
+    // 6. Real-Time Course Assignment Feeds
+    match /courseFeeds/{courseFeedId} {
+      allow get: if isVerifiedUser()
+        && isValidId(courseFeedId)
+        && (
+          existing().ownerUid == request.auth.uid
+          || isEnrolledInCourse(existing().ownerUid, existing().courseId)
+        );
+      allow list: if isVerifiedUser() && existing().ownerUid == request.auth.uid;
+      allow create: if isVerifiedUser()
+        && isValidId(courseFeedId)
+        && isValidCourseFeed(incoming())
+        && courseFeedId == (request.auth.uid + '__' + incoming().courseId)
+        && incoming().feedId == courseFeedId
+        && incoming().ownerUid == request.auth.uid
+        && incoming().serverCreatedAt == request.time
+        && incoming().serverUpdatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(courseFeedId)
+        && isValidCourseFeed(incoming())
+        && existing().ownerUid == request.auth.uid
+        && incoming().feedId == existing().feedId
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().courseId == existing().courseId
+        && incoming().serverCreatedAt == existing().serverCreatedAt
+        && incoming().serverUpdatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['assignmentIds', 'serverUpdatedAt']);
+      allow delete: if isVerifiedUser()
+        && isValidId(courseFeedId)
+        && existing().ownerUid == request.auth.uid;
+    }
+
+    // 7. Quiz Assignments
+    match /assignments/{assignmentDocId} {
+      allow get: if isVerifiedUser()
+        && isValidId(assignmentDocId)
+        && (
+          existing().ownerUid == request.auth.uid
+          || isEnrolledInCourse(existing().ownerUid, existing().courseId)
+        );
+      allow list: if isVerifiedUser() && existing().ownerUid == request.auth.uid;
+      allow create: if isVerifiedUser()
+        && isValidId(assignmentDocId)
+        && isValidQuizAssignment(incoming())
+        && incoming().ownerUid == request.auth.uid
+        && incoming().serverCreatedAt == request.time
+        && incoming().serverUpdatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(assignmentDocId)
+        && isValidQuizAssignment(incoming())
+        && existing().ownerUid == request.auth.uid
+        && incoming().id == existing().id
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().teacherId == existing().teacherId
+        && incoming().courseId == existing().courseId
+        && incoming().serverCreatedAt == existing().serverCreatedAt
+        && incoming().serverUpdatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'title', 'deadline', 'timeLimitMinutes', 'serverUpdatedAt'
+        ]);
+      allow delete: if isVerifiedUser()
+        && isValidId(assignmentDocId)
+        && existing().ownerUid == request.auth.uid;
+    }
+
+    // 8. Quiz Attempts & Grades (Shared Student <-> Teacher Sync)
+    match /attempts/{attemptDocId} {
+      allow get: if isVerifiedUser()
+        && isValidId(attemptDocId)
+        && (existing().ownerUid == request.auth.uid || existing().studentUid == request.auth.uid);
+      allow list: if isVerifiedUser()
+        && (existing().ownerUid == request.auth.uid || existing().studentUid == request.auth.uid);
+      allow create: if isVerifiedUser()
+        && isValidId(attemptDocId)
+        && isValidQuizAttempt(incoming())
+        && incoming().serverCreatedAt == request.time
+        && incoming().serverUpdatedAt == request.time
+        && exists(/databases/$(database)/documents/assignments/$(incoming().assignmentDocId))
+        && get(/databases/$(database)/documents/assignments/$(incoming().assignmentDocId)).data.ownerUid == incoming().ownerUid
+        && get(/databases/$(database)/documents/assignments/$(incoming().assignmentDocId)).data.courseId == incoming().courseId
+        && (
+          // Teacher creating demo/test attempt
+          (
+            incoming().ownerUid == request.auth.uid
+            && (incoming().studentUid == '' || incoming().studentUid == request.auth.uid)
+          )
+          // Enrolled student submitting evaluation
+          || (
+            incoming().studentUid == request.auth.uid
+            && isEnrolledInCourse(incoming().ownerUid, incoming().courseId)
+          )
+        );
+      allow update: if isVerifiedUser()
+        && isValidId(attemptDocId)
+        && isValidQuizAttempt(incoming())
+        && existing().ownerUid == request.auth.uid
+        && incoming().id == existing().id
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().quizId == existing().quizId
+        && incoming().assignmentDocId == existing().assignmentDocId
+        && incoming().studentId == existing().studentId
+        && incoming().courseId == existing().courseId
+        && incoming().teacherId == existing().teacherId
+        && incoming().serverCreatedAt == existing().serverCreatedAt
+        && incoming().serverUpdatedAt == request.time
+        && (
+          (
+            incoming().studentUid == existing().studentUid
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'chileanGrade', 'percentage', 'performanceLevel', 'serverUpdatedAt'
+            ])
+          )
+          || (
+            existing().studentUid == ''
+            && isValidId(incoming().studentUid)
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'studentUid', 'serverUpdatedAt'
+            ])
+          )
+        );
+      allow delete: if isVerifiedUser()
+        && isValidId(attemptDocId)
+        && existing().ownerUid == request.auth.uid;
+    }
+  }
+}

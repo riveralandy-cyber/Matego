@@ -1,0 +1,712 @@
+{
+  "entities": {
+    "TeacherProfile": {
+      "title": "TeacherProfile",
+      "description": "Private profile and preferences for an authenticated teacher.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "teacherId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 160
+        },
+        "schoolName": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "commune": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "rbd": {
+          "type": "string",
+          "maxLength": 24
+        },
+        "activeTheme": {
+          "type": "string",
+          "enum": ["estandar", "pastel", "claro", "nocturno", "vibrante"],
+          "maxLength": 20
+        },
+        "seededInitialData": {
+          "type": "boolean"
+        },
+        "serverCreatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "serverUpdatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "teacherId",
+        "name",
+        "email",
+        "schoolName",
+        "commune",
+        "rbd",
+        "activeTheme",
+        "seededInitialData",
+        "serverCreatedAt",
+        "serverUpdatedAt"
+      ]
+    },
+    "RosterStudent": {
+      "title": "RosterStudent",
+      "description": "Private teacher-owned student record containing RUN and PIN.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "teacherId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "rut": {
+          "type": "string",
+          "maxLength": 24
+        },
+        "courseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "accessCode": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 32,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "pin": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 16,
+          "pattern": "^[0-9]{4,16}$"
+        },
+        "hasCustomPin": {
+          "type": "boolean"
+        },
+        "linkedStudentUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "serverCreatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "serverUpdatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "ownerUid",
+        "teacherId",
+        "name",
+        "rut",
+        "courseId",
+        "accessCode",
+        "pin",
+        "hasCustomPin",
+        "linkedStudentUid",
+        "serverCreatedAt",
+        "serverUpdatedAt"
+      ]
+    },
+    "StudentDirectoryEntry": {
+      "title": "StudentDirectoryEntry",
+      "description": "Non-PII credential lookup keyed by uppercase student accessCode with SHA-256 PIN hash.",
+      "type": "object",
+      "properties": {
+        "accessCode": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 32,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "studentDocId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "studentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "studentName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "courseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "teacherId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "teacherName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "ownerUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "pinHash": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "hasCustomPin": {
+          "type": "boolean"
+        },
+        "linkedStudentUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "serverCreatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "serverUpdatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "accessCode",
+        "studentDocId",
+        "studentId",
+        "studentName",
+        "courseId",
+        "teacherId",
+        "teacherName",
+        "ownerUid",
+        "pinHash",
+        "hasCustomPin",
+        "linkedStudentUid",
+        "serverCreatedAt",
+        "serverUpdatedAt"
+      ]
+    },
+    "CourseJoinCode": {
+      "title": "CourseJoinCode",
+      "description": "Class-code directory containing non-PII student display names and access codes for class selector login.",
+      "type": "object",
+      "properties": {
+        "joinCode": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 48,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "teacherId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "teacherName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "courseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "courseSection": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 64
+        },
+        "studentsPreview": {
+          "type": "array",
+          "description": "Bounded up to 80 items: { studentId, name, accessCode }."
+        },
+        "serverCreatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "serverUpdatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "joinCode",
+        "ownerUid",
+        "teacherId",
+        "teacherName",
+        "courseId",
+        "courseSection",
+        "studentsPreview",
+        "serverCreatedAt",
+        "serverUpdatedAt"
+      ]
+    },
+    "CourseMember": {
+      "title": "CourseMember",
+      "description": "Verified course enrollment binding a student Firebase Auth UID to a teacher course.",
+      "type": "object",
+      "properties": {
+        "memberId": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "courseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "studentUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "studentDocId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "accessCode": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 32,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "serverCreatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "serverUpdatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "memberId",
+        "ownerUid",
+        "courseId",
+        "studentUid",
+        "studentDocId",
+        "accessCode",
+        "serverCreatedAt",
+        "serverUpdatedAt"
+      ]
+    },
+    "CourseFeed": {
+      "title": "CourseFeed",
+      "description": "Live list of active assignment document IDs for a teacher course.",
+      "type": "object",
+      "properties": {
+        "feedId": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "courseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "assignmentIds": {
+          "type": "array",
+          "description": "Bounded up to 100 active assignment document IDs."
+        },
+        "serverCreatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "serverUpdatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "feedId",
+        "ownerUid",
+        "courseId",
+        "assignmentIds",
+        "serverCreatedAt",
+        "serverUpdatedAt"
+      ]
+    },
+    "QuizAssignmentDoc": {
+      "title": "QuizAssignmentDoc",
+      "description": "Teacher-created evaluation or SIMCE essay assigned to a course.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "code": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 40
+        },
+        "title": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 200
+        },
+        "courseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "teacherId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "teacherName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "gradeLevel": {
+          "type": "string",
+          "enum": ["1_basico", "2_basico", "3_basico", "4_basico", "5_basico", "6_basico", "7_basico", "8_basico"],
+          "maxLength": 20
+        },
+        "axis": {
+          "type": "string",
+          "enum": ["numeros_operaciones", "patrones_algebra", "geometria", "medicion", "datos_probabilidades"],
+          "maxLength": 32
+        },
+        "oaCode": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "difficulty": {
+          "type": "string",
+          "enum": ["facil", "medio", "dificil", "progresivo"],
+          "maxLength": 20
+        },
+        "totalQuestions": {
+          "type": "number"
+        },
+        "deadline": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "timeLimitMinutes": {
+          "type": "number"
+        },
+        "questions": {
+          "type": "array",
+          "description": "Bounded up to 50 question objects."
+        },
+        "createdAt": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "isSimce": {
+          "type": "boolean"
+        },
+        "simceAxisFilter": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "serverCreatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "serverUpdatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "ownerUid",
+        "code",
+        "title",
+        "courseId",
+        "teacherId",
+        "teacherName",
+        "gradeLevel",
+        "axis",
+        "oaCode",
+        "difficulty",
+        "totalQuestions",
+        "deadline",
+        "timeLimitMinutes",
+        "questions",
+        "createdAt",
+        "isSimce",
+        "simceAxisFilter",
+        "serverCreatedAt",
+        "serverUpdatedAt"
+      ]
+    },
+    "QuizAttemptDoc": {
+      "title": "QuizAttemptDoc",
+      "description": "Completed student quiz attempt synced between student and teacher.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "studentUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "quizId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "assignmentDocId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "quizTitle": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "oaCode": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "axis": {
+          "type": "string",
+          "enum": ["numeros_operaciones", "patrones_algebra", "geometria", "medicion", "datos_probabilidades"],
+          "maxLength": 32
+        },
+        "studentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "studentName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "courseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "teacherId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "answers": {
+          "type": "array",
+          "description": "Bounded up to 50 QuestionAnswer objects."
+        },
+        "score": {
+          "type": "number"
+        },
+        "totalQuestions": {
+          "type": "number"
+        },
+        "percentage": {
+          "type": "number"
+        },
+        "chileanGrade": {
+          "type": "number"
+        },
+        "performanceLevel": {
+          "type": "string",
+          "enum": ["Insuficiente", "Elemental", "Adecuado"],
+          "maxLength": 24
+        },
+        "completedAt": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "durationSeconds": {
+          "type": "number"
+        },
+        "isSimce": {
+          "type": "boolean"
+        },
+        "simceScore": {
+          "type": "number"
+        },
+        "simceLevel": {
+          "type": "string",
+          "maxLength": 24
+        },
+        "serverCreatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "serverUpdatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "ownerUid",
+        "studentUid",
+        "quizId",
+        "assignmentDocId",
+        "quizTitle",
+        "oaCode",
+        "axis",
+        "studentId",
+        "studentName",
+        "courseId",
+        "teacherId",
+        "answers",
+        "score",
+        "totalQuestions",
+        "percentage",
+        "chileanGrade",
+        "performanceLevel",
+        "completedAt",
+        "durationSeconds",
+        "isSimce",
+        "simceScore",
+        "simceLevel",
+        "serverCreatedAt",
+        "serverUpdatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/teachers/{teacherUid}": {
+      "schema": { "$ref": "#/entities/TeacherProfile" },
+      "description": "Private teacher profile and app settings owned by teacherUid."
+    },
+    "/teacherRosterStudents/{studentDocId}": {
+      "schema": { "$ref": "#/entities/RosterStudent" },
+      "description": "Teacher-managed student roster containing RUN and PIN."
+    },
+    "/studentDirectory/{accessCode}": {
+      "schema": { "$ref": "#/entities/StudentDirectoryEntry" },
+      "description": "Non-PII credential lookup keyed by uppercase student accessCode with SHA-256 PIN hash."
+    },
+    "/courseJoinCodes/{joinCode}": {
+      "schema": { "$ref": "#/entities/CourseJoinCode" },
+      "description": "Class join directory exposing non-PII student display names for class dropdown login."
+    },
+    "/courseMembers/{memberDocId}": {
+      "schema": { "$ref": "#/entities/CourseMember" },
+      "description": "Enrollment binding between authenticated student UID and teacher course."
+    },
+    "/courseFeeds/{courseFeedId}": {
+      "schema": { "$ref": "#/entities/CourseFeed" },
+      "description": "Real-time feed of active assignment IDs per teacher course."
+    },
+    "/assignments/{assignmentDocId}": {
+      "schema": { "$ref": "#/entities/QuizAssignmentDoc" },
+      "description": "Evaluations and SIMCE essays created by teachers for their courses."
+    },
+    "/attempts/{attemptDocId}": {
+      "schema": { "$ref": "#/entities/QuizAttemptDoc" },
+      "description": "Student quiz attempts and grades visible to both the student and owner teacher."
+    }
+  }
+}
