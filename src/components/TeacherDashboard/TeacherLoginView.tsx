@@ -371,7 +371,7 @@ export const TeacherLoginView: React.FC = () => {
           className="text-xs font-bold tq-text-accent hover:opacity-80 transition-opacity inline-flex items-center gap-1.5 cursor-pointer"
         >
           <PlayCircle className="w-4 h-4" />
-          <span>Práctica Libre ThatQuiz (ejercitar sin iniciar sesión)</span>
+          <span>Práctica Libre MateClic (ejercitar sin iniciar sesión)</span>
         </button>
       </div>
     </div>

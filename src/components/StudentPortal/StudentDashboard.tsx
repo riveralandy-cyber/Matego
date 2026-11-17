@@ -184,7 +184,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold tq-text">
-                  ¡Personaliza tu clave de acceso ThatQuiz!
+                  ¡Personaliza tu clave de acceso MateClic!
                 </span>
                 <span className="text-[10px] bg-amber-200/70 dark:bg-amber-900 text-amber-900 dark:text-amber-100 font-bold px-2 py-0.5 rounded-full">
                   Recomendado

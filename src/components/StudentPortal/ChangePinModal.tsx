@@ -120,7 +120,7 @@ export const ChangePinModal: React.FC<ChangePinModalProps> = ({
             <p className="text-xs text-emerald-700 dark:text-emerald-300">
               Tu nuevo PIN personal es <span className="font-mono font-black text-sm tq-card tq-text px-2 py-0.5 rounded border tq-border">{newPin}</span>.
               <br />
-              Úsalo a partir de ahora cada vez que ingreses a tus evaluaciones ThatQuiz.
+              Úsalo a partir de ahora cada vez que ingreses a tus evaluaciones MateClic.
             </p>
           </div>
         ) : (

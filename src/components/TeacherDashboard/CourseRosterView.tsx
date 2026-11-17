@@ -48,7 +48,6 @@ export const CourseRosterView: React.FC = () => {
   const [copiedJoinCode, setCopiedJoinCode] = useState(false);
   const [copiedQrUrl, setCopiedQrUrl] = useState(false);
 
-  const inlineQrCanvasWrapRef = useRef<HTMLButtonElement | null>(null);
   const modalQrCanvasWrapRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -101,7 +100,7 @@ export const CourseRosterView: React.FC = () => {
   const teacherDisplay = currentTeacher?.name ? `Prof. ${currentTeacher.name}` : 'Docente';
   const whatsAppShareText = [
     `*Escuela Ricardo Silva Arriagada · SLEP Chinchorro*`,
-    `Acceso al curso *${selectedCourse?.section || ''}* (${teacherDisplay}) en la plataforma Matemática ThatQuiz:`,
+    `Acceso al curso *${selectedCourse?.section || ''}* (${teacherDisplay}) en la plataforma Matemática MateClic:`,
     ``,
     `📲 Ingresa directo escaneando el QR o abriendo este enlace:`,
     qrShareUrl,
@@ -115,15 +114,11 @@ export const CourseRosterView: React.FC = () => {
     e.preventDefault();
     if (!rawStudentList.trim()) return;
 
-    const hadStudentsBefore = courseStudents.length > 0;
     const count = addStudentsToCourse(selectedCourseId, rawStudentList);
     setRawStudentList('');
     setIsAddModalOpen(false);
     setAddedCountNotice(count);
-    if (!hadStudentsBefore && count > 0) {
-      setIsQrModalOpen(true);
-    }
-    setTimeout(() => setAddedCountNotice(null), 5000);
+    setTimeout(() => setAddedCountNotice(null), 6000);
   };
 
   const handlePrint = () => {
@@ -143,9 +138,7 @@ export const CourseRosterView: React.FC = () => {
   };
 
   const handleDownloadQrPng = () => {
-    const sourceCanvas =
-      modalQrCanvasWrapRef.current?.querySelector('canvas') ||
-      inlineQrCanvasWrapRef.current?.querySelector('canvas');
+    const sourceCanvas = modalQrCanvasWrapRef.current?.querySelector('canvas');
     if (!sourceCanvas) return;
 
     const cardWidth = 640;
@@ -178,7 +171,7 @@ export const CourseRosterView: React.FC = () => {
 
     ctx.fillStyle = '#bae6fd';
     ctx.font = '600 17px system-ui, -apple-system, sans-serif';
-    ctx.fillText(`${teacherDisplay} · Matemática ThatQuiz`, cardWidth / 2, 122);
+    ctx.fillText(`${teacherDisplay} · Matemática MateClic`, cardWidth / 2, 122);
 
     // QR Frame
     const qrSize = 360;
@@ -353,7 +346,7 @@ export const CourseRosterView: React.FC = () => {
               className="px-3.5 py-1.5 text-xs font-bold tq-accent-soft border tq-border rounded-xl flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
             >
               <Eye className="w-3.5 h-3.5" />
-              <span>Ver Matriz de Notas ThatQuiz</span>
+              <span>Ver Matriz de Notas MateClic</span>
             </button>
           </div>
         </div>
@@ -460,104 +453,42 @@ export const CourseRosterView: React.FC = () => {
         </div>
       )}
 
-      {/* Shareable Course QR & Join Code Card */}
+      {/* Compact Course Code Bar (QR opens as popup when clicked) */}
       {courseStudents.length > 0 && (
-        <div className="p-5 tq-tint border-2 border-[var(--tq-border-strong)] rounded-2xl flex flex-col lg:flex-row lg:items-center justify-between gap-5 shadow-2xs print:hidden">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            {/* Crisp white quiet zone around QR so phone cameras scan reliably in all 5 themes */}
+        <div className="px-4 py-2.5 tq-tint border border-[var(--tq-border-strong)] rounded-xl flex flex-wrap items-center justify-between gap-3 shadow-2xs print:hidden">
+          <div className="flex flex-wrap items-center gap-2.5 text-xs">
+            <span className="font-bold tq-text-2">Código de acceso ({selectedCourse?.section}):</span>
+            <span className="font-mono font-black text-xs px-2.5 py-1 tq-card border border-[var(--tq-border-strong)] rounded-lg tq-text-accent select-all">
+              {shareCourseCode}
+            </span>
             <button
               type="button"
-              onClick={() => setIsQrModalOpen(true)}
-              ref={inlineQrCanvasWrapRef}
-              className="bg-white p-2.5 rounded-2xl border border-indigo-200 shadow-xs shrink-0 hover:scale-[1.03] transition-transform cursor-pointer"
-              title="Haz clic para ampliar o imprimir el afiche QR"
+              onClick={handleCopyJoinCode}
+              className="px-2.5 py-1 tq-card border tq-border rounded-lg text-[11px] font-bold tq-text-2 hover:tq-text inline-flex items-center gap-1 cursor-pointer"
             >
-              <QRCodeCanvas
-                value={qrShareUrl}
-                size={104}
-                level="M"
-                bgColor="#ffffff"
-                fgColor="#0f172a"
-              />
+              {copiedJoinCode ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+              <span>{copiedJoinCode ? 'Copiado' : 'Copiar'}</span>
             </button>
-
-            <div className="space-y-1.5">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-black tq-text flex items-center gap-1.5">
-                  <QrCode className="w-4 h-4 tq-text-accent" />
-                  <span>QR del Curso para Apoderados y Estudiantes ({selectedCourse?.section})</span>
-                </span>
-                {isCloudTeacher ? (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800 inline-flex items-center gap-1">
-                    <Cloud className="w-3 h-3" />
-                    <span>Sincronizado en la nube</span>
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-800">
-                    Modo local · Conecta Google para multi-dispositivo
-                  </span>
-                )}
-              </div>
-
-              <p className="text-xs tq-text-2 max-w-2xl leading-relaxed">
-                Al escanear este QR con el celular, el estudiante o apoderado abre directamente el ingreso de <strong>{selectedCourse?.section}</strong> para elegir su nombre de la lista y entrar con su PIN.
-              </p>
-
-              <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                <span className="text-[11px] font-bold tq-text-muted">Código del curso:</span>
-                <span className="font-mono font-black text-xs px-2.5 py-1 tq-card border border-[var(--tq-border-strong)] rounded-lg tq-text-accent select-all">
-                  {shareCourseCode}
-                </span>
-                <button
-                  type="button"
-                  onClick={handleCopyJoinCode}
-                  className="px-2.5 py-1 tq-card border tq-border rounded-lg text-[11px] font-bold tq-text-2 hover:tq-text inline-flex items-center gap-1 cursor-pointer"
-                >
-                  {copiedJoinCode ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-                  <span>{copiedJoinCode ? 'Copiado' : 'Copiar código'}</span>
-                </button>
-              </div>
-            </div>
+            {isCloudTeacher ? (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800 inline-flex items-center gap-1">
+                <Cloud className="w-3 h-3" />
+                <span>Sincronizado en la nube</span>
+              </span>
+            ) : (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-800">
+                Modo local
+              </span>
+            )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <a
-              href={whatsAppHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors"
-            >
-              <Share2 className="w-3.5 h-3.5" />
-              <span>Enviar por WhatsApp</span>
-            </a>
-
-            <button
-              type="button"
-              onClick={handleCopyQrUrl}
-              className="px-3.5 py-2.5 tq-card border tq-border hover:border-[var(--tq-border-strong)] tq-text rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-            >
-              {copiedQrUrl ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Link2 className="w-3.5 h-3.5 tq-text-accent" />}
-              <span>{copiedQrUrl ? 'Enlace copiado' : 'Copiar enlace'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleDownloadQrPng}
-              className="px-3.5 py-2.5 tq-btn-primary rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Descargar QR</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setIsQrModalOpen(true)}
-              className="px-3.5 py-2.5 tq-accent-soft border tq-border rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span>Ampliar / Imprimir</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setIsQrModalOpen(true)}
+            className="px-3.5 py-1.5 tq-btn-gradient rounded-xl text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+          >
+            <QrCode className="w-3.5 h-3.5" />
+            <span>Ver Código QR y Compartir</span>
+          </button>
         </div>
       )}
 

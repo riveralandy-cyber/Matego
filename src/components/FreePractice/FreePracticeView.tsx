@@ -432,7 +432,7 @@ export const FreePracticeView: React.FC<FreePracticeViewProps> = ({ onStartPract
               <span>Acceso Abierto · Sin inicio de sesión ni registro de notas</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight tq-text">
-              Práctica Libre ThatQuiz
+              Práctica Libre MateClic
             </h1>
             <p className="text-sm tq-text-2 max-w-2xl">
               Elige cualquier contenido matemático de 1° a 8° Básico, ajusta el largo, el nivel y el tiempo, ejercita libremente y obtén tu nota inmediata para seguir practicando.

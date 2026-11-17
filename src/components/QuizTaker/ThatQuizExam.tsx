@@ -251,8 +251,8 @@ export const ThatQuizExam: React.FC<ThatQuizExamProps> = ({
                     ? 'Práctica Libre · Ensayo SIMCE'
                     : 'Evaluación Tipo SIMCE'
                   : isFreePractice
-                  ? 'Práctica Libre ThatQuiz'
-                  : 'ThatQuiz Escolar'}
+                  ? 'Práctica Libre MateClic'
+                  : 'MateClic Escolar'}
               </span>
               <span className="text-xs font-semibold px-2 py-0.5 tq-accent-soft rounded-full border tq-border">
                 {quiz.oaCode} · {formatGradeLevelName(quiz.gradeLevel)}

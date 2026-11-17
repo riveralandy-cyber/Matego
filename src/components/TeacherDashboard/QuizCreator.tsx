@@ -73,8 +73,8 @@ export const QuizCreator: React.FC = () => {
     setGeneratedQuestions(questions);
     setActivePreviewIndex(0);
 
-    if (!customTitle || customTitle.startsWith('Evaluación:')) {
-      setCustomTitle(`Evaluación ThatQuiz: ${currentOAObj.title}`);
+    if (!customTitle || customTitle.startsWith('Evaluación:') || customTitle.startsWith('Evaluación MateClic:')) {
+      setCustomTitle(`Evaluación MateClic: ${currentOAObj.title}`);
     }
   }, [selectedCourseId, gradeLevel, selectedOA, difficulty, questionCount]);
 
@@ -152,7 +152,7 @@ export const QuizCreator: React.FC = () => {
       {/* Top Title */}
       <div className="tq-card border rounded-xl p-5 shadow-xs">
         <h1 className="text-xl font-bold tq-text">
-          Crear Nueva Evaluación ThatQuiz
+          Crear Nueva Evaluación MateClic
         </h1>
         <p className="text-xs tq-text-muted mt-1">
           Configura los contenidos curriculares MINEDUC, el nivel de dificultad y asigna una fecha límite para tus estudiantes.
@@ -402,7 +402,7 @@ export const QuizCreator: React.FC = () => {
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-sm font-bold tq-text">
-                    2. Vista Previa Interactiva de Ejercicios ThatQuiz
+                    2. Vista Previa Interactiva de Ejercicios MateClic
                   </h2>
                   <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full">
                     <ShieldCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
@@ -532,7 +532,7 @@ export const QuizCreator: React.FC = () => {
                     </span>
                   </div>
                   <p className="tq-text-2 mt-1">
-                    <strong className="tq-text font-bold">Retroalimentación pedagógica ThatQuiz:</strong>{' '}
+                    <strong className="tq-text font-bold">Retroalimentación pedagógica MateClic:</strong>{' '}
                     {generatedQuestions[activePreviewIndex].explanation}
                   </p>
                 </div>

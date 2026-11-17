@@ -103,7 +103,7 @@ export const CurriculumView: React.FC = () => {
               <Sparkles className="w-5 h-5 text-amber-400" />
             </h1>
             <p className="text-xs tq-text-muted mt-1 max-w-3xl">
-              Bases curriculares oficiales de 1° a 8° año Básico para la asignatura de Matemática. Cada objetivo incluye sus indicadores de logro pedagógicos oficiales y permite generar automáticamente evaluaciones ThatQuiz personalizadas con 5 a 20 ejercicios interactivos.
+              Bases curriculares oficiales de 1° a 8° año Básico para la asignatura de Matemática. Cada objetivo incluye sus indicadores de logro pedagógicos oficiales y permite generar automáticamente evaluaciones MateClic personalizadas con 5 a 20 ejercicios interactivos.
             </p>
           </div>
 

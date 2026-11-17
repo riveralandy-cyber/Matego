@@ -221,7 +221,7 @@ export const ThatQuizGradeMatrix: React.FC<ThatQuizGradeMatrixProps> = ({ onSele
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `Notas_ThatQuiz_${selectedCourse?.section.replace(/\s+/g, '_')}_2026.csv`);
+    link.setAttribute('download', `Notas_MateClic_${selectedCourse?.section.replace(/\s+/g, '_')}_2026.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -944,7 +944,7 @@ export const ThatQuizGradeMatrix: React.FC<ThatQuizGradeMatrixProps> = ({ onSele
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-2xs">
           <div className="tq-card rounded-2xl shadow-xl border max-w-md w-full p-6">
             <h3 className="text-base font-bold tq-text mb-1">
-              Configuración de Escala ThatQuiz
+              Configuración de Escala MateClic
             </h3>
             <p className="text-xs tq-text-muted mb-4">
               Escuela Ricardo Silva Arriagada · SLEP Chinchorro

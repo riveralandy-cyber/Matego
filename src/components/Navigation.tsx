@@ -38,14 +38,14 @@ export const Navigation: React.FC = () => {
             className="flex items-center gap-2 group"
           >
             <div className="w-9 h-9 rounded-xl tq-brand-badge flex items-center justify-center shadow-xs border border-white/60 dark:border-slate-700">
-              <span className="font-mono font-black text-base">TQ</span>
+              <span translate="no" className="notranslate font-mono font-black text-base">MC</span>
             </div>
             <div className="flex flex-col">
               <span className="text-base font-bold tracking-tight tq-text group-hover:tq-text-accent transition-colors whitespace-nowrap">
                 Escuela Ricardo Silva Arriagada
               </span>
               <span className="text-[11px] tq-text-muted font-medium whitespace-nowrap">
-                SLEP Chinchorro · ThatQuiz Matemática
+                SLEP Chinchorro · <span translate="no" className="notranslate">MateClic</span> Matemática
               </span>
             </div>
           </a>

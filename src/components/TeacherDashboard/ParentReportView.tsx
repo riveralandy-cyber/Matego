@@ -148,7 +148,7 @@ export const ParentReportView: React.FC<ParentReportViewProps> = ({ initialStude
               Informe de Rendimiento y Progreso Escolar en Matemática
             </h3>
             <span className="text-xs text-slate-500">
-              Plataforma de Ejercitación Virtual ThatQuiz Escolar · Currículum Nacional MINEDUC
+              Plataforma de Ejercitación Virtual MateClic Escolar · Currículum Nacional MINEDUC
             </span>
           </div>
         </div>
@@ -331,7 +331,7 @@ export const ParentReportView: React.FC<ParentReportViewProps> = ({ initialStude
 
         {/* Footer date */}
         <div className="mt-8 pt-4 border-t border-slate-200 text-center text-[10px] text-slate-400 font-sans">
-          Documento emitido el {new Date().toLocaleDateString('es-CL', { year: 'numeric', month: 'long', day: 'numeric' })} · Sistema ThatQuiz Escolar MINEDUC
+          Documento emitido el {new Date().toLocaleDateString('es-CL', { year: 'numeric', month: 'long', day: 'numeric' })} · Sistema MateClic Escolar MINEDUC
         </div>
       </div>
     </div>
