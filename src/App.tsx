@@ -112,7 +112,16 @@ const MainAppContent: React.FC = () => {
 
   // If in active quiz examination mode (either student or teacher test-run)
   if (activeQuizTaking) {
-    const activeStudent = currentStudent || teacherStudents[0] || students[0];
+    const teacherPreviewStudent: Student = {
+      id: 'teacher-preview',
+      name: 'Vista Previa Docente',
+      rut: '',
+      courseId: activeQuizTaking.courseId,
+      teacherId: activeQuizTaking.teacherId,
+      accessCode: 'DOCENTE',
+      pin: '',
+    };
+    const activeStudent = currentStudent || teacherStudents[0] || students[0] || teacherPreviewStudent;
     return (
       <ThatQuizExam
         quiz={activeQuizTaking}

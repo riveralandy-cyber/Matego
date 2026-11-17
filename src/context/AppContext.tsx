@@ -16,6 +16,7 @@ import {
   addStudentsCloud,
   backfillStudentUidOnAttemptsCloud,
   claimStudentWithAccessCodeCloud,
+  clearAllTeacherCloudData,
   CourseJoinCodeDirectory,
   deleteQuizAssignmentCloud,
   deleteQuizAttemptsCloud,
@@ -35,48 +36,16 @@ import {
 
 export const DEFAULT_INITIAL_TEACHER_PASSWORD = '1234';
 
-export const DEFAULT_TEACHERS: Teacher[] = [
-  {
-    id: 't-1',
-    name: 'Landy Rivera',
-    email: 'riveralandy@gmail.com',
-    password: DEFAULT_INITIAL_TEACHER_PASSWORD,
-    hasCustomPassword: false,
-    schoolName: 'Escuela Ricardo Silva Arriagada',
-    commune: 'SLEP Chinchorro · Arica',
-    rbd: '102-4',
-  },
-  {
-    id: 't-2',
-    name: 'Pamela Valenzuela',
-    email: 'p.valenzuela@slepchinchorro.cl',
-    password: DEFAULT_INITIAL_TEACHER_PASSWORD,
-    hasCustomPassword: false,
-    schoolName: 'Escuela Ricardo Silva Arriagada',
-    commune: 'SLEP Chinchorro · Arica',
-    rbd: '102-4',
-  },
-  {
-    id: 't-3',
-    name: 'Carlos González',
-    email: 'c.gonzalez@slepchinchorro.cl',
-    password: DEFAULT_INITIAL_TEACHER_PASSWORD,
-    hasCustomPassword: false,
-    schoolName: 'Escuela Ricardo Silva Arriagada',
-    commune: 'SLEP Chinchorro · Arica',
-    rbd: '102-4',
-  },
-  {
-    id: 't-4',
-    name: 'Carolina Morales',
-    email: 'c.morales@slepchinchorro.cl',
-    password: DEFAULT_INITIAL_TEACHER_PASSWORD,
-    hasCustomPassword: false,
-    schoolName: 'Escuela Ricardo Silva Arriagada',
-    commune: 'SLEP Chinchorro · Arica',
-    rbd: '102-4',
-  },
-];
+export const DEFAULT_TEACHERS: Teacher[] = [];
+
+export const EMPTY_TEACHER: Teacher = {
+  id: '',
+  name: '',
+  email: '',
+  schoolName: 'Escuela Ricardo Silva Arriagada',
+  commune: 'SLEP Chinchorro · Arica',
+  rbd: '102-4',
+};
 
 export interface AuthActionResult {
   ok: boolean;
@@ -105,6 +74,8 @@ interface AppContextType {
   loginStudentCloudByAccessCode: (accessCode: string, pin: string, quizDirectCode?: string) => Promise<AuthActionResult>;
   unlinkStudentGoogleAccount: (studentId: string) => void;
   getCourseJoinCode: (courseId: string) => string | null;
+  urlCourseJoinCode: string | null;
+  clearUrlCourseJoinCode: () => void;
 
   // Teacher session & authentication
   teachers: Teacher[];
@@ -159,15 +130,35 @@ interface AppContextType {
   deleteQuizAttempt: (attemptId: string) => void;
   deleteQuizAttempts: (attemptIds: string[]) => void;
   resetDemoData: () => void;
+  clearTeacherWorkspaceAll: () => Promise<void>;
   startQuizAsStudent: (quizId: string, studentId: string) => void;
   updateStudentPin: (studentId: string, newPin: string) => boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const STORAGE_KEY_PREFIX = 'thatquiz_chile_';
-const SESSION_AUTH_KEY = 'thatquiz_chile_teacher_auth_session';
+const STORAGE_KEY_PREFIX = 'thatquiz_chile_v2_';
+const SESSION_AUTH_KEY = 'thatquiz_chile_teacher_auth_session_v2';
 const CLOUD_TEACHER_UID_KEY = 'thatquiz_chile_cloud_teacher_uid';
+
+function parseQrParamsFromUrl(): { initialRole: 'teacher' | 'student' | 'practice'; courseJoinCode: string | null } {
+  if (typeof window === 'undefined') {
+    return { initialRole: 'teacher', courseJoinCode: null };
+  }
+  const params = new URLSearchParams(window.location.search);
+  const rawCurso = (params.get('curso') || params.get('join') || '').trim();
+  const rawRol = (params.get('rol') || '').trim().toLowerCase();
+  if (rawCurso) {
+    return { initialRole: 'student', courseJoinCode: rawCurso.toUpperCase() };
+  }
+  if (rawRol === 'estudiante' || rawRol === 'student') {
+    return { initialRole: 'student', courseJoinCode: null };
+  }
+  if (rawRol === 'practica' || rawRol === 'practice') {
+    return { initialRole: 'practice', courseJoinCode: null };
+  }
+  return { initialRole: 'teacher', courseJoinCode: null };
+}
 
 function normalizeTeacherRecord(t: Teacher): Teacher {
   return {
@@ -178,7 +169,9 @@ function normalizeTeacherRecord(t: Teacher): Teacher {
 }
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [role, setRole] = useState<'teacher' | 'student' | 'practice'>('teacher');
+  const initialUrlState = useMemo(() => parseQrParamsFromUrl(), []);
+  const [role, setRole] = useState<'teacher' | 'student' | 'practice'>(initialUrlState.initialRole);
+  const [urlCourseJoinCode, setUrlCourseJoinCode] = useState<string | null>(initialUrlState.courseJoinCode);
   const [activeTeacherTab, setActiveTeacherTab] = useState<TeacherTab>('matrix');
   const [activeOAForCreation, setActiveOAForCreation] = useState<string | null>(null);
 
@@ -217,7 +210,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (saved) {
       return normalizeTeacherRecord(JSON.parse(saved));
     }
-    return DEFAULT_TEACHERS[0];
+    return EMPTY_TEACHER;
   });
 
   const [isTeacherAuthenticated, setIsTeacherAuthenticated] = useState<boolean>(() => {
@@ -229,10 +222,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [courses, setCourses] = useState<Course[]>(() => {
     const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}courses`);
     if (saved) return JSON.parse(saved);
-    return INITIAL_COURSES.map(c => ({
-      ...c,
-      teacherName: DEFAULT_TEACHERS[0].name,
-    }));
+    return INITIAL_COURSES;
   });
 
   const [selectedCourseId, setSelectedCourseId] = useState<string>(() => {
@@ -243,11 +233,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [localStudents, setLocalStudents] = useState<Student[]>(() => {
     const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}students`);
     if (saved) {
-      const parsed: Student[] = JSON.parse(saved);
-      return parsed.map(s => ({
-        ...s,
-        teacherId: s.teacherId || DEFAULT_TEACHERS[0].id,
-      }));
+      return JSON.parse(saved) as Student[];
     }
     return INITIAL_STUDENTS;
   });
@@ -255,12 +241,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [localAssignments, setLocalAssignments] = useState<QuizAssignment[]>(() => {
     const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}assignments`);
     if (saved) {
-      const parsed: QuizAssignment[] = JSON.parse(saved);
-      return parsed.map(a => ({
-        ...a,
-        teacherId: a.teacherId || DEFAULT_TEACHERS[0].id,
-        teacherName: a.teacherName || DEFAULT_TEACHERS[0].name,
-      }));
+      return JSON.parse(saved) as QuizAssignment[];
     }
     return INITIAL_ASSIGNMENTS;
   });
@@ -268,26 +249,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [localAttempts, setLocalAttempts] = useState<QuizAttempt[]>(() => {
     const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}attempts`);
     if (saved) {
-      const parsed: QuizAttempt[] = JSON.parse(saved);
-      const seedMap = new Map(INITIAL_ATTEMPTS.map(item => [item.id, item]));
-      return parsed.map(att => {
-        const seed = seedMap.get(att.id);
-        if (seed && (!att.answers || att.answers.length === 0)) {
-          return {
-            ...att,
-            teacherId: att.teacherId || DEFAULT_TEACHERS[0].id,
-            answers: seed.answers,
-            score: seed.score,
-            percentage: seed.percentage,
-            durationSeconds: seed.durationSeconds,
-            completedAt: att.completedAt === '2026-08-10' ? seed.completedAt : att.completedAt,
-          };
-        }
-        return {
-          ...att,
-          teacherId: att.teacherId || DEFAULT_TEACHERS[0].id,
-        };
-      });
+      return JSON.parse(saved) as QuizAttempt[];
     }
     return INITIAL_ATTEMPTS;
   });
@@ -403,8 +365,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         if (!profile.seededInitialData && !seededCheckRef.current.has(uid)) {
           seededCheckRef.current.add(uid);
-          setCloudSyncMessage('Inicializando cursos y evaluaciones en la nube por primera vez...');
-          await seedTeacherWorkspaceCloud(uid, profile.name, courses);
+          setCloudSyncMessage('Preparando espacio de trabajo limpio en la nube...');
+          await seedTeacherWorkspaceCloud(uid);
         }
       } catch (err) {
         if (!cancelled) reportCloudError(err);
@@ -1217,6 +1179,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+  const clearUrlCourseJoinCode = () => {
+    setUrlCourseJoinCode(null);
+    if (typeof window !== 'undefined' && window.location.search) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('curso');
+      url.searchParams.delete('join');
+      url.searchParams.delete('rol');
+      window.history.replaceState({}, '', url.pathname + url.search);
+    }
+  };
+
   const resetDemoData = () => {
     if (!isTeacherAuthenticated) return;
     if (isCloudTeacher) {
@@ -1227,14 +1200,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.clear();
     sessionStorage.removeItem(SESSION_AUTH_KEY);
     setTeachers(DEFAULT_TEACHERS);
-    setCurrentTeacher(DEFAULT_TEACHERS[0]);
+    setCurrentTeacher(EMPTY_TEACHER);
     setIsTeacherAuthenticated(false);
-    setCourses(INITIAL_COURSES.map(c => ({ ...c, teacherName: DEFAULT_TEACHERS[0].name })));
+    setCourses(INITIAL_COURSES);
     setLocalStudents(INITIAL_STUDENTS);
     setLocalAssignments(INITIAL_ASSIGNMENTS);
     setLocalAttempts(INITIAL_ATTEMPTS);
     setSelectedCourseId('course-7a');
     setActiveTeacherTab('matrix');
+    setCurrentStudent(null);
+    setActiveQuizTaking(null);
+    setLatestCompletedAttempt(null);
+  };
+
+  const clearTeacherWorkspaceAll = async (): Promise<void> => {
+    if (!isTeacherAuthenticated) return;
+    if (isCloudTeacher && firebaseUser) {
+      setCloudSyncStatus('connecting');
+      setCloudSyncMessage('Vaciando listas y evaluaciones de tu nube...');
+      await clearAllTeacherCloudData(firebaseUser.uid);
+      setCloudSyncStatus('synced');
+      setCloudSyncMessage(`Nube activa · ${firebaseUser.email || ''}`);
+      setSelectedCourseId('course-7a');
+      setActiveTeacherTab('courses');
+      return;
+    }
+    setLocalStudents([]);
+    setLocalAssignments([]);
+    setLocalAttempts([]);
+    setSelectedCourseId('course-7a');
+    setActiveTeacherTab('courses');
     setCurrentStudent(null);
     setActiveQuizTaking(null);
     setLatestCompletedAttempt(null);
@@ -1295,6 +1290,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         loginStudentCloudByAccessCode,
         unlinkStudentGoogleAccount,
         getCourseJoinCode,
+        urlCourseJoinCode,
+        clearUrlCourseJoinCode,
         teachers,
         currentTeacher,
         isTeacherAuthenticated,
@@ -1334,6 +1331,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteQuizAttempt,
         deleteQuizAttempts,
         resetDemoData,
+        clearTeacherWorkspaceAll,
         startQuizAsStudent,
         updateStudentPin,
       }}

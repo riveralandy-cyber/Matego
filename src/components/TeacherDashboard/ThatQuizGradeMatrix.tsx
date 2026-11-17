@@ -83,56 +83,16 @@ export const ThatQuizGradeMatrix: React.FC<ThatQuizGradeMatrixProps> = ({ onSele
     let apellido = '';
     let nombre = '';
 
-    if (st.id.startsWith('st-7a-')) {
-      const idx = parseInt(st.id.replace('st-7a-', ''), 10) - 1;
-      const rawList = [
-        { apellido: 'VÁSQUEZ', nombre: 'AINHOA' },
-        { apellido: 'CASTILLO', nombre: 'ALAN' },
-        { apellido: 'ALDEA', nombre: 'ALONSO' },
-        { apellido: 'HENRY', nombre: 'AMELIA' },
-        { apellido: 'ETIENNE', nombre: 'AMSTY' },
-        { apellido: 'FLORES', nombre: 'ANGEL' },
-        { apellido: 'SEGOVIA', nombre: 'ARTURO' },
-        { apellido: 'VILLAGRAN', nombre: 'BELEN' },
-        { apellido: 'URQUIETA', nombre: 'ELOÍSA' },
-        { apellido: 'SÁNCHEZ', nombre: 'EMELY' },
-        { apellido: 'VEAS', nombre: 'EMILIO' },
-        { apellido: 'SAGARDÍA', nombre: 'FACUNDO' },
-        { apellido: 'MUÑOZ', nombre: 'GASPAR' },
-        { apellido: 'BALTAZAR', nombre: 'IAN' },
-        { apellido: 'ROMANQUE', nombre: 'IVANNA' },
-        { apellido: 'KARL', nombre: 'JAYRO' },
-        { apellido: 'ROMERO', nombre: 'JOAQUÍN' },
-        { apellido: 'COLAN', nombre: 'KATIE' },
-        { apellido: 'MONSALVE', nombre: 'LESLIE' },
-        { apellido: 'ESCOBAR', nombre: 'MARTINA' },
-        { apellido: 'ORTIZ', nombre: 'MATTEO' },
-        { apellido: 'SANDOVAL', nombre: 'OSCAR' },
-        { apellido: 'BARBACHAN', nombre: 'RAFAEL' },
-        { apellido: 'MEDINA', nombre: 'RAFAEL' },
-        { apellido: 'FLORES', nombre: 'RENATO' },
-        { apellido: 'QUISPE', nombre: 'SAID' },
-        { apellido: 'CORTÉS', nombre: 'SOFÍA IGNACIA' },
-        { apellido: 'CORTÉS', nombre: 'SOFÍA MAGDALE' },
-        { apellido: 'CANO', nombre: 'TEO' },
-        { apellido: 'HERRERA', nombre: 'VICTORIA' },
-      ];
-      if (rawList[idx]) {
-        apellido = rawList[idx].apellido;
-        nombre = rawList[idx].nombre;
-      }
+    const parts = st.name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length >= 3) {
+      nombre = parts.slice(0, 2).join(' ');
+      apellido = parts.slice(2).join(' ');
+    } else if (parts.length === 2) {
+      nombre = parts[0];
+      apellido = parts[1];
     } else {
-      const parts = st.name.trim().split(' ');
-      if (parts.length >= 3) {
-        nombre = parts.slice(0, 2).join(' ');
-        apellido = parts.slice(2).join(' ');
-      } else if (parts.length === 2) {
-        nombre = parts[0];
-        apellido = parts[1];
-      } else {
-        nombre = parts[0] || '';
-        apellido = '';
-      }
+      nombre = parts[0] || '';
+      apellido = '';
     }
 
     // Student's grades map
@@ -149,11 +109,7 @@ export const ThatQuizGradeMatrix: React.FC<ThatQuizGradeMatrixProps> = ({ onSele
       attemptIdsByQuizId[att.quizId].push(att.id);
     });
 
-    // Incomplete indicator for specific demo items in screenshot
     const incompleteQuizzes: Record<string, boolean> = {};
-    if (st.id === 'st-7a-7') incompleteQuizzes['quiz-7a-7'] = true;
-    if (st.id === 'st-7a-18') incompleteQuizzes['quiz-7a-8'] = true;
-    if (st.id === 'st-7a-28') incompleteQuizzes['quiz-7a-2'] = true;
 
     // Average grade calculation
     const recordedGrades = Object.values(gradesByQuizId);
@@ -1006,7 +962,7 @@ export const ThatQuizGradeMatrix: React.FC<ThatQuizGradeMatrixProps> = ({ onSele
               </div>
               <div className="flex justify-between">
                 <span>Docente a cargo:</span>
-                <strong className="tq-text">Prof. {currentTeacher?.name || 'Landy Rivera'}</strong>
+                <strong className="tq-text">{currentTeacher?.name ? `Prof. ${currentTeacher.name}` : 'Docente'}</strong>
               </div>
               <div className="flex justify-between">
                 <span>Establecimiento:</span>

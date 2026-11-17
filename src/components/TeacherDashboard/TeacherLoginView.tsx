@@ -28,7 +28,9 @@ export const TeacherLoginView: React.FC = () => {
   } = useApp();
 
   const [showLocalDemo, setShowLocalDemo] = useState(false);
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<'login' | 'register'>(() =>
+    teachers.length === 0 ? 'register' : 'login'
+  );
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>(
     currentTeacher?.id || teachers[0]?.id || ''
   );
@@ -183,6 +185,24 @@ export const TeacherLoginView: React.FC = () => {
             </div>
 
             {mode === 'login' ? (
+              teachers.length === 0 ? (
+                <div className="p-4 tq-card border rounded-xl text-center space-y-2.5">
+                  <p className="text-xs tq-text-2 font-medium">
+                    Aún no hay cuentas docentes locales creadas en este navegador.
+                  </p>
+                  <p className="text-[11px] tq-text-muted">
+                    Usa <strong>Ingresar con Google</strong> arriba (recomendado) o crea una cuenta local en la pestaña <strong>Nuevo Docente</strong>.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setMode('register')}
+                    className="px-3.5 py-2 tq-btn-primary rounded-xl text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                    <span>Crear cuenta docente local</span>
+                  </button>
+                </div>
+              ) : (
               <form onSubmit={handleLoginSubmit} className="space-y-3.5">
                 <div>
                   <label className="block text-xs font-bold tq-text-2 mb-1">
@@ -218,7 +238,7 @@ export const TeacherLoginView: React.FC = () => {
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={e => setPassword(e.target.value)}
-                      placeholder="Ingresa tu clave (demo: 1234)"
+                      placeholder="Ingresa tu clave"
                       autoComplete="current-password"
                       className="w-full pl-10 pr-10 py-2.5 text-xs font-bold border-2 tq-input rounded-xl focus:outline-hidden transition-all"
                     />
@@ -234,7 +254,7 @@ export const TeacherLoginView: React.FC = () => {
 
                   {selectedTeacherObj && selectedTeacherObj.hasCustomPassword === false && (
                     <p className="text-[11px] text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2 mt-2 font-medium">
-                      Clave demo local inicial: <strong>1234</strong>. Para que tus alumnos se conecten desde otros dispositivos, usa "Ingresar con Google" arriba.
+                      Para que tus alumnos se conecten desde otros dispositivos, usa "Ingresar con Google" arriba.
                     </p>
                   )}
                 </div>
@@ -249,6 +269,7 @@ export const TeacherLoginView: React.FC = () => {
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </form>
+              )
             ) : (
               <form onSubmit={handleRegisterSubmit} className="space-y-3">
                 <div>

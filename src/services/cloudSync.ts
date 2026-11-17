@@ -27,14 +27,12 @@ import {
   stripUndefinedDeep,
 } from '../firebase';
 import {
-  Course,
   PerformanceLevel,
   QuizAssignment,
   QuizAttempt,
   Student,
   ThemePaletteId,
 } from '../types';
-import { INITIAL_COURSES, INITIAL_STUDENTS, INITIAL_ASSIGNMENTS, INITIAL_ATTEMPTS } from '../data/initialData';
 
 export interface CloudTeacherProfile {
   uid: string;
@@ -189,230 +187,8 @@ async function resolveUniqueAccessCode(desiredCode: string, ownerUid: string): P
   return sanitizeFirestoreId(`ST-${suffix}-${Date.now().toString(36).toUpperCase()}`, 32);
 }
 
-export async function seedTeacherWorkspaceCloud(
-  ownerUid: string,
-  teacherName: string,
-  courses: Course[]
-): Promise<void> {
-  // Verify teacher doesn't already have cloud roster data
-  try {
-    const existingRosterSnap = await getDocs(
-      query(collection(db, 'teacherRosterStudents'), where('ownerUid', '==', ownerUid))
-    );
-    if (!existingRosterSnap.empty) {
-      await updateDoc(doc(db, 'teachers', ownerUid), {
-        seededInitialData: true,
-        serverUpdatedAt: serverTimestamp(),
-      });
-      return;
-    }
-  } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, 'teacherRosterStudents');
-  }
-
-  const cleanTeacherName = clampStr(teacherName, 120, 'Docente');
-
-  // Check if default MAT-7A-01 prefix belongs to another teacher already
-  let useShortSuffix = false;
-  try {
-    const probe = await getDoc(doc(db, 'studentDirectory', 'MAT-7A-01'));
-    if (probe.exists() && probe.data()?.ownerUid !== ownerUid) {
-      useShortSuffix = true;
-    }
-  } catch (error) {
-    handleFirestoreError(error, OperationType.GET, 'studentDirectory/MAT-7A-01');
-  }
-
-  const uidTag = ownerUid.replace(/[^a-zA-Z0-9]/g, '').slice(0, 4).toUpperCase() || 'DOC';
-
-  const preparedStudents: (Student & { pinHash: string; docId: string })[] = await Promise.all(
-    INITIAL_STUDENTS.map(async st => {
-      const code = useShortSuffix
-        ? sanitizeFirestoreId(`${st.accessCode}-${uidTag}`, 32)
-        : sanitizeFirestoreId(st.accessCode, 32);
-      const pinHash = await sha256Hex(st.pin);
-      const docId = makeStudentDocId(ownerUid, st.id);
-      return {
-        ...st,
-        accessCode: code,
-        teacherId: ownerUid,
-        ownerUid,
-        linkedStudentUid: '',
-        hasCustomPin: Boolean(st.hasCustomPin),
-        pinHash,
-        docId,
-      };
-    })
-  );
-
-  const batch1Ops: BatchOp[] = [];
-
-  // 1. Roster + Student Directory
-  for (const st of preparedStudents) {
-    const rosterRef = doc(db, 'teacherRosterStudents', st.docId);
-    batch1Ops.push(batch =>
-      batch.set(rosterRef, {
-        id: st.id,
-        ownerUid,
-        teacherId: ownerUid,
-        name: clampStr(st.name, 120),
-        rut: clampStr(st.rut, 24),
-        courseId: st.courseId,
-        accessCode: st.accessCode,
-        pin: clampStr(st.pin, 16),
-        hasCustomPin: Boolean(st.hasCustomPin),
-        linkedStudentUid: '',
-        serverCreatedAt: serverTimestamp(),
-        serverUpdatedAt: serverTimestamp(),
-      })
-    );
-
-    const dirRef = doc(db, 'studentDirectory', st.accessCode);
-    batch1Ops.push(batch =>
-      batch.set(dirRef, {
-        accessCode: st.accessCode,
-        studentDocId: st.docId,
-        studentId: st.id,
-        studentName: clampStr(st.name, 120),
-        courseId: st.courseId,
-        teacherId: ownerUid,
-        teacherName: cleanTeacherName,
-        ownerUid,
-        pinHash: st.pinHash,
-        hasCustomPin: Boolean(st.hasCustomPin),
-        linkedStudentUid: '',
-        serverCreatedAt: serverTimestamp(),
-        serverUpdatedAt: serverTimestamp(),
-      })
-    );
-  }
-
-  // 2. Course Join Codes for courses with seeded students
-  const studentsByCourse = new Map<string, Student[]>();
-  for (const st of preparedStudents) {
-    const list = studentsByCourse.get(st.courseId) || [];
-    list.push(st);
-    studentsByCourse.set(st.courseId, list);
-  }
-
-  for (const [courseId, courseStudents] of studentsByCourse.entries()) {
-    const joinCode = makeCourseJoinCode(ownerUid, courseId);
-    const courseObj = courses.find(c => c.id === courseId) || INITIAL_COURSES.find(c => c.id === courseId);
-    const joinRef = doc(db, 'courseJoinCodes', joinCode);
-    batch1Ops.push(batch =>
-      batch.set(joinRef, {
-        joinCode,
-        ownerUid,
-        teacherId: ownerUid,
-        teacherName: cleanTeacherName,
-        courseId,
-        courseSection: clampStr(courseObj?.section || courseId, 64),
-        studentsPreview: courseStudents.slice(0, 80).map(s => ({
-          studentId: s.id,
-          name: clampStr(s.name, 120),
-          accessCode: s.accessCode,
-        })),
-        serverCreatedAt: serverTimestamp(),
-        serverUpdatedAt: serverTimestamp(),
-      })
-    );
-  }
-
-  // 3. Assignments + Course Feeds
-  const feedAssignmentsMap = new Map<string, string[]>();
-
-  for (const quiz of INITIAL_ASSIGNMENTS) {
-    const assignmentDocId = makeAssignmentDocId(ownerUid, quiz.id);
-    const quizRef = doc(db, 'assignments', assignmentDocId);
-    const boundedQuestions = stripUndefinedDeep(quiz.questions.slice(0, 50));
-
-    batch1Ops.push(batch =>
-      batch.set(quizRef, {
-        id: quiz.id,
-        ownerUid,
-        code: clampStr(quiz.code, 40),
-        title: clampStr(quiz.title, 200),
-        courseId: quiz.courseId,
-        teacherId: ownerUid,
-        teacherName: cleanTeacherName,
-        gradeLevel: quiz.gradeLevel,
-        axis: quiz.axis,
-        oaCode: clampStr(quiz.oaCode, 40),
-        difficulty: quiz.difficulty,
-        totalQuestions: Math.min(50, Math.max(1, quiz.totalQuestions)),
-        deadline: clampStr(quiz.deadline, 32),
-        timeLimitMinutes: Math.min(240, Math.max(0, quiz.timeLimitMinutes || 0)),
-        questions: boundedQuestions,
-        createdAt: clampStr(quiz.createdAt, 40, new Date().toISOString().split('T')[0]),
-        isSimce: Boolean(quiz.isSimce),
-        simceAxisFilter: clampStr(quiz.simceAxisFilter || '', 32),
-        serverCreatedAt: serverTimestamp(),
-        serverUpdatedAt: serverTimestamp(),
-      })
-    );
-
-    const arr = feedAssignmentsMap.get(quiz.courseId) || [];
-    arr.push(assignmentDocId);
-    feedAssignmentsMap.set(quiz.courseId, arr);
-  }
-
-  for (const [courseId, assignmentDocIds] of feedAssignmentsMap.entries()) {
-    const feedId = makeCourseFeedId(ownerUid, courseId);
-    const feedRef = doc(db, 'courseFeeds', feedId);
-    batch1Ops.push(batch =>
-      batch.set(feedRef, {
-        feedId,
-        ownerUid,
-        courseId,
-        assignmentIds: assignmentDocIds.slice(0, 100),
-        serverCreatedAt: serverTimestamp(),
-        serverUpdatedAt: serverTimestamp(),
-      })
-    );
-  }
-
-  await commitBatchOpsInChunks(batch1Ops, OperationType.CREATE, 'teacherWorkspaceSeed');
-
-  // 4. Commit initial attempts AFTER assignments exist in Firestore (required by rules)
-  const batch2Ops: BatchOp[] = [];
-  for (const att of INITIAL_ATTEMPTS) {
-    const attemptDocId = makeAttemptDocId(ownerUid, att.id);
-    const assignmentDocId = makeAssignmentDocId(ownerUid, att.quizId);
-    const attRef = doc(db, 'attempts', attemptDocId);
-
-    batch2Ops.push(batch =>
-      batch.set(attRef, {
-        id: att.id,
-        ownerUid,
-        studentUid: '',
-        quizId: att.quizId,
-        assignmentDocId,
-        quizTitle: clampStr(att.quizTitle, 200),
-        oaCode: clampStr(att.oaCode, 40),
-        axis: att.axis,
-        studentId: att.studentId,
-        studentName: clampStr(att.studentName, 120),
-        courseId: att.courseId,
-        teacherId: ownerUid,
-        answers: stripUndefinedDeep(att.answers.slice(0, 50)),
-        score: Math.max(0, Math.min(att.totalQuestions, att.score)),
-        totalQuestions: Math.max(1, Math.min(50, att.totalQuestions)),
-        percentage: Math.max(0, Math.min(100, Math.round(att.percentage))),
-        chileanGrade: Math.max(1.0, Math.min(7.0, Number(att.chileanGrade.toFixed(1)))),
-        performanceLevel: att.performanceLevel,
-        completedAt: clampStr(att.completedAt, 40),
-        durationSeconds: Math.max(0, Math.min(86400, Math.round(att.durationSeconds || 0))),
-        isSimce: Boolean(att.isSimce),
-        simceScore: Math.max(0, Math.min(450, Math.round(att.simceScore || 0))),
-        simceLevel: clampStr(att.simceLevel || '', 24),
-        serverCreatedAt: serverTimestamp(),
-        serverUpdatedAt: serverTimestamp(),
-      })
-    );
-  }
-
-  await commitBatchOpsInChunks(batch2Ops, OperationType.CREATE, 'attempts');
-
+export async function seedTeacherWorkspaceCloud(ownerUid: string): Promise<void> {
+  // Start every teacher cleanly with zero simulated students, exams, or grades
   try {
     await updateDoc(doc(db, 'teachers', ownerUid), {
       seededInitialData: true,
@@ -420,6 +196,36 @@ export async function seedTeacherWorkspaceCloud(
     });
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, `teachers/${ownerUid}`);
+  }
+}
+
+export async function clearAllTeacherCloudData(ownerUid: string): Promise<void> {
+  const ops: BatchOp[] = [];
+  const collectionsToClear = [
+    'attempts',
+    'assignments',
+    'courseFeeds',
+    'courseMembers',
+    'courseJoinCodes',
+    'studentDirectory',
+    'teacherRosterStudents',
+  ] as const;
+
+  for (const colName of collectionsToClear) {
+    try {
+      const snap = await getDocs(
+        query(collection(db, colName), where('ownerUid', '==', ownerUid))
+      );
+      snap.docs.forEach(d => {
+        ops.push(batch => batch.delete(d.ref));
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, colName);
+    }
+  }
+
+  if (ops.length > 0) {
+    await commitBatchOpsInChunks(ops, OperationType.DELETE, 'teacherCloudWorkspace');
   }
 }
 

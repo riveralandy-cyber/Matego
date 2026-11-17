@@ -110,7 +110,7 @@ export const CurriculumView: React.FC = () => {
           <div className="flex items-center gap-2.5 shrink-0">
             <div className="tq-tint p-3 rounded-2xl border text-right">
               <div className="text-[10px] tq-text-accent font-bold uppercase">Docente responsable</div>
-              <div className="text-xs font-bold tq-text">{currentTeacher?.name || 'Prof. Landy Rivera'}</div>
+              <div className="text-xs font-bold tq-text">{currentTeacher?.name ? `Prof. ${currentTeacher.name}` : 'Docente'}</div>
               <div className="text-[10px] tq-text-muted">Arica, Región XV</div>
             </div>
           </div>

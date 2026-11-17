@@ -10,6 +10,8 @@ import {
   CheckCircle2,
   Search,
   RefreshCw,
+  QrCode,
+  X,
 } from 'lucide-react';
 import { ThemePaletteSelector } from '../ThemePaletteSelector';
 import { CourseJoinCodeDirectory } from '../../services/cloudSync';
@@ -33,6 +35,8 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
     setCurrentStudent,
     setActiveQuizTaking,
     setRole,
+    urlCourseJoinCode,
+    clearUrlCourseJoinCode,
   } = useApp();
 
   // Build unique (courseId, teacherId) lists for local demo fallback
@@ -50,18 +54,21 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
     return Array.from(map.values());
   }, [students]);
 
-  const [loginMode, setLoginMode] = useState<'list' | 'code'>('code');
+  const [loginMode, setLoginMode] = useState<'list' | 'code'>(() =>
+    urlCourseJoinCode ? 'list' : 'code'
+  );
   const [useLocalFallback, setUseLocalFallback] = useState(false);
 
   // Cloud Class Code directory state
-  const [joinCodeInput, setJoinCodeInput] = useState<string>('');
+  const [joinCodeInput, setJoinCodeInput] = useState<string>(() => urlCourseJoinCode || '');
   const [loadedDirectory, setLoadedDirectory] = useState<CourseJoinCodeDirectory | null>(null);
   const [selectedAccessCodeFromDir, setSelectedAccessCodeFromDir] = useState<string>('');
   const [isLookingUpCourse, setIsLookingUpCourse] = useState(false);
+  const autoLookedUpQrRef = React.useRef<string | null>(null);
 
   // Local fallback selector state
   const [selectedListKey, setSelectedListKey] = useState<string>(
-    activeCourseTeacherLists[0]?.key || `${courses[0]?.id || ''}::t-1`
+    activeCourseTeacherLists[0]?.key || `${courses[0]?.id || ''}::`
   );
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
 
@@ -91,6 +98,41 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
   const selectedTeacherObj = teachers.find(t => t.id === selectedTeacherId);
 
   const isCloudSignedIn = Boolean(isAuthReady && firebaseUser && firebaseUser.emailVerified);
+
+  // Auto-lookup QR course join code once student connects Google (or match local list in local mode)
+  React.useEffect(() => {
+    if (!urlCourseJoinCode) return;
+    setLoginMode('list');
+    setJoinCodeInput(urlCourseJoinCode);
+
+    if (useLocalFallback) {
+      const matched = activeCourseTeacherLists.find(
+        l => l.courseId.toUpperCase() === urlCourseJoinCode.toUpperCase()
+      );
+      if (matched) {
+        setSelectedListKey(matched.key);
+      }
+      return;
+    }
+
+    if (isCloudSignedIn && autoLookedUpQrRef.current !== urlCourseJoinCode) {
+      autoLookedUpQrRef.current = urlCourseJoinCode;
+      setIsLookingUpCourse(true);
+      setErrorMessage('');
+      void lookupCourseJoinCode(urlCourseJoinCode)
+        .then(res => {
+          if (res.ok && res.directory) {
+            setLoadedDirectory(res.directory);
+            setSelectedAccessCodeFromDir('');
+          } else {
+            setErrorMessage(res.error || 'No se encontró la lista asociada a este código QR.');
+          }
+        })
+        .finally(() => {
+          setIsLookingUpCourse(false);
+        });
+    }
+  }, [urlCourseJoinCode, isCloudSignedIn, useLocalFallback, activeCourseTeacherLists, lookupCourseJoinCode]);
 
   const handleConnectGoogle = async () => {
     setErrorMessage('');
@@ -232,6 +274,33 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
           Escuela Ricardo Silva Arriagada · Ingresa con tu cuenta Google y tu PIN
         </p>
       </div>
+
+      {/* QR Deep-Link Course Banner */}
+      {urlCourseJoinCode && (
+        <div className="mb-4 p-3 rounded-2xl border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50/90 dark:bg-indigo-950/50 flex items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2 min-w-0">
+            <QrCode className="w-4 h-4 text-indigo-700 dark:text-indigo-300 shrink-0" />
+            <div className="min-w-0">
+              <span className="font-bold text-indigo-950 dark:text-indigo-100 block truncate">
+                Ingresando al curso {urlCourseJoinCode} desde QR
+              </span>
+              <span className="text-[11px] text-indigo-800/85 dark:text-indigo-200/80 block">
+                {isCloudSignedIn
+                  ? 'Lista del curso cargada abajo: elige tu nombre e ingresa tu PIN.'
+                  : 'Conecta tu cuenta Google abajo para ver la lista del curso.'}
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={clearUrlCourseJoinCode}
+            className="p-1 rounded-lg hover:bg-indigo-200/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 cursor-pointer shrink-0"
+            title="Limpiar código QR"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Step 1: Google Cloud Connection Bar */}
       {!useLocalFallback && (

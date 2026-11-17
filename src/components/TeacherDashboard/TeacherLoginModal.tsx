@@ -16,6 +16,7 @@ import {
   EyeOff,
   Palette,
   Cloud,
+  Trash2,
 } from 'lucide-react';
 import { ThemePaletteSelector } from '../ThemePaletteSelector';
 
@@ -33,6 +34,7 @@ export const TeacherLoginModal: React.FC = () => {
     registerTeacher,
     logoutTeacher,
     updateTeacherPassword,
+    clearTeacherWorkspaceAll,
   } = useApp();
 
   const [tab, setTab] = useState<'password' | 'theme' | 'switch' | 'register'>('password');
@@ -55,21 +57,24 @@ export const TeacherLoginModal: React.FC = () => {
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
+  const [confirmClearAll, setConfirmClearAll] = useState(false);
+  const [isClearingAll, setIsClearingAll] = useState(false);
 
   useEffect(() => {
     if (isTeacherLoginModalOpen) {
       setErrorMsg(null);
       setSuccessNotice(null);
+      setConfirmClearAll(false);
       setCurrentPass('');
       setNewPass('');
       setConfirmPass('');
       setSwitchPassword('');
       setTargetTeacherId(
-        teachers.find(t => t.id !== currentTeacher?.id)?.id || currentTeacher?.id || ''
+        teachers.find(t => t.id !== currentTeacher?.id)?.id || teachers[0]?.id || ''
       );
-      setTab(currentTeacher?.hasCustomPassword === false ? 'password' : 'password');
+      setTab(isCloudTeacher ? 'theme' : 'password');
     }
-  }, [isTeacherLoginModalOpen, currentTeacher, teachers]);
+  }, [isTeacherLoginModalOpen, currentTeacher, teachers, isCloudTeacher]);
 
   if (!isTeacherLoginModalOpen || !isTeacherAuthenticated) return null;
 
@@ -345,62 +350,71 @@ export const TeacherLoginModal: React.FC = () => {
         )}
 
         {tab === 'switch' && (
-          <form onSubmit={handleSwitchTeacher} className="space-y-3.5">
-            <p className="text-[11px] tq-text-muted">
-              Para acceder al espacio privado de otro docente debes ingresar su clave correspondiente.
-            </p>
-            <div>
-              <label className="block text-xs font-bold tq-text-2 mb-1">
-                Seleccionar Cuenta Docente:
-              </label>
-              <select
-                value={targetTeacherId}
-                onChange={e => {
-                  setTargetTeacherId(e.target.value);
-                  setSwitchPassword('');
-                  setErrorMsg(null);
-                }}
-                className="w-full px-3.5 py-2.5 text-xs font-bold border-2 tq-input rounded-xl focus:outline-hidden"
-              >
-                {teachers.map(t => (
-                  <option key={t.id} value={t.id}>
-                    Prof. {t.name} {t.id === currentTeacher?.id ? '(Actual)' : ''}
-                  </option>
-                ))}
-              </select>
+          teachers.length === 0 ? (
+            <div className="p-4 tq-subtle border rounded-2xl text-center space-y-2">
+              <p className="text-xs font-bold tq-text">No hay otras cuentas locales guardadas</p>
+              <p className="text-[11px] tq-text-muted">
+                Para cambiar de docente en la nube, presiona «Cerrar sesión» arriba e inicia sesión con otra cuenta de Google, o crea un docente local en la pestaña «Nuevo».
+              </p>
             </div>
-
-            <div>
-              <label className="block text-xs font-bold tq-text-2 mb-1">
-                Clave de Prof. {targetTeacherObj?.name || 'Docente'}:
-              </label>
-              <div className="relative">
-                <input
-                  type={showSwitchPass ? 'text' : 'password'}
-                  value={switchPassword}
-                  onChange={e => setSwitchPassword(e.target.value)}
-                  placeholder="Ingresa la clave de esta cuenta"
-                  className="w-full pl-3.5 pr-10 py-2.5 text-xs font-bold border-2 tq-input rounded-xl focus:outline-hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowSwitchPass(prev => !prev)}
-                  className="absolute right-3 top-2.5 tq-text-muted hover:tq-text cursor-pointer"
+          ) : (
+            <form onSubmit={handleSwitchTeacher} className="space-y-3.5">
+              <p className="text-[11px] tq-text-muted">
+                Para acceder al espacio privado de otro docente debes ingresar su clave correspondiente.
+              </p>
+              <div>
+                <label className="block text-xs font-bold tq-text-2 mb-1">
+                  Seleccionar Cuenta Docente:
+                </label>
+                <select
+                  value={targetTeacherId}
+                  onChange={e => {
+                    setTargetTeacherId(e.target.value);
+                    setSwitchPassword('');
+                    setErrorMsg(null);
+                  }}
+                  className="w-full px-3.5 py-2.5 text-xs font-bold border-2 tq-input rounded-xl focus:outline-hidden"
                 >
-                  {showSwitchPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                  {teachers.map(t => (
+                    <option key={t.id} value={t.id}>
+                      Prof. {t.name} {t.id === currentTeacher?.id ? '(Actual)' : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
-            </div>
 
-            <button
-              type="submit"
-              disabled={!targetTeacherId || !switchPassword.trim()}
-              className="w-full py-3 tq-btn-primary disabled:opacity-40 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
-            >
-              <span>Validar Clave e Ingresar</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </form>
+              <div>
+                <label className="block text-xs font-bold tq-text-2 mb-1">
+                  Clave de Prof. {targetTeacherObj?.name || 'Docente'}:
+                </label>
+                <div className="relative">
+                  <input
+                    type={showSwitchPass ? 'text' : 'password'}
+                    value={switchPassword}
+                    onChange={e => setSwitchPassword(e.target.value)}
+                    placeholder="Ingresa la clave de esta cuenta"
+                    className="w-full pl-3.5 pr-10 py-2.5 text-xs font-bold border-2 tq-input rounded-xl focus:outline-hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowSwitchPass(prev => !prev)}
+                    className="absolute right-3 top-2.5 tq-text-muted hover:tq-text cursor-pointer"
+                  >
+                    {showSwitchPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={!targetTeacherId || !switchPassword.trim()}
+                className="w-full py-3 tq-btn-primary disabled:opacity-40 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              >
+                <span>Validar Clave e Ingresar</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </form>
+          )
         )}
 
         {tab === 'register' && (
@@ -464,7 +478,7 @@ export const TeacherLoginModal: React.FC = () => {
               </div>
             </div>
 
-            <button
+              <button
               type="submit"
               disabled={!regName.trim() || regPassword.trim().length < 4}
               className="w-full py-3 tq-btn-primary disabled:opacity-40 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
@@ -474,6 +488,65 @@ export const TeacherLoginModal: React.FC = () => {
             </button>
           </form>
         )}
+
+        {/* Clear All Workspace Data (to leave platform completely clean before presentation) */}
+        <div className="mt-5 pt-4 border-t tq-border">
+          {confirmClearAll ? (
+            <div className="p-3 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 rounded-2xl space-y-2">
+              <p className="text-[11px] font-bold text-rose-900 dark:text-rose-100">
+                ¿Confirmas vaciar todas tus listas de estudiantes, evaluaciones y notas {isCloudTeacher ? 'de tu nube' : 'locales'} para dejar la plataforma en blanco?
+              </p>
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setConfirmClearAll(false)}
+                  disabled={isClearingAll}
+                  className="px-3 py-1.5 tq-card border tq-border tq-text-2 text-xs font-semibold rounded-xl cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={isClearingAll}
+                  onClick={async () => {
+                    setIsClearingAll(true);
+                    setErrorMsg(null);
+                    try {
+                      await clearTeacherWorkspaceAll();
+                      setConfirmClearAll(false);
+                      setSuccessNotice('Espacio de trabajo vaciado correctamente.');
+                      setTimeout(() => {
+                        setSuccessNotice(null);
+                        setIsTeacherLoginModalOpen(false);
+                      }, 1200);
+                    } catch (err) {
+                      setErrorMsg(err instanceof Error ? err.message : 'No se pudo vaciar el espacio.');
+                    } finally {
+                      setIsClearingAll(false);
+                    }
+                  }}
+                  className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl cursor-pointer"
+                >
+                  {isClearingAll ? 'Vaciando...' : 'Sí, dejar en blanco'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <span className="text-[11px] tq-text-muted">
+                ¿Quieres limpiar pruebas anteriores y dejar todo en cero?
+              </span>
+              <button
+                type="button"
+                onClick={() => setConfirmClearAll(true)}
+                className="px-3 py-1.5 text-[11px] font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 border border-rose-200 dark:border-rose-800 rounded-xl flex items-center gap-1.5 shrink-0 cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Vaciar espacio de trabajo</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
