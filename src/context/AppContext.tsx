@@ -519,10 +519,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [pendingDirectQuizCode, cloudStudentAssignments, currentStudent]);
 
   // Unified collections depending on active mode (Cloud Teacher, Cloud Student, or Local Demo)
+  const sortByNameES = <T extends { name: string }>(arr: T[]): T[] =>
+    [...arr].sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
+
   const students = useMemo(() => {
-    if (isCloudTeacher) return cloudTeacherStudents;
+    if (isCloudTeacher) return sortByNameES(cloudTeacherStudents);
     if (isCloudStudent && currentStudent) return [currentStudent];
-    return localStudents;
+    return sortByNameES(localStudents);
   }, [isCloudTeacher, cloudTeacherStudents, isCloudStudent, currentStudent, localStudents]);
 
   const assignments = useMemo(() => {
@@ -609,8 +612,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Scoped views strictly for the authenticated teacher
   const teacherStudents = useMemo(() => {
     if (!isTeacherAuthenticated) return [];
-    if (isCloudTeacher) return cloudTeacherStudents;
-    return localStudents.filter(s => s.teacherId === currentTeacher.id);
+    if (isCloudTeacher) return sortByNameES(cloudTeacherStudents);
+    return sortByNameES(localStudents.filter(s => s.teacherId === currentTeacher.id));
   }, [isTeacherAuthenticated, isCloudTeacher, cloudTeacherStudents, localStudents, currentTeacher.id]);
 
   const teacherAssignments = useMemo(() => {
@@ -1070,6 +1073,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newStudents: Student[] = [];
 
     const rutPattern = /^\d{1,2}\.?\d{3}\.?\d{3}-[\dkK]$/i;
+    const parsedNames: string[] = [];
 
     for (const line of lines) {
       let name = line;
@@ -1083,8 +1087,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
       name = name.replace(/\s+/g, ' ').trim();
-      if (!name) continue;
+      if (name) {
+        parsedNames.push(name);
+      }
+    }
 
+    parsedNames.sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+
+    for (const name of parsedNames) {
       let seqStr = counter < 10 ? `0${counter}` : `${counter}`;
       let accessCode = `MAT-${gradeShort}-${seqStr}`;
       while (existingAccessCodes.has(accessCode.toUpperCase())) {
@@ -1112,7 +1122,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     if (isCloudTeacher && firebaseUser) {
-      const courseStudentsAfter = [...existingTeacherCourseStudents, ...newStudents];
+      const courseStudentsAfter = sortByNameES([...existingTeacherCourseStudents, ...newStudents]);
       void addStudentsCloud(
         firebaseUser.uid,
         currentTeacher.name,

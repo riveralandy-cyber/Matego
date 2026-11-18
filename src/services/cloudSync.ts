@@ -262,11 +262,14 @@ export async function addStudentsCloud(
   }
 
   const codeMap = new Map(resolvedStudents.map(r => [r.id, r.uniqueCode]));
-  const preview = allCourseStudentsAfter.slice(0, 80).map(s => ({
-    studentId: s.id,
-    name: clampStr(s.name, 120),
-    accessCode: codeMap.get(s.id) || sanitizeFirestoreId(s.accessCode.toUpperCase(), 32),
-  }));
+  const preview = [...allCourseStudentsAfter]
+    .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }))
+    .slice(0, 80)
+    .map(s => ({
+      studentId: s.id,
+      name: clampStr(s.name, 120),
+      accessCode: codeMap.get(s.id) || sanitizeFirestoreId(s.accessCode.toUpperCase(), 32),
+    }));
 
   const ops: BatchOp[] = [];
 
@@ -370,11 +373,14 @@ export async function removeStudentsCloud(
       batch.update(joinRef, {
         teacherName: clampStr(teacherName, 120, 'Docente'),
         courseSection: clampStr(courseSection, 64),
-        studentsPreview: remainingCourseStudents.slice(0, 80).map(s => ({
-          studentId: s.id,
-          name: clampStr(s.name, 120),
-          accessCode: sanitizeFirestoreId(s.accessCode.toUpperCase(), 32),
-        })),
+        studentsPreview: [...remainingCourseStudents]
+          .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }))
+          .slice(0, 80)
+          .map(s => ({
+            studentId: s.id,
+            name: clampStr(s.name, 120),
+            accessCode: sanitizeFirestoreId(s.accessCode.toUpperCase(), 32),
+          })),
         serverUpdatedAt: serverTimestamp(),
       })
     );
@@ -448,11 +454,14 @@ export async function updateStudentNameCloud(params: {
       batch.update(joinRef, {
         teacherName: clampStr(teacherName, 120, 'Docente'),
         courseSection: clampStr(courseSection, 64),
-        studentsPreview: allCourseStudentsAfter.slice(0, 80).map(s => ({
-          studentId: s.id,
-          name: clampStr(s.id === student.id ? cleanName : s.name, 120),
-          accessCode: sanitizeFirestoreId(s.accessCode.toUpperCase(), 32),
-        })),
+        studentsPreview: allCourseStudentsAfter
+          .map(s => ({
+            studentId: s.id,
+            name: clampStr(s.id === student.id ? cleanName : s.name, 120),
+            accessCode: sanitizeFirestoreId(s.accessCode.toUpperCase(), 32),
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }))
+          .slice(0, 80),
         serverUpdatedAt: serverTimestamp(),
       })
     );
@@ -695,7 +704,17 @@ export async function lookupCourseJoinCodeCloud(
         error: `No se encontró el curso con código "${cleanJoinCode}". Verifica con tu profesor(a).`,
       };
     }
-    return { ok: true, directory: snap.data() as CourseJoinCodeDirectory };
+    const rawDir = snap.data() as CourseJoinCodeDirectory;
+    const sortedPreview = [...(rawDir.studentsPreview || [])].sort((a, b) =>
+      a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })
+    );
+    return {
+      ok: true,
+      directory: {
+        ...rawDir,
+        studentsPreview: sortedPreview,
+      },
+    };
   } catch (error) {
     handleFirestoreError(error, OperationType.GET, `courseJoinCodes/${cleanJoinCode}`);
   }
@@ -840,7 +859,7 @@ export function subscribeTeacherWorkspaceCloud(
     query(collection(db, 'teacherRosterStudents'), where('ownerUid', '==', ownerUid)),
     snap => {
       const list = snap.docs.map(d => d.data() as Student);
-      list.sort((a, b) => a.accessCode.localeCompare(b.accessCode));
+      list.sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
       callbacks.onStudents(list);
     },
     error => {
