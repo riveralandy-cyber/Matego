@@ -117,7 +117,7 @@ export const CourseRosterView: React.FC = () => {
     qrShareUrl,
     ``,
     `🔑 Código del curso: *${shareCourseCode}*`,
-    `Cada estudiante elige su nombre de la lista e ingresa su PIN de 4 dígitos.`,
+    `Cada estudiante elige su curso, busca su nombre en la lista e ingresa su clave / PIN (sin necesidad de correo).`,
   ].join('\n');
   const whatsAppHref = `https://wa.me/?text=${encodeURIComponent(whatsAppShareText)}`;
 
@@ -239,8 +239,8 @@ export const CourseRosterView: React.FC = () => {
     ctx.fillStyle = '#475569';
     ctx.font = '500 15px system-ui, -apple-system, sans-serif';
     ctx.fillText('1. Escanea el código QR con la cámara de tu celular.', cardWidth / 2, 734);
-    ctx.fillText('2. Conecta una cuenta Google y elige tu nombre en la lista.', cardWidth / 2, 760);
-    ctx.fillText('3. Ingresa el PIN de 4 dígitos entregado por tu profesor(a).', cardWidth / 2, 786);
+    ctx.fillText('2. Elige tu curso y selecciona tu nombre de la lista.', cardWidth / 2, 760);
+    ctx.fillText('3. Ingresa la clave / PIN entregada por tu profesor(a).', cardWidth / 2, 786);
 
     const pngUrl = outCanvas.toDataURL('image/png');
     const a = document.createElement('a');
@@ -816,8 +816,8 @@ export const CourseRosterView: React.FC = () => {
 
               <ol className="mt-3 text-xs text-slate-600 space-y-1 text-left bg-slate-50 border border-slate-200 rounded-2xl p-3 w-full">
                 <li><strong>1.</strong> Escanea el código QR con la cámara del celular o abre el enlace compartido.</li>
-                <li><strong>2.</strong> Conecta la cuenta Google del estudiante o apoderado.</li>
-                <li><strong>3.</strong> Selecciona el nombre del estudiante en la lista e ingresa su PIN de 4 dígitos.</li>
+                <li><strong>2.</strong> Elige tu curso y busca tu nombre en la lista (sin correo).</li>
+                <li><strong>3.</strong> Ingresa la clave / PIN de 4 dígitos entregada por tu profesor(a).</li>
               </ol>
             </div>
 

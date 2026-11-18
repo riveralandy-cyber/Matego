@@ -3,19 +3,16 @@ import { useApp } from '../../context/AppContext';
 import {
   KeyRound,
   UserCheck,
-  ArrowRight,
   ShieldAlert,
   PlayCircle,
-  Cloud,
-  CheckCircle2,
   Search,
   RefreshCw,
   QrCode,
   X,
-  LogOut,
   FileText,
   Eye,
   EyeOff,
+  Cloud,
 } from 'lucide-react';
 import { ThemePaletteSelector } from '../ThemePaletteSelector';
 import { CourseJoinCodeDirectory } from '../../services/cloudSync';
@@ -32,9 +29,8 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
     teachers,
     firebaseUser,
     isAuthReady,
-    linkedCloudStudentSeats,
-    connectStudentWithGoogle,
-    disconnectGoogleAccount,
+    studentCloudError,
+    ensureStudentSession,
     listAvailableCourseDirectories,
     lookupCourseJoinCode,
     loginStudentCloudByAccessCode,
@@ -101,12 +97,11 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
   const selectedCourseObj = courses.find(c => c.id === selectedCourseId);
   const selectedTeacherObj = teachers.find(t => t.id === selectedTeacherId);
 
-  const isCloudSignedIn = Boolean(isAuthReady && firebaseUser && firebaseUser.emailVerified);
+  const isCloudSignedIn = Boolean(isAuthReady && firebaseUser);
 
   const loadCloudCourses = useCallback(async () => {
     if (!isCloudSignedIn || useLocalFallback) return;
     setIsLoadingCourses(true);
-    setErrorMessage('');
     try {
       const list = await listAvailableCourseDirectories();
       let mergedList = list;
@@ -143,7 +138,7 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
     }
   }, [isCloudSignedIn, useLocalFallback, listAvailableCourseDirectories, lookupCourseJoinCode, urlCourseJoinCode]);
 
-  // Auto-load course lists when Google account is connected
+  // Auto-load course lists when cloud session is ready
   React.useEffect(() => {
     if (useLocalFallback) {
       if (urlCourseJoinCode) {
@@ -171,35 +166,6 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
   const filteredLocalStudents = courseStudents.filter(
     st => !cleanNameFilter || st.name.toLowerCase().includes(cleanNameFilter)
   );
-
-  const handleConnectGoogle = async () => {
-    setErrorMessage('');
-    setIsSubmitting(true);
-    try {
-      const res = await connectStudentWithGoogle();
-      if (!res.ok) {
-        setErrorMessage(res.error || 'No se pudo conectar la cuenta Google.');
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDisconnectGoogle = async () => {
-    setErrorMessage('');
-    setIsSubmitting(true);
-    try {
-      await disconnectGoogleAccount();
-      setAvailableDirectories([]);
-      setSelectedJoinCode('');
-      setSelectedAccessCodeFromDir('');
-      setNameSearchQuery('');
-      setPin('');
-      autoLookedUpQrRef.current = null;
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const handleCloudListLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -291,7 +257,7 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
         </div>
         <h1 className="text-2xl font-bold tq-text">¡Hola estudiante!</h1>
         <p className="text-xs tq-text-muted mt-1 font-medium">
-          Escuela Ricardo Silva Arriagada · Elige tu curso, busca tu nombre e ingresa tu clave
+          Escuela Ricardo Silva Arriagada · Elige tu curso, busca tu nombre e ingresa tu clave (sin correo)
         </p>
       </div>
 
@@ -307,9 +273,7 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
                   : 'Ingresando desde enlace QR del curso'}
               </span>
               <span className="text-[11px] text-indigo-800/85 dark:text-indigo-200/80 block">
-                {isCloudSignedIn
-                  ? 'Elige tu nombre de la lista e ingresa tu clave entregada por el docente.'
-                  : 'Conecta tu cuenta Google abajo para cargar la lista de tu curso.'}
+                Elige tu nombre de la lista e ingresa la clave entregada por tu docente.
               </span>
             </div>
           </div>
@@ -324,99 +288,30 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
         </div>
       )}
 
-      {/* Step 1: Google Cloud Connection Bar */}
-      {!useLocalFallback && (
-        <div className="mb-5 p-3.5 rounded-2xl border tq-tint">
-          {!isCloudSignedIn ? (
-            <div className="space-y-2.5 text-center">
-              <div className="flex items-center justify-center gap-1.5 text-xs font-bold tq-text">
-                <Cloud className="w-4 h-4 tq-text-accent" />
-                <span>Paso 1: Conecta tu cuenta Google</span>
+      {/* Automatic Cloud Connection Status (shown only while initializing or on connection error) */}
+      {!useLocalFallback && !isCloudSignedIn && (
+        <div className="mb-4 p-3.5 rounded-2xl border tq-tint text-xs">
+          {studentCloudError ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-rose-700 dark:text-rose-300 font-semibold">
+                <ShieldAlert className="w-4 h-4 shrink-0" />
+                <span>{studentCloudError}</span>
               </div>
-              <p className="text-[11px] tq-text-2 leading-relaxed">
-                Necesario para ver la lista de tu curso, recibir tus evaluaciones actualizadas y guardar tus notas en la nube.
-              </p>
               <button
                 type="button"
-                onClick={handleConnectGoogle}
-                disabled={isSubmitting}
-                className="w-full py-2.5 px-4 tq-btn-gradient rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs cursor-pointer disabled:opacity-50"
+                onClick={() => void ensureStudentSession()}
+                className="px-3 py-1.5 tq-btn-primary rounded-lg text-[11px] font-bold inline-flex items-center gap-1.5 cursor-pointer"
               >
-                <Cloud className="w-4 h-4" />
-                <span>{isSubmitting ? 'Conectando...' : 'Conectar con Google'}</span>
+                <RefreshCw className="w-3 h-3" />
+                <span>Reintentar conexión</span>
               </button>
             </div>
           ) : (
-            <div className="flex items-center justify-between gap-2 text-xs">
-              <div className="flex items-center gap-2 min-w-0">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <div className="min-w-0">
-                  <span className="text-[10px] font-bold uppercase text-emerald-700 dark:text-emerald-300 block">
-                    Conectado a la nube
-                  </span>
-                  <span className="font-bold tq-text truncate block">
-                    {firebaseUser?.email}
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={handleConnectGoogle}
-                  disabled={isSubmitting}
-                  className="px-2.5 py-1 tq-card border rounded-lg text-[11px] font-bold tq-text-accent flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                  title="Usar otro correo Google"
-                >
-                  <RefreshCw className="w-3 h-3" />
-                  <span>Cambiar</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDisconnectGoogle}
-                  disabled={isSubmitting}
-                  className="px-2.5 py-1 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 text-rose-700 dark:text-rose-200 border border-rose-200 dark:border-rose-800 rounded-lg text-[11px] font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                  title="Cerrar sesión de este correo Google"
-                >
-                  <LogOut className="w-3 h-3" />
-                  <span>Salir</span>
-                </button>
-              </div>
+            <div className="flex items-center justify-center gap-2 tq-text-2 font-medium py-1">
+              <Cloud className="w-4 h-4 tq-text-accent animate-pulse" />
+              <span>Conectando con la nube de MateClic...</span>
             </div>
           )}
-        </div>
-      )}
-
-      {/* Returning Student Linked Seats Quick Access */}
-      {isCloudSignedIn && !useLocalFallback && linkedCloudStudentSeats.length > 0 && (
-        <div className="mb-5 p-3.5 rounded-2xl border-2 border-emerald-300 dark:border-emerald-700 bg-emerald-50/70 dark:bg-emerald-950/40 space-y-2">
-          <span className="text-[11px] font-bold text-emerald-800 dark:text-emerald-200 block">
-            Cuenta vinculada detectada · Ingreso rápido:
-          </span>
-          {linkedCloudStudentSeats.map(seat => {
-            const c = courses.find(co => co.id === seat.courseId);
-            return (
-              <button
-                key={`${seat.ownerUid}_${seat.id}`}
-                type="button"
-                onClick={() => {
-                  setCurrentStudent(seat);
-                  onLoginSuccess();
-                }}
-                className="w-full p-2.5 tq-card border rounded-xl flex items-center justify-between text-left hover:border-emerald-400 transition-all cursor-pointer"
-              >
-                <div>
-                  <span className="text-xs font-bold tq-text block">{seat.name}</span>
-                  <span className="text-[11px] tq-text-muted">
-                    {c?.section || seat.courseId}
-                  </span>
-                </div>
-                <span className="px-2.5 py-1 rounded-lg tq-btn-primary text-[11px] font-bold flex items-center gap-1">
-                  <span>Entrar</span>
-                  <ArrowRight className="w-3 h-3" />
-                </span>
-              </button>
-            );
-          })}
         </div>
       )}
 
@@ -777,8 +672,8 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
           className="text-[11px] tq-text-muted hover:tq-text underline cursor-pointer"
         >
           {useLocalFallback
-            ? 'Volver al acceso en la nube (Google)'
-            : 'Usar en modo demo local (sin Google ni sincronización)'}
+            ? 'Volver al acceso en la nube'
+            : 'Usar en modo demo local (sin nube ni sincronización)'}
         </button>
       </div>
 

@@ -27,8 +27,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     assignments,
     attempts,
     teachers,
-    firebaseUser,
-    disconnectGoogleAccount,
+    logoutStudent,
   } = useApp();
   const [isChangePinOpen, setIsChangePinOpen] = useState(false);
   const [isFirstLoginPrompt, setIsFirstLoginPrompt] = useState(false);
@@ -143,15 +142,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
           <button
             type="button"
-            onClick={() => {
-              if (firebaseUser) {
-                void disconnectGoogleAccount();
-              } else {
-                setCurrentStudent(null);
-              }
-            }}
+            onClick={logoutStudent}
             className="px-3 py-1.5 text-xs bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/70 text-rose-700 dark:text-rose-200 border border-rose-200 dark:border-rose-800 rounded-lg flex items-center gap-1.5 font-bold transition-colors cursor-pointer"
-            title="Cerrar sesión del estudiante y desconectar correo Google"
+            title="Cerrar sesión de estudiante"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Cerrar sesión</span>

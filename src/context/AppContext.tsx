@@ -1,5 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { User, deleteUser, onAuthStateChanged, reauthenticateWithPopup, signInWithPopup, signOut } from 'firebase/auth';
+import {
+  User,
+  deleteUser,
+  onAuthStateChanged,
+  reauthenticateWithPopup,
+  signInAnonymously,
+  signInWithPopup,
+  signOut,
+} from 'firebase/auth';
 import { Course, Student, QuizAssignment, QuizAttempt, Teacher, TeacherTab, ThemePaletteId } from '../types';
 import { INITIAL_COURSES, INITIAL_STUDENTS, INITIAL_ASSIGNMENTS, INITIAL_ATTEMPTS } from '../data/initialData';
 import { calculateChileanGrade, getMineducPerformanceLevel } from '../utils/chileanGrades';
@@ -29,7 +37,6 @@ import {
   recordQuizAttemptCloud,
   removeStudentsCloud,
   seedTeacherWorkspaceCloud,
-  subscribeLinkedStudentSeatsCloud,
   subscribeStudentCourseAndAttemptsCloud,
   subscribeTeacherWorkspaceCloud,
   unlinkStudentGoogleCloud,
@@ -72,9 +79,10 @@ interface AppContextType {
   isAdminTeacher: boolean;
   cloudSyncStatus: CloudSyncStatus;
   cloudSyncMessage: string | null;
-  linkedCloudStudentSeats: Student[];
+  studentCloudError: string | null;
+  ensureStudentSession: () => Promise<AuthActionResult>;
+  logoutStudent: () => void;
   loginTeacherWithGoogle: () => Promise<AuthActionResult>;
-  connectStudentWithGoogle: () => Promise<AuthActionResult>;
   disconnectGoogleAccount: () => Promise<void>;
   listAvailableCourseDirectories: () => Promise<CourseJoinCodeDirectory[]>;
   lookupCourseJoinCode: (joinCode: string) => Promise<{ ok: boolean; directory?: CourseJoinCodeDirectory; error?: string }>;
@@ -202,10 +210,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [cloudTeacherAttempts, setCloudTeacherAttempts] = useState<QuizAttempt[]>([]);
 
   // Cloud student collections
-  const [linkedCloudStudentSeats, setLinkedCloudStudentSeats] = useState<Student[]>([]);
   const [cloudStudentAssignments, setCloudStudentAssignments] = useState<QuizAssignment[]>([]);
   const [cloudStudentAttempts, setCloudStudentAttempts] = useState<QuizAttempt[]>([]);
   const [pendingDirectQuizCode, setPendingDirectQuizCode] = useState<string | null>(null);
+  const [studentCloudError, setStudentCloudError] = useState<string | null>(null);
 
   const [teachers, setTeachers] = useState<Teacher[]>(() => {
     const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}teachers`);
@@ -302,7 +310,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     role === 'student' &&
       isAuthReady &&
       firebaseUser &&
-      firebaseUser.emailVerified &&
       currentStudent?.ownerUid
   );
 
@@ -329,7 +336,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCloudTeacherStudents([]);
         setCloudTeacherAssignments([]);
         setCloudTeacherAttempts([]);
-        setLinkedCloudStudentSeats([]);
         setCloudStudentAssignments([]);
         setCloudStudentAttempts([]);
         setCloudSyncStatus('local');
@@ -338,6 +344,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
     return () => unsub();
   }, []);
+
+  const ensureStudentSession = useCallback(async (): Promise<AuthActionResult> => {
+    if (auth.currentUser) {
+      setStudentCloudError(null);
+      return { ok: true };
+    }
+    try {
+      const cred = await signInAnonymously(auth);
+      setFirebaseUser(cred.user);
+      setStudentCloudError(null);
+      return { ok: true };
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      const friendly = msg.includes('operation-not-allowed')
+        ? 'Falta habilitar el acceso Anónimo en Authentication → Sign-in method de Firebase.'
+        : `No se pudo iniciar la conexión en la nube para estudiantes: ${msg}`;
+      setStudentCloudError(friendly);
+      return { ok: false, error: friendly };
+    }
+  }, []);
+
+  // Automatically ensure an invisible cloud session whenever entering Student view (zero email required)
+  useEffect(() => {
+    if (role === 'student' && isAuthReady && !firebaseUser) {
+      void ensureStudentSession();
+    }
+  }, [role, isAuthReady, firebaseUser, ensureStudentSession]);
 
   // Teacher Cloud Realtime Subscription
   const seededCheckRef = useRef<Set<string>>(new Set());
@@ -455,26 +488,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   }, [isCloudTeacher, firebaseUser, cloudTeacherStudents, cloudTeacherAttempts]);
 
-  // Student Cloud Linked Seats Discovery (auto-detect previously linked seats for Google account)
-  useEffect(() => {
-    if (role !== 'student' || !isAuthReady || !firebaseUser || !firebaseUser.emailVerified) {
-      return;
-    }
-
-    const unsub = subscribeLinkedStudentSeatsCloud(firebaseUser.uid, {
-      onSeats: seats => {
-        setLinkedCloudStudentSeats(seats);
-        setCurrentStudentState(prev => {
-          if (!prev) return prev;
-          const refreshed = seats.find(s => s.id === prev.id && s.ownerUid === prev.ownerUid);
-          return refreshed || prev;
-        });
-      },
-      onError: err => reportCloudError(err),
-    });
-
-    return () => unsub();
-  }, [role, isAuthReady, firebaseUser]);
+  // Student seats are always authenticated explicitly via Course + Name + PIN (no PIN-less quick bypass)
 
   // Student Cloud Live Feed & Attempts Listener
   useEffect(() => {
@@ -730,24 +744,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const connectStudentWithGoogle = async (): Promise<AuthActionResult> => {
-    try {
-      const cred = await signInWithPopup(auth, googleProvider);
-      if (!cred.user.emailVerified) {
-        return { ok: false, error: 'Se requiere una cuenta Google con correo verificado.' };
-      }
-      // Ensure teacher cloud mode is cleared if switching to student Google auth
-      localStorage.removeItem(CLOUD_TEACHER_UID_KEY);
-      setCloudTeacherUid(null);
-      setIsTeacherAuthenticated(false);
-      return { ok: true };
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      if (msg.includes('popup-closed-by-user') || msg.includes('cancelled-popup-request')) {
-        return { ok: false, error: 'Ventana de Google cerrada antes de conectar tu cuenta.' };
-      }
-      return { ok: false, error: `No se pudo conectar la cuenta Google: ${msg}` };
-    }
+  const logoutStudent = () => {
+    setCurrentStudentState(null);
+    setActiveQuizTaking(null);
+    setLatestCompletedAttempt(null);
+    setPendingDirectQuizCode(null);
+    setCloudStudentAssignments([]);
+    setCloudStudentAttempts([]);
   };
 
   const disconnectGoogleAccount = async (): Promise<void> => {
@@ -775,13 +778,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     pin: string,
     quizDirectCode?: string
   ): Promise<AuthActionResult> => {
-    if (!firebaseUser || !firebaseUser.emailVerified) {
-      return { ok: false, error: 'Primero conecta tu cuenta Google en el Paso 1.' };
+    if (!auth.currentUser) {
+      const sessionRes = await ensureStudentSession();
+      if (!sessionRes.ok) {
+        return { ok: false, error: sessionRes.error || 'No se pudo conectar con la nube.' };
+      }
+    }
+    const activeUid = auth.currentUser?.uid;
+    if (!activeUid) {
+      return { ok: false, error: 'No se pudo iniciar la sesión de estudiante en la nube.' };
     }
     const res = await claimStudentWithAccessCodeCloud({
       accessCode,
       pin,
-      firebaseUid: firebaseUser.uid,
+      firebaseUid: activeUid,
     });
     if (!res.ok || !res.student) {
       return { ok: false, error: res.error || 'Credenciales inválidas.' };
@@ -1305,7 +1315,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setLatestCompletedAttempt(ownedAttempt);
 
-    if (ownerUid && firebaseUser && firebaseUser.emailVerified) {
+    if (ownerUid && firebaseUser && (role === 'student' || firebaseUser.emailVerified)) {
       void recordQuizAttemptCloud({
         attempt: ownedAttempt,
         ownerUid,
@@ -1467,7 +1477,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       students.find(s => s.id === studentId) ||
       null;
 
-    if (target?.ownerUid && firebaseUser && firebaseUser.emailVerified) {
+    if (target?.ownerUid && firebaseUser && (role === 'student' || firebaseUser.emailVerified)) {
       void updateStudentPinCloud(target, cleanPin).catch(reportCloudError);
     } else {
       setLocalStudents(prev =>
@@ -1495,9 +1505,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isAdminTeacher,
         cloudSyncStatus,
         cloudSyncMessage,
-        linkedCloudStudentSeats,
+        studentCloudError,
+        ensureStudentSession,
+        logoutStudent,
         loginTeacherWithGoogle,
-        connectStudentWithGoogle,
         disconnectGoogleAccount,
         listAvailableCourseDirectories,
         lookupCourseJoinCode,

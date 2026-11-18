@@ -793,14 +793,6 @@ export async function claimStudentWithAccessCodeCloud(params: {
     return { ok: false, error: 'Clave / PIN incorrecta. Verifica tu clave con tu profesor(a) (sin espacios).' };
   }
 
-  if (entry.linkedStudentUid && entry.linkedStudentUid !== params.firebaseUid) {
-    return {
-      ok: false,
-      error:
-        'Este estudiante ya ingresó anteriormente con otro correo Google. Si cambiaste de correo o dispositivo, pídele a tu profesor(a) presionar Desvincular junto a tu nombre en «Lista del curso».',
-    };
-  }
-
   const memberDocId = makeCourseMemberId(entry.ownerUid, entry.courseId, params.firebaseUid);
   const memberRef = doc(db, 'courseMembers', memberDocId);
   let memberExists = false;

@@ -268,7 +268,7 @@ service cloud.firestore {
 
     // Connection diagnostic doc
     match /test/{docId} {
-      allow get: if isVerifiedUser() && docId == 'connection';
+      allow get: if isSignedIn() && docId == 'connection';
     }
 
     // 1. Private Teacher Profile
@@ -297,15 +297,15 @@ service cloud.firestore {
       allow delete: if isVerifiedUser() && isValidId(teacherUid) && (request.auth.uid == teacherUid || isAdmin());
     }
 
-    // 2. Teacher Roster Students (PII Isolated to Owner Teacher & Linked Student)
+    // 2. Teacher Roster Students (PII Isolated to Owner Teacher & Claimed Student Session)
     match /teacherRosterStudents/{studentDocId} {
-      allow get: if isVerifiedUser()
+      allow get: if isSignedIn()
         && isValidId(studentDocId)
         && (
           isAdmin()
           || (resource != null && (existing().ownerUid == request.auth.uid || existing().linkedStudentUid == request.auth.uid))
         );
-      allow list: if isVerifiedUser()
+      allow list: if isSignedIn()
         && (existing().ownerUid == request.auth.uid || existing().linkedStudentUid == request.auth.uid || isAdmin());
       allow create: if isVerifiedUser()
         && isValidId(studentDocId)
@@ -313,7 +313,7 @@ service cloud.firestore {
         && incoming().ownerUid == request.auth.uid
         && incoming().serverCreatedAt == request.time
         && incoming().serverUpdatedAt == request.time;
-      allow update: if isVerifiedUser()
+      allow update: if isSignedIn()
         && isValidId(studentDocId)
         && isValidRosterStudent(incoming())
         && incoming().id == existing().id
@@ -322,21 +322,21 @@ service cloud.firestore {
         && incoming().serverCreatedAt == existing().serverCreatedAt
         && incoming().serverUpdatedAt == request.time
         && (
-          // Tier 1: Owner teacher updates roster info or links/syncs student
+          // Tier 1: Owner teacher (verified Google) updates roster info or links/syncs student
           (
-            existing().ownerUid == request.auth.uid
+            isVerifiedUser()
+            && existing().ownerUid == request.auth.uid
             && incoming().diff(existing()).affectedKeys().hasOnly([
               'name', 'rut', 'courseId', 'accessCode', 'pin', 'hasCustomPin', 'linkedStudentUid', 'serverUpdatedAt'
             ])
           )
-          // Tier 2a: Student claims their seat matching studentDirectory
+          // Tier 2a: Student claims/re-links their seat on current device matching studentDirectory
           || (
-            (existing().linkedStudentUid == '' || existing().linkedStudentUid == request.auth.uid)
-            && incoming().linkedStudentUid == request.auth.uid
+            incoming().linkedStudentUid == request.auth.uid
             && incoming().diff(existing()).affectedKeys().hasOnly(['linkedStudentUid', 'serverUpdatedAt'])
             && getAfter(/databases/$(database)/documents/studentDirectory/$(existing().accessCode)).data.linkedStudentUid == request.auth.uid
           )
-          // Tier 2b: Linked student updates only their personal PIN
+          // Tier 2b: Active student session updates only their personal PIN
           || (
             existing().linkedStudentUid == request.auth.uid
             && incoming().diff(existing()).affectedKeys().hasOnly(['pin', 'hasCustomPin', 'serverUpdatedAt'])
@@ -349,7 +349,7 @@ service cloud.firestore {
 
     // 3. Student Directory (Non-PII lookup keyed by uppercase accessCode)
     match /studentDirectory/{accessCode} {
-      allow get: if isVerifiedUser() && isValidId(accessCode);
+      allow get: if isSignedIn() && isValidId(accessCode);
       allow list: if isVerifiedUser()
         && (existing().ownerUid == request.auth.uid || existing().linkedStudentUid == request.auth.uid || isAdmin());
       allow create: if isVerifiedUser()
@@ -359,7 +359,7 @@ service cloud.firestore {
         && incoming().ownerUid == request.auth.uid
         && incoming().serverCreatedAt == request.time
         && incoming().serverUpdatedAt == request.time;
-      allow update: if isVerifiedUser()
+      allow update: if isSignedIn()
         && isValidId(accessCode)
         && isValidStudentDirectory(incoming())
         && incoming().accessCode == existing().accessCode
@@ -370,20 +370,20 @@ service cloud.firestore {
         && incoming().serverCreatedAt == existing().serverCreatedAt
         && incoming().serverUpdatedAt == request.time
         && (
-          // Tier 1: Owner teacher updates directory metadata or pinHash
+          // Tier 1: Owner teacher (verified Google) updates directory metadata or pinHash
           (
-            existing().ownerUid == request.auth.uid
+            isVerifiedUser()
+            && existing().ownerUid == request.auth.uid
             && incoming().diff(existing()).affectedKeys().hasOnly([
               'studentName', 'courseId', 'teacherName', 'pinHash', 'hasCustomPin', 'linkedStudentUid', 'serverUpdatedAt'
             ])
           )
-          // Tier 2a: Student claims directory entry
+          // Tier 2a: Student binds current session UID to directory entry
           || (
-            (existing().linkedStudentUid == '' || existing().linkedStudentUid == request.auth.uid)
-            && incoming().linkedStudentUid == request.auth.uid
+            incoming().linkedStudentUid == request.auth.uid
             && incoming().diff(existing()).affectedKeys().hasOnly(['linkedStudentUid', 'serverUpdatedAt'])
           )
-          // Tier 2b: Linked student updates pinHash
+          // Tier 2b: Active student session updates pinHash
           || (
             existing().linkedStudentUid == request.auth.uid
             && incoming().diff(existing()).affectedKeys().hasOnly(['pinHash', 'hasCustomPin', 'serverUpdatedAt'])
@@ -396,8 +396,8 @@ service cloud.firestore {
 
     // 4. Course Join Codes (Class directory without PII)
     match /courseJoinCodes/{joinCode} {
-      allow get: if isVerifiedUser() && isValidId(joinCode);
-      allow list: if isVerifiedUser() && (
+      allow get: if isSignedIn() && isValidId(joinCode);
+      allow list: if isSignedIn() && (
         existing().ownerUid == request.auth.uid
         || isAdmin()
         || existing().courseId in [
@@ -434,16 +434,16 @@ service cloud.firestore {
 
     // 5. Verified Course Memberships
     match /courseMembers/{memberDocId} {
-      allow get: if isVerifiedUser()
+      allow get: if isSignedIn()
         && isValidId(memberDocId)
         && (
           isAdmin()
           || (resource == null && memberDocId.matches('^[a-zA-Z0-9_-]+__' + request.auth.uid + '$'))
           || (resource != null && (existing().ownerUid == request.auth.uid || existing().studentUid == request.auth.uid))
         );
-      allow list: if isVerifiedUser()
+      allow list: if isSignedIn()
         && (existing().ownerUid == request.auth.uid || existing().studentUid == request.auth.uid || isAdmin());
-      allow create: if isVerifiedUser()
+      allow create: if isSignedIn()
         && isValidId(memberDocId)
         && isValidCourseMember(incoming())
         && memberDocId == (incoming().ownerUid + '__' + incoming().courseId + '__' + request.auth.uid)
@@ -462,7 +462,7 @@ service cloud.firestore {
 
     // 6. Real-Time Course Assignment Feeds
     match /courseFeeds/{courseFeedId} {
-      allow get: if isVerifiedUser()
+      allow get: if isSignedIn()
         && isValidId(courseFeedId)
         && (
           isAdmin()
@@ -501,7 +501,7 @@ service cloud.firestore {
 
     // 7. Quiz Assignments
     match /assignments/{assignmentDocId} {
-      allow get: if isVerifiedUser()
+      allow get: if isSignedIn()
         && isValidId(assignmentDocId)
         && (
           isAdmin()
@@ -537,15 +537,15 @@ service cloud.firestore {
 
     // 8. Quiz Attempts & Grades (Shared Student <-> Teacher Sync)
     match /attempts/{attemptDocId} {
-      allow get: if isVerifiedUser()
+      allow get: if isSignedIn()
         && isValidId(attemptDocId)
         && (
           isAdmin()
           || (resource != null && (existing().ownerUid == request.auth.uid || existing().studentUid == request.auth.uid))
         );
-      allow list: if isVerifiedUser()
+      allow list: if isSignedIn()
         && (existing().ownerUid == request.auth.uid || existing().studentUid == request.auth.uid || isAdmin());
-      allow create: if isVerifiedUser()
+      allow create: if isSignedIn()
         && isValidId(attemptDocId)
         && isValidQuizAttempt(incoming())
         && incoming().serverCreatedAt == request.time
@@ -554,9 +554,10 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/assignments/$(incoming().assignmentDocId)).data.ownerUid == incoming().ownerUid
         && get(/databases/$(database)/documents/assignments/$(incoming().assignmentDocId)).data.courseId == incoming().courseId
         && (
-          // Teacher creating demo/test attempt
+          // Teacher (verified Google) creating demo/test attempt
           (
-            incoming().ownerUid == request.auth.uid
+            isVerifiedUser()
+            && incoming().ownerUid == request.auth.uid
             && (incoming().studentUid == '' || incoming().studentUid == request.auth.uid)
           )
           // Enrolled student submitting evaluation
