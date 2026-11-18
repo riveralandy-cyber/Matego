@@ -394,7 +394,16 @@ service cloud.firestore {
     // 4. Course Join Codes (Class directory without PII)
     match /courseJoinCodes/{joinCode} {
       allow get: if isVerifiedUser() && isValidId(joinCode);
-      allow list: if isVerifiedUser() && (existing().ownerUid == request.auth.uid || isAdmin());
+      allow list: if isVerifiedUser() && (
+        existing().ownerUid == request.auth.uid
+        || isAdmin()
+        || existing().courseId in [
+          'course-1a', 'course-1b', 'course-2a', 'course-2b',
+          'course-3a', 'course-3b', 'course-4a', 'course-4b',
+          'course-5a', 'course-5b', 'course-6a', 'course-6b',
+          'course-7a', 'course-7b', 'course-8a', 'course-8b'
+        ]
+      );
       allow create: if isVerifiedUser()
         && isValidId(joinCode)
         && isValidCourseJoinCode(incoming())

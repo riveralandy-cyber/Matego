@@ -369,21 +369,25 @@ export async function removeStudentsCloud(
   }
 
   if (joinExists) {
-    ops.push(batch =>
-      batch.update(joinRef, {
-        teacherName: clampStr(teacherName, 120, 'Docente'),
-        courseSection: clampStr(courseSection, 64),
-        studentsPreview: [...remainingCourseStudents]
-          .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }))
-          .slice(0, 80)
-          .map(s => ({
-            studentId: s.id,
-            name: clampStr(s.name, 120),
-            accessCode: sanitizeFirestoreId(s.accessCode.toUpperCase(), 32),
-          })),
-        serverUpdatedAt: serverTimestamp(),
-      })
-    );
+    if (remainingCourseStudents.length === 0) {
+      ops.push(batch => batch.delete(joinRef));
+    } else {
+      ops.push(batch =>
+        batch.update(joinRef, {
+          teacherName: clampStr(teacherName, 120, 'Docente'),
+          courseSection: clampStr(courseSection, 64),
+          studentsPreview: [...remainingCourseStudents]
+            .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }))
+            .slice(0, 80)
+            .map(s => ({
+              studentId: s.id,
+              name: clampStr(s.name, 120),
+              accessCode: sanitizeFirestoreId(s.accessCode.toUpperCase(), 32),
+            })),
+          serverUpdatedAt: serverTimestamp(),
+        })
+      );
+    }
   }
 
   await commitBatchOpsInChunks(ops, OperationType.DELETE, 'teacherRosterStudents');
@@ -717,6 +721,44 @@ export async function lookupCourseJoinCodeCloud(
     };
   } catch (error) {
     handleFirestoreError(error, OperationType.GET, `courseJoinCodes/${cleanJoinCode}`);
+  }
+}
+
+const ALL_VALID_COURSE_IDS = [
+  'course-1a', 'course-1b',
+  'course-2a', 'course-2b',
+  'course-3a', 'course-3b',
+  'course-4a', 'course-4b',
+  'course-5a', 'course-5b',
+  'course-6a', 'course-6b',
+  'course-7a', 'course-7b',
+  'course-8a', 'course-8b',
+];
+
+export async function listAvailableCourseDirectoriesCloud(): Promise<CourseJoinCodeDirectory[]> {
+  try {
+    const snap = await getDocs(
+      query(collection(db, 'courseJoinCodes'), where('courseId', 'in', ALL_VALID_COURSE_IDS))
+    );
+    const list = snap.docs
+      .map(d => {
+        const raw = d.data() as CourseJoinCodeDirectory;
+        return {
+          ...raw,
+          studentsPreview: [...(raw.studentsPreview || [])].sort((a, b) =>
+            a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })
+          ),
+        };
+      })
+      .filter(d => d.studentsPreview.length > 0);
+    list.sort((a, b) =>
+      `${a.courseId} ${a.teacherName}`.localeCompare(`${b.courseId} ${b.teacherName}`, 'es', {
+        sensitivity: 'base',
+      })
+    );
+    return list;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, 'courseJoinCodes');
   }
 }
 

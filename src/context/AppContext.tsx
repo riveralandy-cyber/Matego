@@ -24,6 +24,7 @@ import {
   deleteTeacherProfileAndDataCloud,
   ensureTeacherProfileCloud,
   listAllCloudTeachers,
+  listAvailableCourseDirectoriesCloud,
   lookupCourseJoinCodeCloud,
   recordQuizAttemptCloud,
   removeStudentsCloud,
@@ -75,6 +76,7 @@ interface AppContextType {
   loginTeacherWithGoogle: () => Promise<AuthActionResult>;
   connectStudentWithGoogle: () => Promise<AuthActionResult>;
   disconnectGoogleAccount: () => Promise<void>;
+  listAvailableCourseDirectories: () => Promise<CourseJoinCodeDirectory[]>;
   lookupCourseJoinCode: (joinCode: string) => Promise<{ ok: boolean; directory?: CourseJoinCodeDirectory; error?: string }>;
   loginStudentCloudByAccessCode: (accessCode: string, pin: string, quizDirectCode?: string) => Promise<AuthActionResult>;
   unlinkStudentGoogleAccount: (studentId: string) => void;
@@ -758,6 +760,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCloudSyncStatus('local');
     setCloudSyncMessage(null);
     await signOut(auth);
+  };
+
+  const listAvailableCourseDirectories = async (): Promise<CourseJoinCodeDirectory[]> => {
+    return listAvailableCourseDirectoriesCloud();
   };
 
   const lookupCourseJoinCode = async (joinCode: string) => {
@@ -1493,6 +1499,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         loginTeacherWithGoogle,
         connectStudentWithGoogle,
         disconnectGoogleAccount,
+        listAvailableCourseDirectories,
         lookupCourseJoinCode,
         loginStudentCloudByAccessCode,
         unlinkStudentGoogleAccount,
