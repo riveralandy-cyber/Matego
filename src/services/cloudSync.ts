@@ -401,6 +401,66 @@ export async function unlinkStudentGoogleCloud(ownerUid: string, student: Studen
   await commitBatchOpsInChunks(ops, OperationType.UPDATE, `teacherRosterStudents/${docId}`);
 }
 
+export async function updateStudentNameCloud(params: {
+  ownerUid: string;
+  teacherName: string;
+  courseId: string;
+  courseSection: string;
+  student: Student;
+  newName: string;
+  allCourseStudentsAfter: Student[];
+}): Promise<void> {
+  const { ownerUid, teacherName, courseId, courseSection, student, newName, allCourseStudentsAfter } = params;
+  const cleanName = clampStr(newName, 120);
+  if (cleanName.length < 2) return;
+
+  const docId = makeStudentDocId(ownerUid, student.id);
+  const accessCode = sanitizeFirestoreId(student.accessCode.toUpperCase(), 32);
+  const joinCode = makeCourseJoinCode(ownerUid, courseId);
+  const joinRef = doc(db, 'courseJoinCodes', joinCode);
+
+  let joinExists = false;
+  try {
+    joinExists = (await getDoc(joinRef)).exists();
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, `courseJoinCodes/${joinCode}`);
+  }
+
+  const ops: BatchOp[] = [
+    batch =>
+      batch.update(doc(db, 'teacherRosterStudents', docId), {
+        name: cleanName,
+        serverUpdatedAt: serverTimestamp(),
+      }),
+  ];
+
+  if (accessCode.length >= 3) {
+    ops.push(batch =>
+      batch.update(doc(db, 'studentDirectory', accessCode), {
+        studentName: cleanName,
+        serverUpdatedAt: serverTimestamp(),
+      })
+    );
+  }
+
+  if (joinExists) {
+    ops.push(batch =>
+      batch.update(joinRef, {
+        teacherName: clampStr(teacherName, 120, 'Docente'),
+        courseSection: clampStr(courseSection, 64),
+        studentsPreview: allCourseStudentsAfter.slice(0, 80).map(s => ({
+          studentId: s.id,
+          name: clampStr(s.id === student.id ? cleanName : s.name, 120),
+          accessCode: sanitizeFirestoreId(s.accessCode.toUpperCase(), 32),
+        })),
+        serverUpdatedAt: serverTimestamp(),
+      })
+    );
+  }
+
+  await commitBatchOpsInChunks(ops, OperationType.UPDATE, `teacherRosterStudents/${docId}`);
+}
+
 export async function addQuizAssignmentCloud(
   ownerUid: string,
   assignment: QuizAssignment,

@@ -16,6 +16,7 @@ import {
   Share2,
   X,
   Link2,
+  Pencil,
 } from 'lucide-react';
 import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react';
 import { GradeLevel } from '../../types';
@@ -28,6 +29,7 @@ export const CourseRosterView: React.FC = () => {
     selectedCourse,
     teacherStudents,
     addStudentsToCourse,
+    updateStudentName,
     removeStudentFromCourse,
     clearCourseStudentsForTeacher,
     unlinkStudentGoogleAccount,
@@ -47,8 +49,17 @@ export const CourseRosterView: React.FC = () => {
   const [confirmClear, setConfirmClear] = useState(false);
   const [copiedJoinCode, setCopiedJoinCode] = useState(false);
   const [copiedQrUrl, setCopiedQrUrl] = useState(false);
+  const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
+  const [editingNameValue, setEditingNameValue] = useState('');
+  const [editErrorMsg, setEditErrorMsg] = useState<string | null>(null);
 
   const modalQrCanvasWrapRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setEditingStudentId(null);
+    setEditingNameValue('');
+    setEditErrorMsg(null);
+  }, [selectedCourseId]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -119,6 +130,29 @@ export const CourseRosterView: React.FC = () => {
     setIsAddModalOpen(false);
     setAddedCountNotice(count);
     setTimeout(() => setAddedCountNotice(null), 6000);
+  };
+
+  const handleStartEditStudent = (studentId: string, currentName: string) => {
+    setEditingStudentId(studentId);
+    setEditingNameValue(currentName);
+    setEditErrorMsg(null);
+  };
+
+  const handleCancelEditStudent = () => {
+    setEditingStudentId(null);
+    setEditingNameValue('');
+    setEditErrorMsg(null);
+  };
+
+  const handleSaveEditStudent = (studentId: string) => {
+    const res = updateStudentName(studentId, editingNameValue);
+    if (!res.ok) {
+      setEditErrorMsg(res.error || 'No se pudo actualizar el nombre.');
+      return;
+    }
+    setEditingStudentId(null);
+    setEditingNameValue('');
+    setEditErrorMsg(null);
   };
 
   const handlePrint = () => {
@@ -525,7 +559,7 @@ export const CourseRosterView: React.FC = () => {
                 <th className="py-3 px-4">Código MateClic</th>
                 <th className="py-3 px-4">PIN Inicial</th>
                 <th className="py-3 px-4 text-center">Estado</th>
-                <th className="py-3 px-3 text-center w-14">Acción</th>
+                <th className="py-3 px-3 text-center w-24">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--tq-border)] tq-text-2 font-mono text-xs">
@@ -536,71 +570,141 @@ export const CourseRosterView: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                filteredStudents.map((st, idx) => (
-                  <tr key={st.id} className="hover:bg-[var(--tq-tint-bg)]/40 transition-colors">
-                    <td className="py-2.5 px-4 text-center tq-text-muted">
-                      {idx + 1}
-                    </td>
-                    <td className="py-2.5 px-4 font-bold font-sans tq-text">
-                      {st.name}
-                    </td>
-                    <td className="py-2.5 px-4 font-bold">
-                      <span className="px-2 py-0.5 rounded-md tq-accent-soft border tq-border">
-                        {st.accessCode}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-4 font-bold tq-text">
-                      <div className="flex items-center gap-1.5">
-                        <span className="px-2 py-0.5 rounded-md tq-muted border tq-border">
-                          {st.pin}
-                        </span>
-                        {st.hasCustomPin ? (
-                          <span className="text-[10px] bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800 px-1.5 py-0.5 rounded-md font-sans font-bold" title="El estudiante cambió su PIN por uno personal">
-                            Personal
-                          </span>
+                filteredStudents.map((st, idx) => {
+                  const isEditingThis = editingStudentId === st.id;
+                  return (
+                    <tr key={st.id} className="hover:bg-[var(--tq-tint-bg)]/40 transition-colors">
+                      <td className="py-2.5 px-4 text-center tq-text-muted">
+                        {idx + 1}
+                      </td>
+                      <td className="py-2.5 px-4 font-bold font-sans tq-text">
+                        {isEditingThis ? (
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="text"
+                                autoFocus
+                                maxLength={120}
+                                value={editingNameValue}
+                                onChange={e => {
+                                  setEditingNameValue(e.target.value);
+                                  if (editErrorMsg) setEditErrorMsg(null);
+                                }}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleSaveEditStudent(st.id);
+                                  } else if (e.key === 'Escape') {
+                                    e.preventDefault();
+                                    handleCancelEditStudent();
+                                  }
+                                }}
+                                placeholder="Nombre y apellidos del estudiante"
+                                className="w-full min-w-[200px] px-2.5 py-1 text-xs font-bold border-2 border-[var(--tq-accent)] tq-input rounded-lg focus:outline-hidden"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleSaveEditStudent(st.id)}
+                                className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors cursor-pointer shrink-0"
+                                title="Guardar nombre"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleCancelEditStudent}
+                                className="p-1.5 tq-muted hover:opacity-80 tq-text-2 rounded-lg transition-colors cursor-pointer shrink-0"
+                                title="Cancelar edición"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                            {editErrorMsg && (
+                              <span className="text-[11px] text-rose-600 dark:text-rose-400 font-semibold block">
+                                {editErrorMsg}
+                              </span>
+                            )}
+                          </div>
                         ) : (
-                          <span className="text-[10px] bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-800 px-1.5 py-0.5 rounded-md font-sans font-medium" title="PIN inicial asignado por sistema">
-                            Inicial
-                          </span>
+                          <span>{st.name}</span>
                         )}
-                      </div>
-                    </td>
-                    <td className="py-2.5 px-4 text-center font-sans">
-                      {st.linkedStudentUid ? (
-                        <div className="inline-flex items-center gap-1.5">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-100 dark:bg-sky-950/70 text-sky-800 dark:text-sky-200 border border-sky-200 dark:border-sky-800">
-                            <Cloud className="w-3 h-3" />
-                            <span>Vinculado</span>
+                      </td>
+                      <td className="py-2.5 px-4 font-bold">
+                        <span className="px-2 py-0.5 rounded-md tq-accent-soft border tq-border">
+                          {st.accessCode}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-4 font-bold tq-text">
+                        <div className="flex items-center gap-1.5">
+                          <span className="px-2 py-0.5 rounded-md tq-muted border tq-border">
+                            {st.pin}
                           </span>
-                          {isCloudTeacher && (
-                            <button
-                              type="button"
-                              onClick={() => unlinkStudentGoogleAccount(st.id)}
-                              className="p-1 tq-text-muted hover:text-amber-600 rounded-md transition-colors cursor-pointer"
-                              title="Desvincular cuenta Google del alumno para que ingrese desde otro correo"
-                            >
-                              <Unlink className="w-3 h-3" />
-                            </button>
+                          {st.hasCustomPin ? (
+                            <span className="text-[10px] bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800 px-1.5 py-0.5 rounded-md font-sans font-bold" title="El estudiante cambió su PIN por uno personal">
+                              Personal
+                            </span>
+                          ) : (
+                            <span className="text-[10px] bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-800 px-1.5 py-0.5 rounded-md font-sans font-medium" title="PIN inicial asignado por sistema">
+                              Inicial
+                            </span>
                           )}
                         </div>
-                      ) : (
-                        <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800">
-                          Habilitado
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-2.5 px-3 text-center">
-                      <button
-                        type="button"
-                        onClick={() => removeStudentFromCourse(st.id)}
-                        className="p-1 tq-text-muted hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 rounded-lg transition-colors cursor-pointer"
-                        title="Quitar de mi lista"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="py-2.5 px-4 text-center font-sans">
+                        {st.linkedStudentUid ? (
+                          <div className="inline-flex items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-100 dark:bg-sky-950/70 text-sky-800 dark:text-sky-200 border border-sky-200 dark:border-sky-800">
+                              <Cloud className="w-3 h-3" />
+                              <span>Vinculado</span>
+                            </span>
+                            {isCloudTeacher && (
+                              <button
+                                type="button"
+                                onClick={() => unlinkStudentGoogleAccount(st.id)}
+                                className="p-1 tq-text-muted hover:text-amber-600 rounded-md transition-colors cursor-pointer"
+                                title="Desvincular cuenta Google del alumno para que ingrese desde otro correo"
+                              >
+                                <Unlink className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800">
+                            Habilitado
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        <div className="inline-flex items-center justify-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              isEditingThis
+                                ? handleCancelEditStudent()
+                                : handleStartEditStudent(st.id, st.name)
+                            }
+                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                              isEditingThis
+                                ? 'tq-accent-soft tq-text-accent'
+                                : 'tq-text-muted hover:tq-text-accent hover:bg-[var(--tq-tint-bg)]'
+                            }`}
+                            title="Editar nombre del estudiante"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeStudentFromCourse(st.id)}
+                            className="p-1.5 tq-text-muted hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 rounded-lg transition-colors cursor-pointer"
+                            title="Quitar de mi lista"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

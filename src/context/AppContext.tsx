@@ -33,6 +33,7 @@ import {
   subscribeTeacherWorkspaceCloud,
   unlinkStudentGoogleCloud,
   updateQuizAttemptGradeCloud,
+  updateStudentNameCloud,
   updateStudentPinCloud,
   updateTeacherThemeCloud,
 } from '../services/cloudSync';
@@ -128,6 +129,7 @@ interface AppContextType {
 
   // Actions
   addStudentsToCourse: (courseId: string, rawText: string) => number;
+  updateStudentName: (studentId: string, newName: string) => AuthActionResult;
   removeStudentFromCourse: (studentId: string) => void;
   clearCourseStudentsForTeacher: (courseId: string) => void;
   addQuizAssignment: (assignment: QuizAssignment) => void;
@@ -1151,6 +1153,62 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+  const updateStudentName = (studentId: string, newName: string): AuthActionResult => {
+    if (!isTeacherAuthenticated) {
+      return { ok: false, error: 'Debes iniciar sesión como docente.' };
+    }
+    const cleanName = newName.replace(/\s+/g, ' ').trim().slice(0, 120);
+    if (cleanName.length < 2) {
+      return { ok: false, error: 'El nombre del estudiante debe tener al menos 2 caracteres.' };
+    }
+
+    if (isCloudTeacher && firebaseUser) {
+      const target = cloudTeacherStudents.find(s => s.id === studentId);
+      if (!target) {
+        return { ok: false, error: 'No se encontró al estudiante en tu lista.' };
+      }
+      const courseObj = courses.find(c => c.id === target.courseId);
+      const courseStudentsAfter = cloudTeacherStudents
+        .filter(s => s.courseId === target.courseId)
+        .map(s => (s.id === studentId ? { ...s, name: cleanName } : s));
+
+      void updateStudentNameCloud({
+        ownerUid: firebaseUser.uid,
+        teacherName: currentTeacher.name,
+        courseId: target.courseId,
+        courseSection: courseObj?.section || target.courseId,
+        student: target,
+        newName: cleanName,
+        allCourseStudentsAfter: courseStudentsAfter,
+      }).catch(reportCloudError);
+      return { ok: true };
+    }
+
+    const localTarget = localStudents.find(
+      s => s.id === studentId && s.teacherId === currentTeacher.id
+    );
+    if (!localTarget) {
+      return { ok: false, error: 'No se encontró al estudiante en tu lista.' };
+    }
+
+    setLocalStudents(prev =>
+      prev.map(s =>
+        s.id === studentId && s.teacherId === currentTeacher.id ? { ...s, name: cleanName } : s
+      )
+    );
+    setLocalAttempts(prev =>
+      prev.map(att =>
+        att.studentId === studentId && att.teacherId === currentTeacher.id
+          ? { ...att, studentName: cleanName }
+          : att
+      )
+    );
+    if (currentStudent && currentStudent.id === studentId) {
+      setCurrentStudent(prev => (prev ? { ...prev, name: cleanName } : null));
+    }
+    return { ok: true };
+  };
+
   const clearCourseStudentsForTeacher = (courseId: string) => {
     if (!isTeacherAuthenticated) return;
     if (isCloudTeacher && firebaseUser) {
@@ -1464,6 +1522,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         activeTheme,
         setThemePreference,
         addStudentsToCourse,
+        updateStudentName,
         removeStudentFromCourse,
         clearCourseStudentsForTeacher,
         addQuizAssignment,
