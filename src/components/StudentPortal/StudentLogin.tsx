@@ -14,6 +14,8 @@ import {
   X,
   LogOut,
   FileText,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { ThemePaletteSelector } from '../ThemePaletteSelector';
 import { CourseJoinCodeDirectory } from '../../services/cloudSync';
@@ -76,6 +78,7 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
   // Shared credentials state
   const [nameSearchQuery, setNameSearchQuery] = useState<string>('');
   const [pin, setPin] = useState<string>('');
+  const [showPin, setShowPin] = useState<boolean>(false);
   const [quizDirectCode, setQuizDirectCode] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -206,7 +209,7 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
       return;
     }
     if (!selectedAccessCodeFromDir) {
-      setErrorMessage('Busca y selecciona tu nombre de la lista del curso.');
+      setErrorMessage('Busca y haz clic en tu nombre en el listado desplegable del curso.');
       return;
     }
     if (!pin.trim()) {
@@ -225,6 +228,20 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
         return;
       }
       onLoginSuccess();
+    } catch (err) {
+      const raw = err instanceof Error ? err.message : String(err);
+      let friendly = raw;
+      if (raw.startsWith('{') && raw.includes('"error"')) {
+        try {
+          const parsed = JSON.parse(raw) as { error?: string };
+          if (parsed.error) friendly = parsed.error;
+        } catch {
+          // keep raw
+        }
+      }
+      setErrorMessage(
+        `No se pudo completar el ingreso en la nube (${friendly}). Intenta nuevamente o verifica con tu docente.`
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -465,13 +482,30 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
                     type="text"
                     value={nameSearchQuery}
                     onChange={e => {
-                      setNameSearchQuery(e.target.value);
+                      const q = e.target.value;
+                      setNameSearchQuery(q);
                       setErrorMessage('');
+                      const needle = q.trim().toLowerCase();
+                      if (needle.length >= 2) {
+                        const matches = courseStudents.filter(st =>
+                          st.name.toLowerCase().includes(needle)
+                        );
+                        if (matches.length === 1) {
+                          setSelectedStudentId(matches[0].id);
+                        }
+                      }
                     }}
                     placeholder="Escribir nombre o apellido para filtrar..."
                     className="w-full pl-8 pr-3 py-2 text-xs border rounded-xl tq-input focus:outline-hidden"
                   />
                 </div>
+                {cleanNameFilter.length >= 1 && (
+                  <span className="text-[11px] tq-text-muted block">
+                    {filteredLocalStudents.length === 1
+                      ? `1 coincidencia encontrada (${filteredLocalStudents[0].name})`
+                      : `${filteredLocalStudents.length} coincidencias — elige tu nombre abajo`}
+                  </span>
+                )}
                 <select
                   value={selectedStudentId}
                   onChange={e => {
@@ -498,18 +532,28 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
                 <label className="block text-xs font-bold tq-text-2 mb-1">
                   3. Clave de Acceso (entregada por tu docente):
                 </label>
-                <input
-                  type="password"
-                  inputMode="numeric"
-                  maxLength={16}
-                  value={pin}
-                  onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
-                  placeholder="••••"
-                  autoComplete="off"
-                  className="w-full text-center text-xl font-mono font-bold tracking-widest border rounded-xl p-3 tq-input focus:outline-hidden"
-                />
+                <div className="relative">
+                  <input
+                    type={showPin ? 'text' : 'password'}
+                    inputMode="numeric"
+                    maxLength={16}
+                    value={pin}
+                    onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
+                    placeholder="••••"
+                    autoComplete="off"
+                    className="w-full text-center text-xl font-mono font-bold tracking-widest border rounded-xl p-3 pr-10 tq-input focus:outline-hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPin(prev => !prev)}
+                    className="absolute right-3 top-3.5 tq-text-muted hover:tq-text p-0.5 cursor-pointer"
+                    title={showPin ? 'Ocultar clave' : 'Ver clave ingresada'}
+                  >
+                    {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
                 <span className="text-[11px] tq-text-muted mt-1 block">
-                  Ingresa tu clave de 4 dígitos. Una vez dentro, podrás cambiarla por una clave personal.
+                  Ingresa tu clave numérica (sin espacios). Una vez dentro, podrás cambiarla por una clave personal.
                 </span>
               </div>
 
@@ -532,8 +576,7 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
 
               <button
                 type="submit"
-                disabled={!selectedStudentId || !pin.trim()}
-                className="w-full py-3 tq-btn-gradient disabled:opacity-40 font-bold text-sm rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+                className="w-full py-3 tq-btn-gradient font-bold text-sm rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
                 <UserCheck className="w-4 h-4" />
                 <span>Entrar a Mis Evaluaciones</span>
@@ -570,24 +613,29 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
                   </p>
                 </div>
               ) : (
-                <select
-                  value={selectedJoinCode}
-                  onChange={e => {
-                    setSelectedJoinCode(e.target.value);
-                    setSelectedAccessCodeFromDir('');
-                    setNameSearchQuery('');
-                    setPin('');
-                    setErrorMessage('');
-                  }}
-                  className="w-full text-xs font-bold border rounded-xl p-3 tq-input focus:outline-hidden"
-                >
-                  <option value="">-- Elige tu curso de la lista --</option>
-                  {availableDirectories.map(dir => (
-                    <option key={dir.joinCode} value={dir.joinCode}>
-                      {dir.courseSection} · Prof. {dir.teacherName} ({dir.studentsPreview.length} al.)
-                    </option>
-                  ))}
-                </select>
+                <div className="space-y-1.5">
+                  <select
+                    value={selectedJoinCode}
+                    onChange={e => {
+                      setSelectedJoinCode(e.target.value);
+                      setSelectedAccessCodeFromDir('');
+                      setNameSearchQuery('');
+                      setPin('');
+                      setErrorMessage('');
+                    }}
+                    className="w-full text-xs font-bold border rounded-xl p-3 tq-input focus:outline-hidden"
+                  >
+                    <option value="">-- Elige tu curso de la lista --</option>
+                    {availableDirectories.map(dir => (
+                      <option key={dir.joinCode} value={dir.joinCode}>
+                        {dir.courseSection} · Prof. {dir.teacherName} ({dir.studentsPreview.length} al.)
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] tq-text-muted leading-snug">
+                    Solo aparecen los cursos cuya lista ya fue cargada en la nube por un docente desde «Panel Profesor → Lista de curso (1° a 8°)».
+                  </p>
+                </div>
               )}
             </div>
 
@@ -612,13 +660,30 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
                       type="text"
                       value={nameSearchQuery}
                       onChange={e => {
-                        setNameSearchQuery(e.target.value);
+                        const q = e.target.value;
+                        setNameSearchQuery(q);
                         setErrorMessage('');
+                        const needle = q.trim().toLowerCase();
+                        if (needle.length >= 2) {
+                          const matches = (activeCloudDirectory.studentsPreview || []).filter(st =>
+                            st.name.toLowerCase().includes(needle)
+                          );
+                          if (matches.length === 1) {
+                            setSelectedAccessCodeFromDir(matches[0].accessCode);
+                          }
+                        }
                       }}
                       placeholder="Escribir nombre o apellido para filtrar..."
                       className="w-full pl-8 pr-3 py-2 text-xs border rounded-xl tq-input focus:outline-hidden"
                     />
                   </div>
+                  {cleanNameFilter.length >= 1 && (
+                    <span className="text-[11px] tq-text-muted block">
+                      {filteredCloudStudents.length === 1
+                        ? `1 coincidencia encontrada (${filteredCloudStudents[0].name})`
+                        : `${filteredCloudStudents.length} coincidencias — elige tu nombre abajo`}
+                    </span>
+                  )}
                   <select
                     value={selectedAccessCodeFromDir}
                     onChange={e => {
@@ -645,18 +710,28 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
                   <label className="block text-xs font-bold tq-text-2 mb-1">
                     3. Clave de Acceso (entregada por tu docente):
                   </label>
-                  <input
-                    type="password"
-                    inputMode="numeric"
-                    maxLength={16}
-                    value={pin}
-                    onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
-                    placeholder="••••"
-                    autoComplete="off"
-                    className="w-full text-center text-xl font-mono font-bold tracking-widest border rounded-xl p-3 tq-input focus:outline-hidden"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPin ? 'text' : 'password'}
+                      inputMode="numeric"
+                      maxLength={16}
+                      value={pin}
+                      onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
+                      placeholder="••••"
+                      autoComplete="off"
+                      className="w-full text-center text-xl font-mono font-bold tracking-widest border rounded-xl p-3 pr-10 tq-input focus:outline-hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPin(prev => !prev)}
+                      className="absolute right-3 top-3.5 tq-text-muted hover:tq-text p-0.5 cursor-pointer"
+                      title={showPin ? 'Ocultar clave' : 'Ver clave ingresada'}
+                    >
+                      {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                   <span className="text-[11px] tq-text-muted mt-1 block">
-                    Ingresa tu clave de 4 dígitos. Una vez dentro, podrás cambiarla por una clave personal.
+                    Ingresa tu clave numérica (sin espacios). Una vez dentro, podrás cambiarla por una clave personal.
                   </span>
                 </div>
 
@@ -679,8 +754,8 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
 
                 <button
                   type="submit"
-                  disabled={isSubmitting || !selectedAccessCodeFromDir || !pin.trim()}
-                  className="w-full py-3 tq-btn-gradient disabled:opacity-40 font-bold text-sm rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  disabled={isSubmitting}
+                  className="w-full py-3 tq-btn-gradient disabled:opacity-50 font-bold text-sm rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
                 >
                   <UserCheck className="w-4 h-4" />
                   <span>{isSubmitting ? 'Verificando...' : 'Entrar a Mis Evaluaciones'}</span>

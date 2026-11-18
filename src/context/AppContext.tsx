@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { User, deleteUser, onAuthStateChanged, reauthenticateWithPopup, signInWithPopup, signOut } from 'firebase/auth';
 import { Course, Student, QuizAssignment, QuizAttempt, Teacher, TeacherTab, ThemePaletteId } from '../types';
 import { INITIAL_COURSES, INITIAL_STUDENTS, INITIAL_ASSIGNMENTS, INITIAL_ATTEMPTS } from '../data/initialData';
@@ -525,20 +525,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     [...arr].sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
 
   const students = useMemo(() => {
-    if (isCloudTeacher) return sortByNameES(cloudTeacherStudents);
     if (isCloudStudent && currentStudent) return [currentStudent];
+    if (isCloudTeacher) return sortByNameES(cloudTeacherStudents);
     return sortByNameES(localStudents);
   }, [isCloudTeacher, cloudTeacherStudents, isCloudStudent, currentStudent, localStudents]);
 
   const assignments = useMemo(() => {
-    if (isCloudTeacher) return cloudTeacherAssignments;
     if (isCloudStudent) return cloudStudentAssignments;
+    if (isCloudTeacher) return cloudTeacherAssignments;
     return localAssignments;
   }, [isCloudTeacher, cloudTeacherAssignments, isCloudStudent, cloudStudentAssignments, localAssignments]);
 
   const attempts = useMemo(() => {
-    if (isCloudTeacher) return cloudTeacherAttempts;
     if (isCloudStudent) return cloudStudentAttempts;
+    if (isCloudTeacher) return cloudTeacherAttempts;
     return localAttempts;
   }, [isCloudTeacher, cloudTeacherAttempts, isCloudStudent, cloudStudentAttempts, localAttempts]);
 
@@ -762,13 +762,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await signOut(auth);
   };
 
-  const listAvailableCourseDirectories = async (): Promise<CourseJoinCodeDirectory[]> => {
+  const listAvailableCourseDirectories = useCallback(async (): Promise<CourseJoinCodeDirectory[]> => {
     return listAvailableCourseDirectoriesCloud();
-  };
+  }, []);
 
-  const lookupCourseJoinCode = async (joinCode: string) => {
+  const lookupCourseJoinCode = useCallback(async (joinCode: string) => {
     return lookupCourseJoinCodeCloud(joinCode);
-  };
+  }, []);
 
   const loginStudentCloudByAccessCode = async (
     accessCode: string,

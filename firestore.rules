@@ -301,7 +301,10 @@ service cloud.firestore {
     match /teacherRosterStudents/{studentDocId} {
       allow get: if isVerifiedUser()
         && isValidId(studentDocId)
-        && (existing().ownerUid == request.auth.uid || existing().linkedStudentUid == request.auth.uid || isAdmin());
+        && (
+          isAdmin()
+          || (resource != null && (existing().ownerUid == request.auth.uid || existing().linkedStudentUid == request.auth.uid))
+        );
       allow list: if isVerifiedUser()
         && (existing().ownerUid == request.auth.uid || existing().linkedStudentUid == request.auth.uid || isAdmin());
       allow create: if isVerifiedUser()
@@ -433,7 +436,11 @@ service cloud.firestore {
     match /courseMembers/{memberDocId} {
       allow get: if isVerifiedUser()
         && isValidId(memberDocId)
-        && (existing().ownerUid == request.auth.uid || existing().studentUid == request.auth.uid || isAdmin());
+        && (
+          isAdmin()
+          || (resource == null && memberDocId.matches('^[a-zA-Z0-9_-]+__' + request.auth.uid + '$'))
+          || (resource != null && (existing().ownerUid == request.auth.uid || existing().studentUid == request.auth.uid))
+        );
       allow list: if isVerifiedUser()
         && (existing().ownerUid == request.auth.uid || existing().studentUid == request.auth.uid || isAdmin());
       allow create: if isVerifiedUser()
@@ -458,8 +465,15 @@ service cloud.firestore {
       allow get: if isVerifiedUser()
         && isValidId(courseFeedId)
         && (
-          existing().ownerUid == request.auth.uid
-          || isEnrolledInCourse(existing().ownerUid, existing().courseId)
+          isAdmin()
+          || (resource == null && (
+            courseFeedId.matches('^' + request.auth.uid + '__[a-zA-Z0-9_-]+$')
+            || exists(/databases/$(database)/documents/courseMembers/$(courseFeedId + '__' + request.auth.uid))
+          ))
+          || (resource != null && (
+            existing().ownerUid == request.auth.uid
+            || isEnrolledInCourse(existing().ownerUid, existing().courseId)
+          ))
         );
       allow list: if isVerifiedUser() && (existing().ownerUid == request.auth.uid || isAdmin());
       allow create: if isVerifiedUser()
@@ -490,8 +504,11 @@ service cloud.firestore {
       allow get: if isVerifiedUser()
         && isValidId(assignmentDocId)
         && (
-          existing().ownerUid == request.auth.uid
-          || isEnrolledInCourse(existing().ownerUid, existing().courseId)
+          isAdmin()
+          || (resource != null && (
+            existing().ownerUid == request.auth.uid
+            || isEnrolledInCourse(existing().ownerUid, existing().courseId)
+          ))
         );
       allow list: if isVerifiedUser() && (existing().ownerUid == request.auth.uid || isAdmin());
       allow create: if isVerifiedUser()
@@ -522,7 +539,10 @@ service cloud.firestore {
     match /attempts/{attemptDocId} {
       allow get: if isVerifiedUser()
         && isValidId(attemptDocId)
-        && (existing().ownerUid == request.auth.uid || existing().studentUid == request.auth.uid || isAdmin());
+        && (
+          isAdmin()
+          || (resource != null && (existing().ownerUid == request.auth.uid || existing().studentUid == request.auth.uid))
+        );
       allow list: if isVerifiedUser()
         && (existing().ownerUid == request.auth.uid || existing().studentUid == request.auth.uid || isAdmin());
       allow create: if isVerifiedUser()

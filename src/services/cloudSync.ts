@@ -80,8 +80,9 @@ export interface StudentDirectoryEntry {
 const VALID_THEMES: ThemePaletteId[] = ['estandar', 'pastel', 'claro', 'nocturno', 'vibrante'];
 
 function clampStr(val: string | undefined, maxLen: number, fallback = ''): string {
-  const s = (val ?? fallback).toString().trim();
-  return s.slice(0, maxLen);
+  const s = (val ?? '').toString().trim();
+  const resolved = s.length > 0 ? s : fallback;
+  return resolved.slice(0, maxLen);
 }
 
 function normalizeTheme(theme: ThemePaletteId | undefined): ThemePaletteId {
@@ -771,7 +772,7 @@ export async function claimStudentWithAccessCodeCloud(params: {
   const cleanPin = params.pin.trim();
 
   if (!cleanCode || !cleanPin) {
-    return { ok: false, error: 'Ingresa tu código de estudiante y tu PIN personal.' };
+    return { ok: false, error: 'Selecciona tu nombre de la lista e ingresa tu clave / PIN.' };
   }
 
   const dirRef = doc(db, 'studentDirectory', cleanCode);
@@ -783,20 +784,20 @@ export async function claimStudentWithAccessCodeCloud(params: {
   }
 
   if (!dirSnap.exists()) {
-    return { ok: false, error: 'Código de estudiante no encontrado. Verifica con tu profesor(a).' };
+    return { ok: false, error: 'No se encontró este estudiante en la lista del curso. Verifica con tu profesor(a).' };
   }
 
   const entry = dirSnap.data() as StudentDirectoryEntry;
   const inputHash = await sha256Hex(cleanPin);
   if (inputHash !== entry.pinHash) {
-    return { ok: false, error: 'PIN incorrecto. Verifica tu clave o pídela a tu profesor(a).' };
+    return { ok: false, error: 'Clave / PIN incorrecta. Verifica tu clave con tu profesor(a) (sin espacios).' };
   }
 
   if (entry.linkedStudentUid && entry.linkedStudentUid !== params.firebaseUid) {
     return {
       ok: false,
       error:
-        'Este código de estudiante ya está vinculado a otra cuenta Google. Pídele a tu profesor(a) desvincularla en Lista de Curso si cambiaste de correo o dispositivo.',
+        'Este estudiante ya ingresó anteriormente con otro correo Google. Si cambiaste de correo o dispositivo, pídele a tu profesor(a) presionar Desvincular junto a tu nombre en «Lista del curso».',
     };
   }
 
