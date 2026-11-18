@@ -708,7 +708,7 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
       <div className="mt-5">
         <ThemePaletteSelector
           variant="compact"
-          title="Personaliza los colores de tu plataforma"
+          title="Paleta de colores"
           subtitle="Puedes mantener la paleta estándar o elegir otra desde tu ingreso."
         />
       </div>

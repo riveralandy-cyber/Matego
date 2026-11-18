@@ -349,7 +349,7 @@ export const TeacherLoginView: React.FC = () => {
       <div className="mt-5">
         <ThemePaletteSelector
           variant="compact"
-          title="Personaliza la paleta de colores"
+          title="Paleta de colores"
           subtitle="Puedes mantener el tema estándar o elegir otro desde tu ingreso."
         />
       </div>

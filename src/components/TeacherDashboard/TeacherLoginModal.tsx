@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
+import { CloudTeacherProfile } from '../../services/cloudSync';
 import {
   Check,
   User,
@@ -17,6 +18,10 @@ import {
   Palette,
   Cloud,
   Trash2,
+  UserX,
+  Users,
+  RefreshCw,
+  Search,
 } from 'lucide-react';
 import { ThemePaletteSelector } from '../ThemePaletteSelector';
 
@@ -24,8 +29,10 @@ export const TeacherLoginModal: React.FC = () => {
   const {
     teachers,
     currentTeacher,
+    firebaseUser,
     isTeacherAuthenticated,
     isCloudTeacher,
+    isAdminTeacher,
     cloudSyncMessage,
     loginTeacherWithGoogle,
     isTeacherLoginModalOpen,
@@ -35,9 +42,12 @@ export const TeacherLoginModal: React.FC = () => {
     logoutTeacher,
     updateTeacherPassword,
     clearTeacherWorkspaceAll,
+    deleteOwnTeacherAccount,
+    listCloudTeachersForAdmin,
+    deleteTeacherAccountAsAdmin,
   } = useApp();
 
-  const [tab, setTab] = useState<'password' | 'theme' | 'switch' | 'register'>('password');
+  const [tab, setTab] = useState<'password' | 'theme' | 'switch' | 'register' | 'admin'>('password');
 
   // Change password state
   const [currentPass, setCurrentPass] = useState('');
@@ -55,16 +65,50 @@ export const TeacherLoginModal: React.FC = () => {
   const [regPassword, setRegPassword] = useState('');
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
 
+  // Admin state
+  const [cloudTeachers, setCloudTeachers] = useState<CloudTeacherProfile[]>([]);
+  const [isLoadingCloudTeachers, setIsLoadingCloudTeachers] = useState(false);
+  const [adminSearch, setAdminSearch] = useState('');
+  const [confirmAdminDeleteTarget, setConfirmAdminDeleteTarget] = useState<{
+    id: string;
+    name: string;
+    email: string;
+    isCloud: boolean;
+  } | null>(null);
+  const [isDeletingTarget, setIsDeletingTarget] = useState(false);
+
+  // Messages & self danger-zone state
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
   const [confirmClearAll, setConfirmClearAll] = useState(false);
   const [isClearingAll, setIsClearingAll] = useState(false);
+  const [confirmDeleteSelf, setConfirmDeleteSelf] = useState(false);
+  const [isDeletingSelf, setIsDeletingSelf] = useState(false);
+
+  const loadCloudTeachers = useCallback(async () => {
+    if (!isAdminTeacher) return;
+    setIsLoadingCloudTeachers(true);
+    setErrorMsg(null);
+    try {
+      const list = await listCloudTeachersForAdmin();
+      setCloudTeachers(list);
+    } catch (err) {
+      setErrorMsg(
+        err instanceof Error ? err.message : 'No se pudo cargar la lista de docentes registrados.'
+      );
+    } finally {
+      setIsLoadingCloudTeachers(false);
+    }
+  }, [isAdminTeacher, listCloudTeachersForAdmin]);
 
   useEffect(() => {
     if (isTeacherLoginModalOpen) {
       setErrorMsg(null);
       setSuccessNotice(null);
       setConfirmClearAll(false);
+      setConfirmDeleteSelf(false);
+      setConfirmAdminDeleteTarget(null);
+      setAdminSearch('');
       setCurrentPass('');
       setNewPass('');
       setConfirmPass('');
@@ -75,6 +119,12 @@ export const TeacherLoginModal: React.FC = () => {
       setTab(isCloudTeacher ? 'theme' : 'password');
     }
   }, [isTeacherLoginModalOpen, currentTeacher, teachers, isCloudTeacher]);
+
+  useEffect(() => {
+    if (isTeacherLoginModalOpen && tab === 'admin' && isAdminTeacher) {
+      void loadCloudTeachers();
+    }
+  }, [isTeacherLoginModalOpen, tab, isAdminTeacher, loadCloudTeachers]);
 
   if (!isTeacherLoginModalOpen || !isTeacherAuthenticated) return null;
 
@@ -117,7 +167,7 @@ export const TeacherLoginModal: React.FC = () => {
       return;
     }
 
-    setSuccessNotice(`Sesión cambiada correctamente.`);
+    setSuccessNotice('Sesión cambiada correctamente.');
     setTimeout(() => {
       setSuccessNotice(null);
       setIsTeacherLoginModalOpen(false);
@@ -147,6 +197,63 @@ export const TeacherLoginModal: React.FC = () => {
     }, 1000);
   };
 
+  const handleDeleteOwnAccount = async () => {
+    setIsDeletingSelf(true);
+    setErrorMsg(null);
+    setSuccessNotice(null);
+    try {
+      const res = await deleteOwnTeacherAccount();
+      if (!res.ok) {
+        setErrorMsg(res.error || 'No se pudo eliminar tu cuenta.');
+        return;
+      }
+      setConfirmDeleteSelf(false);
+    } finally {
+      setIsDeletingSelf(false);
+    }
+  };
+
+  const handleConfirmAdminDelete = async () => {
+    if (!confirmAdminDeleteTarget) return;
+    setIsDeletingTarget(true);
+    setErrorMsg(null);
+    setSuccessNotice(null);
+    try {
+      const res = await deleteTeacherAccountAsAdmin(
+        confirmAdminDeleteTarget.id,
+        confirmAdminDeleteTarget.isCloud
+      );
+      if (!res.ok) {
+        setErrorMsg(res.error || 'No se pudo eliminar la cuenta seleccionada.');
+        return;
+      }
+      const deletedName = confirmAdminDeleteTarget.name;
+      if (confirmAdminDeleteTarget.isCloud) {
+        setCloudTeachers(prev => prev.filter(t => t.uid !== confirmAdminDeleteTarget.id));
+      }
+      setConfirmAdminDeleteTarget(null);
+      setSuccessNotice(`Cuenta de Prof. ${deletedName} eliminada correctamente.`);
+    } finally {
+      setIsDeletingTarget(false);
+    }
+  };
+
+  const normalizedSearch = adminSearch.trim().toLowerCase();
+  const filteredCloudTeachers = cloudTeachers.filter(
+    t =>
+      !normalizedSearch ||
+      t.name.toLowerCase().includes(normalizedSearch) ||
+      t.email.toLowerCase().includes(normalizedSearch)
+  );
+  const filteredLocalTeachers = teachers.filter(
+    t =>
+      !normalizedSearch ||
+      t.name.toLowerCase().includes(normalizedSearch) ||
+      (t.email || '').toLowerCase().includes(normalizedSearch)
+  );
+
+  const visibleTabsCount = isCloudTeacher ? (isAdminTeacher ? 4 : 3) : 4;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
       <div className="tq-card rounded-3xl shadow-2xl border-2 max-w-lg w-full p-6 sm:p-7 relative font-sans animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
@@ -167,9 +274,16 @@ export const TeacherLoginModal: React.FC = () => {
               <GraduationCap className="w-6 h-6" />
             </div>
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider tq-text-accent block">
-                Sesión Activa Docente
-              </span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] font-bold uppercase tracking-wider tq-text-accent">
+                  Sesión Activa Docente
+                </span>
+                {isAdminTeacher && (
+                  <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700 px-1.5 py-0.5 rounded-md">
+                    Administradora
+                  </span>
+                )}
+              </div>
               <h2 className="text-lg font-black tq-text leading-tight">
                 Prof. {currentTeacher?.name}
               </h2>
@@ -224,17 +338,21 @@ export const TeacherLoginModal: React.FC = () => {
         </div>
 
         {/* Navigation Tabs */}
-        <div className="grid grid-cols-4 tq-muted p-1 rounded-2xl my-4 border gap-1">
-          <button
-            type="button"
-            onClick={() => { setTab('password'); setErrorMsg(null); setSuccessNotice(null); }}
-            className={`py-2 px-1 text-[11px] font-bold rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer ${
-              tab === 'password' ? 'tq-card tq-text-accent shadow-xs' : 'tq-text-muted hover:tq-text'
-            }`}
-          >
-            <KeyRound className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">Mi Clave</span>
-          </button>
+        <div
+          className={`grid ${visibleTabsCount === 3 ? 'grid-cols-3' : 'grid-cols-4'} tq-muted p-1 rounded-2xl my-4 border gap-1`}
+        >
+          {!isCloudTeacher && (
+            <button
+              type="button"
+              onClick={() => { setTab('password'); setErrorMsg(null); setSuccessNotice(null); }}
+              className={`py-2 px-1 text-[11px] font-bold rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                tab === 'password' ? 'tq-card tq-text-accent shadow-xs' : 'tq-text-muted hover:tq-text'
+              }`}
+            >
+              <KeyRound className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">Mi Clave</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => { setTab('theme'); setErrorMsg(null); setSuccessNotice(null); }}
@@ -245,6 +363,18 @@ export const TeacherLoginModal: React.FC = () => {
             <Palette className="w-3.5 h-3.5 shrink-0" />
             <span className="truncate">Apariencia</span>
           </button>
+          {isAdminTeacher && (
+            <button
+              type="button"
+              onClick={() => { setTab('admin'); setErrorMsg(null); setSuccessNotice(null); }}
+              className={`py-2 px-1 text-[11px] font-bold rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                tab === 'admin' ? 'tq-card tq-text-accent shadow-xs' : 'tq-text-muted hover:tq-text'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">Docentes</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => { setTab('switch'); setErrorMsg(null); setSuccessNotice(null); }}
@@ -281,7 +411,7 @@ export const TeacherLoginModal: React.FC = () => {
           </div>
         )}
 
-        {tab === 'password' && (
+        {tab === 'password' && !isCloudTeacher && (
           <form onSubmit={handlePasswordChange} className="space-y-3">
             {currentTeacher?.hasCustomPassword === false && (
               <p className="text-[11px] text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded-xl p-2.5 font-medium">
@@ -346,6 +476,170 @@ export const TeacherLoginModal: React.FC = () => {
               title="Paleta de Colores de tu Plataforma"
               subtitle="Elige entre la paleta estándar o 4 paletas adicionales (pasteles, claro, nocturno vivo o vibrante). Se guarda para tu perfil docente."
             />
+          </div>
+        )}
+
+        {tab === 'admin' && isAdminTeacher && (
+          <div className="space-y-3.5">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <h3 className="text-xs font-black tq-text">
+                  Administración de Cuentas Docentes
+                </h3>
+                <p className="text-[11px] tq-text-muted">
+                  Elimina cuentas y datos de docentes que ya no continúan en el establecimiento.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void loadCloudTeachers()}
+                disabled={isLoadingCloudTeachers}
+                className="px-2.5 py-1.5 tq-subtle border tq-border rounded-xl text-[11px] font-bold tq-text-2 flex items-center gap-1 hover:opacity-80 cursor-pointer shrink-0"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isLoadingCloudTeachers ? 'animate-spin' : ''}`} />
+                <span>Actualizar</span>
+              </button>
+            </div>
+
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 tq-text-muted absolute left-3 top-2.5" />
+              <input
+                type="text"
+                value={adminSearch}
+                onChange={e => setAdminSearch(e.target.value)}
+                placeholder="Buscar docente por nombre o correo..."
+                className="w-full pl-8 pr-3 py-2 text-xs font-medium border tq-input rounded-xl focus:outline-hidden"
+              />
+            </div>
+
+            {confirmAdminDeleteTarget && (
+              <div className="p-3 bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-700 rounded-2xl space-y-2">
+                <p className="text-xs font-bold text-rose-900 dark:text-rose-100">
+                  ¿Confirmas eliminar la cuenta de Prof. {confirmAdminDeleteTarget.name}
+                  {confirmAdminDeleteTarget.email ? ` (${confirmAdminDeleteTarget.email})` : ''}?
+                </p>
+                <p className="text-[11px] text-rose-800 dark:text-rose-200 leading-relaxed">
+                  Se borrarán de forma permanente su perfil, listas de curso, códigos de acceso, evaluaciones y calificaciones{' '}
+                  {confirmAdminDeleteTarget.isCloud
+                    ? 'en la nube de MateClic.'
+                    : 'locales de este navegador.'}
+                </p>
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    disabled={isDeletingTarget}
+                    onClick={() => setConfirmAdminDeleteTarget(null)}
+                    className="px-3 py-1.5 tq-card border tq-border tq-text-2 text-xs font-semibold rounded-xl cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isDeletingTarget}
+                    onClick={() => void handleConfirmAdminDelete()}
+                    className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl cursor-pointer"
+                  >
+                    {isDeletingTarget ? 'Eliminando...' : 'Sí, eliminar docente'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+              {isLoadingCloudTeachers ? (
+                <div className="p-4 tq-subtle border tq-border rounded-2xl text-center text-xs tq-text-muted font-medium">
+                  Cargando docentes registrados en la nube...
+                </div>
+              ) : filteredCloudTeachers.length === 0 ? (
+                <div className="p-4 tq-subtle border tq-border rounded-2xl text-center text-xs tq-text-muted">
+                  {adminSearch
+                    ? 'No hay docentes que coincidan con tu búsqueda.'
+                    : 'No se encontraron cuentas docentes en la nube.'}
+                </div>
+              ) : (
+                filteredCloudTeachers.map(t => {
+                  const isSelf = firebaseUser?.uid === t.uid;
+                  return (
+                    <div
+                      key={t.uid}
+                      className="p-2.5 tq-subtle border tq-border rounded-2xl flex items-center justify-between gap-2.5"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-xs font-bold tq-text truncate">
+                            Prof. {t.name}
+                          </span>
+                          {isSelf && (
+                            <span className="text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200 px-1.5 py-0.5 rounded-md">
+                              Tu cuenta
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[11px] tq-text-muted block truncate">
+                          {t.email || t.uid}
+                        </span>
+                      </div>
+
+                      {!isSelf && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setConfirmAdminDeleteTarget({
+                              id: t.uid,
+                              name: t.name,
+                              email: t.email,
+                              isCloud: true,
+                            })
+                          }
+                          className="px-2.5 py-1.5 text-[11px] font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 border border-rose-200 dark:border-rose-800 rounded-xl flex items-center gap-1 shrink-0 cursor-pointer"
+                        >
+                          <UserX className="w-3.5 h-3.5" />
+                          <span>Eliminar</span>
+                        </button>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+
+              {filteredLocalTeachers.length > 0 && (
+                <div className="pt-2 space-y-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider tq-text-muted block px-1">
+                    Cuentas Locales (solo este navegador)
+                  </span>
+                  {filteredLocalTeachers.map(t => (
+                    <div
+                      key={t.id}
+                      className="p-2.5 tq-subtle border tq-border rounded-2xl flex items-center justify-between gap-2.5"
+                    >
+                      <div className="min-w-0">
+                        <span className="text-xs font-bold tq-text block truncate">
+                          Prof. {t.name}
+                        </span>
+                        <span className="text-[11px] tq-text-muted block truncate">
+                          {t.email || 'Cuenta local'}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setConfirmAdminDeleteTarget({
+                            id: t.id,
+                            name: t.name,
+                            email: t.email || '',
+                            isCloud: false,
+                          })
+                        }
+                        className="px-2.5 py-1.5 text-[11px] font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 border border-rose-200 dark:border-rose-800 rounded-xl flex items-center gap-1 shrink-0 cursor-pointer"
+                      >
+                        <UserX className="w-3.5 h-3.5" />
+                        <span>Eliminar</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -478,7 +772,7 @@ export const TeacherLoginModal: React.FC = () => {
               </div>
             </div>
 
-              <button
+            <button
               type="submit"
               disabled={!regName.trim() || regPassword.trim().length < 4}
               className="w-full py-3 tq-btn-primary disabled:opacity-40 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
@@ -489,8 +783,8 @@ export const TeacherLoginModal: React.FC = () => {
           </form>
         )}
 
-        {/* Clear All Workspace Data (to leave platform completely clean before presentation) */}
-        <div className="mt-5 pt-4 border-t tq-border">
+        {/* Workspace Clear + Self Account Deletion */}
+        <div className="mt-5 pt-4 border-t tq-border space-y-3">
           {confirmClearAll ? (
             <div className="p-3 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 rounded-2xl space-y-2">
               <p className="text-[11px] font-bold text-rose-900 dark:text-rose-100">
@@ -538,11 +832,63 @@ export const TeacherLoginModal: React.FC = () => {
               </span>
               <button
                 type="button"
-                onClick={() => setConfirmClearAll(true)}
+                onClick={() => {
+                  setConfirmClearAll(true);
+                  setConfirmDeleteSelf(false);
+                }}
                 className="px-3 py-1.5 text-[11px] font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 border border-rose-200 dark:border-rose-800 rounded-xl flex items-center gap-1.5 shrink-0 cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Vaciar espacio de trabajo</span>
+              </button>
+            </div>
+          )}
+
+          {confirmDeleteSelf ? (
+            <div className="p-3 bg-rose-50 dark:bg-rose-950/70 border-2 border-rose-300 dark:border-rose-700 rounded-2xl space-y-2">
+              <p className="text-xs font-black text-rose-900 dark:text-rose-100">
+                ¿Eliminar definitivamente tu cuenta docente?
+              </p>
+              <p className="text-[11px] text-rose-800 dark:text-rose-200 leading-relaxed">
+                Se borrarán de forma permanente tu perfil docente, listas de cursos, códigos de acceso, evaluaciones creadas y notas{' '}
+                {isCloudTeacher
+                  ? 'de la nube de MateClic y de autenticación.'
+                  : 'guardadas en este navegador.'}
+              </p>
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setConfirmDeleteSelf(false)}
+                  disabled={isDeletingSelf}
+                  className="px-3 py-1.5 tq-card border tq-border tq-text-2 text-xs font-semibold rounded-xl cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeletingSelf}
+                  onClick={() => void handleDeleteOwnAccount()}
+                  className="px-3 py-1.5 bg-rose-700 hover:bg-rose-800 disabled:opacity-50 text-white text-xs font-bold rounded-xl cursor-pointer"
+                >
+                  {isDeletingSelf ? 'Eliminando cuenta...' : 'Sí, eliminar mi cuenta'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <span className="text-[11px] tq-text-muted">
+                ¿Ya no continúas trabajando con esta cuenta?
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmDeleteSelf(true);
+                  setConfirmClearAll(false);
+                }}
+                className="px-3 py-1.5 text-[11px] font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl flex items-center gap-1.5 shrink-0 cursor-pointer shadow-2xs"
+              >
+                <UserX className="w-3.5 h-3.5" />
+                <span>Eliminar mi cuenta</span>
               </button>
             </div>
           )}

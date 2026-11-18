@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { BookOpen, Calendar, Clock, Play, CheckCircle2, RotateCcw, LogOut, FileText, KeyRound, Sparkles, Palette, Award, Cloud } from 'lucide-react';
 import { formatGrade, getGradeColorClass, formatAxisName, formatGradeLevelName } from '../../utils/chileanGrades';
-import { THEME_PALETTES } from '../../utils/themes';
 import { QuizAssignment, QuizAttempt, SimceGradeLevel, ThematicAxis } from '../../types';
 import { ChangePinModal } from './ChangePinModal';
 import { ThemePaletteSelector } from '../ThemePaletteSelector';
@@ -28,7 +27,6 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     assignments,
     attempts,
     teachers,
-    activeTheme,
     firebaseUser,
     disconnectGoogleAccount,
   } = useApp();
@@ -66,8 +64,6 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   const averageGrade = studentAttempts.length > 0
     ? studentAttempts.reduce((acc, curr) => acc + curr.chileanGrade, 0) / studentAttempts.length
     : null;
-
-  const activePaletteObj = THEME_PALETTES.find(p => p.id === activeTheme) || THEME_PALETTES[0];
 
   const handleOpenChangePin = (firstTime: boolean = false) => {
     setIsFirstLoginPrompt(firstTime);
@@ -118,7 +114,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 title="Cambiar paleta de colores de tu plataforma"
               >
                 <Palette className="w-3 h-3" />
-                <span>Tema: {activePaletteObj.shortLabel}</span>
+                <span>Paleta de colores</span>
               </button>
               {currentStudent.ownerUid && (
                 <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-lg border bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800 inline-flex items-center gap-1">

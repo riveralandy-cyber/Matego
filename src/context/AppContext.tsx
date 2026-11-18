@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
-import { User, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
+import { User, deleteUser, onAuthStateChanged, reauthenticateWithPopup, signInWithPopup, signOut } from 'firebase/auth';
 import { Course, Student, QuizAssignment, QuizAttempt, Teacher, TeacherTab, ThemePaletteId } from '../types';
 import { INITIAL_COURSES, INITIAL_STUDENTS, INITIAL_ASSIGNMENTS, INITIAL_ATTEMPTS } from '../data/initialData';
 import { calculateChileanGrade, getMineducPerformanceLevel } from '../utils/chileanGrades';
@@ -12,6 +12,7 @@ import {
 } from '../utils/themes';
 import { auth, googleProvider, makeAssignmentDocId, makeCourseJoinCode } from '../firebase';
 import {
+  CloudTeacherProfile,
   addQuizAssignmentCloud,
   addStudentsCloud,
   backfillStudentUidOnAttemptsCloud,
@@ -20,7 +21,9 @@ import {
   CourseJoinCodeDirectory,
   deleteQuizAssignmentCloud,
   deleteQuizAttemptsCloud,
+  deleteTeacherProfileAndDataCloud,
   ensureTeacherProfileCloud,
+  listAllCloudTeachers,
   lookupCourseJoinCodeCloud,
   recordQuizAttemptCloud,
   removeStudentsCloud,
@@ -64,6 +67,7 @@ interface AppContextType {
   firebaseUser: User | null;
   isAuthReady: boolean;
   isCloudTeacher: boolean;
+  isAdminTeacher: boolean;
   cloudSyncStatus: CloudSyncStatus;
   cloudSyncMessage: string | null;
   linkedCloudStudentSeats: Student[];
@@ -87,6 +91,9 @@ interface AppContextType {
   registerTeacher: (name: string, password: string, email?: string) => AuthActionResult;
   logoutTeacher: () => void;
   updateTeacherPassword: (currentPassword: string, newPassword: string) => AuthActionResult;
+  deleteOwnTeacherAccount: () => Promise<AuthActionResult>;
+  listCloudTeachersForAdmin: () => Promise<CloudTeacherProfile[]>;
+  deleteTeacherAccountAsAdmin: (targetTeacherId: string, isCloud: boolean) => Promise<AuthActionResult>;
 
   courses: Course[];
   selectedCourseId: string;
@@ -279,6 +286,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       firebaseUser.emailVerified &&
       isTeacherAuthenticated &&
       cloudTeacherUid === firebaseUser.uid
+  );
+
+  const isAdminTeacher = Boolean(
+    isCloudTeacher &&
+      firebaseUser?.emailVerified &&
+      firebaseUser.email?.toLowerCase() === 'riveralandy@gmail.com'
   );
 
   const isCloudStudent = Boolean(
@@ -907,6 +920,137 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { ok: true };
   };
 
+  const purgeLocalTeacherRecords = (teacherId: string) => {
+    setTeachers(prev => prev.filter(t => t.id !== teacherId));
+    setLocalStudents(prev => prev.filter(s => s.teacherId !== teacherId));
+    setLocalAssignments(prev => prev.filter(a => a.teacherId !== teacherId));
+    setLocalAttempts(prev => prev.filter(att => att.teacherId !== teacherId));
+    setThemePrefs(prev => {
+      if (!(teacherId in prev.teachers)) return prev;
+      const nextTeachers = { ...prev.teachers };
+      delete nextTeachers[teacherId];
+      return { ...prev, teachers: nextTeachers };
+    });
+  };
+
+  const deleteOwnTeacherAccount = async (): Promise<AuthActionResult> => {
+    if (!isTeacherAuthenticated) {
+      return { ok: false, error: 'Debes iniciar sesión como docente para eliminar tu cuenta.' };
+    }
+
+    if (isCloudTeacher && firebaseUser) {
+      const targetUser = firebaseUser;
+      const uid = targetUser.uid;
+      try {
+        await deleteTeacherProfileAndDataCloud(uid);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return { ok: false, error: `No se pudieron eliminar tus datos en la nube: ${msg}` };
+      }
+
+      let authDeleted = false;
+      try {
+        await deleteUser(targetUser);
+        authDeleted = true;
+      } catch (authErr) {
+        const code = (authErr as { code?: string })?.code || '';
+        const msg = authErr instanceof Error ? authErr.message : String(authErr);
+        if (code.includes('requires-recent-login') || msg.includes('requires-recent-login')) {
+          try {
+            const reauthCred = await reauthenticateWithPopup(targetUser, googleProvider);
+            await deleteUser(reauthCred.user);
+            authDeleted = true;
+          } catch {
+            authDeleted = false;
+          }
+        }
+      }
+
+      if (!authDeleted) {
+        await signOut(auth).catch(() => undefined);
+      }
+
+      localStorage.removeItem(CLOUD_TEACHER_UID_KEY);
+      seededCheckRef.current.delete(uid);
+      purgeLocalTeacherRecords(uid);
+      setCloudTeacherUid(null);
+      setCloudTeacherStudents([]);
+      setCloudTeacherAssignments([]);
+      setCloudTeacherAttempts([]);
+      setCurrentTeacher(EMPTY_TEACHER);
+      setIsTeacherAuthenticated(false);
+      setIsTeacherLoginModalOpen(false);
+      setActiveQuizTaking(null);
+      setLatestCompletedAttempt(null);
+      setCurrentStudentState(null);
+      setPendingEntryTheme(null);
+      setCloudSyncStatus('local');
+      setCloudSyncMessage(null);
+      setRole('teacher');
+
+      if (!authDeleted) {
+        return {
+          ok: true,
+          error:
+            'Tu perfil, listas de curso, evaluaciones y notas fueron eliminados de MateClic. Cerramos tu sesión para finalizar.',
+        };
+      }
+      return { ok: true };
+    }
+
+    const localId = currentTeacher.id;
+    if (localId) {
+      purgeLocalTeacherRecords(localId);
+    }
+    setCurrentTeacher(EMPTY_TEACHER);
+    setIsTeacherAuthenticated(false);
+    setIsTeacherLoginModalOpen(false);
+    setActiveQuizTaking(null);
+    setLatestCompletedAttempt(null);
+    setCurrentStudentState(null);
+    setPendingEntryTheme(null);
+    setRole('teacher');
+    return { ok: true };
+  };
+
+  const listCloudTeachersForAdmin = async (): Promise<CloudTeacherProfile[]> => {
+    if (!isAdminTeacher) return [];
+    return listAllCloudTeachers();
+  };
+
+  const deleteTeacherAccountAsAdmin = async (
+    targetTeacherId: string,
+    isCloud: boolean
+  ): Promise<AuthActionResult> => {
+    if (!isAdminTeacher) {
+      return {
+        ok: false,
+        error: 'Solo la administradora autorizada (riveralandy@gmail.com) puede eliminar cuentas de otros docentes.',
+      };
+    }
+
+    if (isCloud) {
+      if (firebaseUser && targetTeacherId === firebaseUser.uid) {
+        return deleteOwnTeacherAccount();
+      }
+      try {
+        await deleteTeacherProfileAndDataCloud(targetTeacherId);
+        seededCheckRef.current.delete(targetTeacherId);
+        purgeLocalTeacherRecords(targetTeacherId);
+        return { ok: true };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return { ok: false, error: `No se pudo eliminar la cuenta docente en la nube: ${msg}` };
+      }
+    }
+
+    if (!isCloudTeacher && targetTeacherId === currentTeacher.id) {
+      return deleteOwnTeacherAccount();
+    }
+    purgeLocalTeacherRecords(targetTeacherId);
+    return { ok: true };
+  };
+
   const selectedCourse = courses.find(c => c.id === selectedCourseId) || courses[0];
 
   const addStudentsToCourse = (courseId: string, rawText: string): number => {
@@ -1274,6 +1418,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         firebaseUser,
         isAuthReady,
         isCloudTeacher,
+        isAdminTeacher,
         cloudSyncStatus,
         cloudSyncMessage,
         linkedCloudStudentSeats,
@@ -1295,6 +1440,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         registerTeacher,
         logoutTeacher,
         updateTeacherPassword,
+        deleteOwnTeacherAccount,
+        listCloudTeachersForAdmin,
+        deleteTeacherAccountAsAdmin,
         courses,
         selectedCourseId,
         setSelectedCourseId,

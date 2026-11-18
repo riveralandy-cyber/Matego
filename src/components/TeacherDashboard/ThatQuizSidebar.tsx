@@ -134,7 +134,7 @@ export const ThatQuizSidebar: React.FC = () => {
 
       {/* Theme Palette Switcher in Sidebar */}
       <div className="pt-2 border-t tq-border">
-        <ThemePaletteSelector variant="compact" title="Paleta visual" />
+        <ThemePaletteSelector variant="compact" title="Paleta de colores" />
       </div>
     </aside>
   );

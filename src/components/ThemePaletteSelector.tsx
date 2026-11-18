@@ -1,5 +1,5 @@
-import React from 'react';
-import { Check, Palette } from 'lucide-react';
+import React, { useState } from 'react';
+import { Check, ChevronDown, ChevronUp, Palette } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { THEME_PALETTES, ThemePaletteDefinition } from '../utils/themes';
 import { ThemePaletteId } from '../types';
@@ -16,6 +16,7 @@ export const ThemePaletteSelector: React.FC<ThemePaletteSelectorProps> = ({
   subtitle,
 }) => {
   const { activeTheme, setThemePreference } = useApp();
+  const [isOpen, setIsOpen] = useState(false);
 
   const handleSelect = (id: ThemePaletteId) => {
     setThemePreference(id);
@@ -24,42 +25,55 @@ export const ThemePaletteSelector: React.FC<ThemePaletteSelectorProps> = ({
   if (variant === 'inline-bar') {
     return (
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold tq-text-muted flex items-center gap-1.5 mr-1">
+        <button
+          type="button"
+          onClick={() => setIsOpen(prev => !prev)}
+          aria-expanded={isOpen}
+          className="px-3 py-1.5 rounded-xl border tq-subtle hover:bg-[var(--tq-card-bg)] text-xs font-bold tq-text-2 inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+        >
           <Palette className="w-3.5 h-3.5 tq-text-accent" />
-          <span>{title}:</span>
-        </span>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {THEME_PALETTES.map((p: ThemePaletteDefinition) => {
-            const isSelected = activeTheme === p.id;
-            return (
-              <button
-                key={p.id}
-                type="button"
-                aria-pressed={isSelected}
-                onClick={() => handleSelect(p.id)}
-                title={`${p.name} — ${p.description}`}
-                className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                  isSelected
-                    ? 'tq-accent-soft border-[var(--tq-accent)] ring-1 ring-[var(--tq-accent)]'
-                    : 'tq-card hover:bg-[var(--tq-subtle-bg)]'
-                }`}
-              >
-                <span className="flex items-center -space-x-1 shrink-0" aria-hidden="true">
-                  <span
-                    className="w-3 h-3 rounded-full border border-black/15 dark:border-white/25"
-                    style={{ backgroundColor: p.swatches[0] }}
-                  />
-                  <span
-                    className="w-3 h-3 rounded-full border border-black/15 dark:border-white/25"
-                    style={{ backgroundColor: p.swatches[2] }}
-                  />
-                </span>
-                <span>{p.shortLabel}</span>
-                {isSelected && <Check className="w-3 h-3 shrink-0" />}
-              </button>
-            );
-          })}
-        </div>
+          <span>{title}</span>
+          {isOpen ? (
+            <ChevronUp className="w-3.5 h-3.5 tq-text-muted" />
+          ) : (
+            <ChevronDown className="w-3.5 h-3.5 tq-text-muted" />
+          )}
+        </button>
+
+        {isOpen && (
+          <div className="flex flex-wrap items-center gap-1.5 animate-in fade-in duration-150">
+            {THEME_PALETTES.map((p: ThemePaletteDefinition) => {
+              const isSelected = activeTheme === p.id;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  aria-pressed={isSelected}
+                  onClick={() => handleSelect(p.id)}
+                  title={`${p.name} — ${p.description}`}
+                  className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                    isSelected
+                      ? 'tq-accent-soft border-[var(--tq-accent)] ring-1 ring-[var(--tq-accent)]'
+                      : 'tq-card hover:bg-[var(--tq-subtle-bg)]'
+                  }`}
+                >
+                  <span className="flex items-center -space-x-1 shrink-0" aria-hidden="true">
+                    <span
+                      className="w-3 h-3 rounded-full border border-black/15 dark:border-white/25"
+                      style={{ backgroundColor: p.swatches[0] }}
+                    />
+                    <span
+                      className="w-3 h-3 rounded-full border border-black/15 dark:border-white/25"
+                      style={{ backgroundColor: p.swatches[2] }}
+                    />
+                  </span>
+                  <span>{p.shortLabel}</span>
+                  {isSelected && <Check className="w-3 h-3 shrink-0" />}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
     );
   }
@@ -123,56 +137,67 @@ export const ThemePaletteSelector: React.FC<ThemePaletteSelectorProps> = ({
     );
   }
 
-  // Compact 5-button grid (used on login cards & sidebar)
+  // Collapsible compact 5-button grid (used on login cards & sidebar; only expands when clicked)
   return (
-    <div className="p-3 rounded-2xl tq-subtle border space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 text-[11px] font-bold tq-text-2">
-          <Palette className="w-3.5 h-3.5 tq-text-accent" />
+    <div className="rounded-2xl tq-subtle border overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setIsOpen(prev => !prev)}
+        aria-expanded={isOpen}
+        className="w-full px-3 py-2.5 flex items-center justify-between gap-2 text-left hover:bg-[var(--tq-muted-bg)]/60 transition-colors cursor-pointer"
+      >
+        <span className="flex items-center gap-1.5 text-[11px] font-bold tq-text-2">
+          <Palette className="w-3.5 h-3.5 tq-text-accent shrink-0" />
           <span>{title}</span>
-        </div>
-        <span className="text-[10px] font-semibold tq-text-accent">
-          {THEME_PALETTES.find(p => p.id === activeTheme)?.shortLabel}
         </span>
-      </div>
+        {isOpen ? (
+          <ChevronUp className="w-3.5 h-3.5 tq-text-muted shrink-0" />
+        ) : (
+          <ChevronDown className="w-3.5 h-3.5 tq-text-muted shrink-0" />
+        )}
+      </button>
 
-      {subtitle && (
-        <p className="text-[11px] tq-text-muted leading-snug">{subtitle}</p>
+      {isOpen && (
+        <div className="px-3 pb-3 pt-2 border-t tq-border space-y-2 animate-in fade-in duration-150">
+          {subtitle && (
+            <p className="text-[11px] tq-text-muted leading-snug">{subtitle}</p>
+          )}
+
+          <div className="grid grid-cols-5 gap-1.5">
+            {THEME_PALETTES.map(p => {
+              const isSelected = activeTheme === p.id;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  aria-pressed={isSelected}
+                  onClick={() => handleSelect(p.id)}
+                  title={`${p.name}: ${p.description}`}
+                  className={`py-2 px-1 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
+                    isSelected
+                      ? 'tq-card border-[var(--tq-accent)] ring-2 ring-[var(--tq-accent)]/30 shadow-2xs'
+                      : 'tq-card border-[var(--tq-border)] opacity-85 hover:opacity-100 hover:border-[var(--tq-border-strong)]'
+                  }`}
+                >
+                  <span className="flex items-center -space-x-1" aria-hidden="true">
+                    <span
+                      className="w-3.5 h-3.5 rounded-full border border-black/20 dark:border-white/30"
+                      style={{ backgroundColor: p.swatches[0] }}
+                    />
+                    <span
+                      className="w-3.5 h-3.5 rounded-full border border-black/20 dark:border-white/30"
+                      style={{ backgroundColor: p.swatches[2] }}
+                    />
+                  </span>
+                  <span className="text-[10px] font-bold tq-text truncate w-full px-0.5">
+                    {p.shortLabel}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       )}
-
-      <div className="grid grid-cols-5 gap-1.5">
-        {THEME_PALETTES.map(p => {
-          const isSelected = activeTheme === p.id;
-          return (
-            <button
-              key={p.id}
-              type="button"
-              aria-pressed={isSelected}
-              onClick={() => handleSelect(p.id)}
-              title={`${p.name}: ${p.description}`}
-              className={`py-2 px-1 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
-                isSelected
-                  ? 'tq-card border-[var(--tq-accent)] ring-2 ring-[var(--tq-accent)]/30 shadow-2xs'
-                  : 'tq-card border-[var(--tq-border)] opacity-85 hover:opacity-100 hover:border-[var(--tq-border-strong)]'
-              }`}
-            >
-              <span className="flex items-center -space-x-1" aria-hidden="true">
-                <span
-                  className="w-3.5 h-3.5 rounded-full border border-black/20 dark:border-white/30"
-                  style={{ backgroundColor: p.swatches[0] }}
-                />
-                <span
-                  className="w-3.5 h-3.5 rounded-full border border-black/20 dark:border-white/30"
-                  style={{ backgroundColor: p.swatches[2] }}
-                />
-              </span>
-              <span className="text-[10px] font-bold tq-text truncate w-full px-0.5">
-                {p.shortLabel}
-              </span>
-            </button>
-          );
-        })}
-      </div>
     </div>
   );
 };

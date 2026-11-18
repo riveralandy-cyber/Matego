@@ -224,7 +224,7 @@ export const SimceCreatorView: React.FC = () => {
   );
 
   const lengthChoices = useMemo(() => {
-    const presets = [5, 10, 15, 20, 24].filter(n => n <= maxPoolCount);
+    const presets = [5, 10, 15, 20, 25, 30, 40].filter(n => n <= maxPoolCount);
     if (!presets.includes(maxPoolCount) && maxPoolCount > 0) {
       presets.push(maxPoolCount);
     }

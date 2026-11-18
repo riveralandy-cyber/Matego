@@ -19,6 +19,10 @@ service cloud.firestore {
       return isSignedIn() && request.auth.token.email_verified == true;
     }
 
+    function isAdmin() {
+      return isVerifiedUser() && request.auth.token.email == 'riveralandy@gmail.com';
+    }
+
     function isValidId(id) {
       return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
@@ -269,8 +273,8 @@ service cloud.firestore {
 
     // 1. Private Teacher Profile
     match /teachers/{teacherUid} {
-      allow get: if isVerifiedUser() && isValidId(teacherUid) && request.auth.uid == teacherUid;
-      allow list: if false;
+      allow get: if isVerifiedUser() && isValidId(teacherUid) && (request.auth.uid == teacherUid || isAdmin());
+      allow list: if isAdmin();
       allow create: if isVerifiedUser()
         && isValidId(teacherUid)
         && request.auth.uid == teacherUid
@@ -290,16 +294,16 @@ service cloud.firestore {
         && incoming().diff(existing()).affectedKeys().hasOnly([
           'name', 'email', 'schoolName', 'commune', 'rbd', 'activeTheme', 'seededInitialData', 'serverUpdatedAt'
         ]);
-      allow delete: if false;
+      allow delete: if isVerifiedUser() && isValidId(teacherUid) && (request.auth.uid == teacherUid || isAdmin());
     }
 
     // 2. Teacher Roster Students (PII Isolated to Owner Teacher & Linked Student)
     match /teacherRosterStudents/{studentDocId} {
       allow get: if isVerifiedUser()
         && isValidId(studentDocId)
-        && (existing().ownerUid == request.auth.uid || existing().linkedStudentUid == request.auth.uid);
+        && (existing().ownerUid == request.auth.uid || existing().linkedStudentUid == request.auth.uid || isAdmin());
       allow list: if isVerifiedUser()
-        && (existing().ownerUid == request.auth.uid || existing().linkedStudentUid == request.auth.uid);
+        && (existing().ownerUid == request.auth.uid || existing().linkedStudentUid == request.auth.uid || isAdmin());
       allow create: if isVerifiedUser()
         && isValidId(studentDocId)
         && isValidRosterStudent(incoming())
@@ -337,14 +341,14 @@ service cloud.firestore {
         );
       allow delete: if isVerifiedUser()
         && isValidId(studentDocId)
-        && existing().ownerUid == request.auth.uid;
+        && (existing().ownerUid == request.auth.uid || isAdmin());
     }
 
     // 3. Student Directory (Non-PII lookup keyed by uppercase accessCode)
     match /studentDirectory/{accessCode} {
       allow get: if isVerifiedUser() && isValidId(accessCode);
       allow list: if isVerifiedUser()
-        && (existing().ownerUid == request.auth.uid || existing().linkedStudentUid == request.auth.uid);
+        && (existing().ownerUid == request.auth.uid || existing().linkedStudentUid == request.auth.uid || isAdmin());
       allow create: if isVerifiedUser()
         && isValidId(accessCode)
         && isValidStudentDirectory(incoming())
@@ -384,13 +388,13 @@ service cloud.firestore {
         );
       allow delete: if isVerifiedUser()
         && isValidId(accessCode)
-        && existing().ownerUid == request.auth.uid;
+        && (existing().ownerUid == request.auth.uid || isAdmin());
     }
 
     // 4. Course Join Codes (Class directory without PII)
     match /courseJoinCodes/{joinCode} {
       allow get: if isVerifiedUser() && isValidId(joinCode);
-      allow list: if isVerifiedUser() && existing().ownerUid == request.auth.uid;
+      allow list: if isVerifiedUser() && (existing().ownerUid == request.auth.uid || isAdmin());
       allow create: if isVerifiedUser()
         && isValidId(joinCode)
         && isValidCourseJoinCode(incoming())
@@ -413,16 +417,16 @@ service cloud.firestore {
         ]);
       allow delete: if isVerifiedUser()
         && isValidId(joinCode)
-        && existing().ownerUid == request.auth.uid;
+        && (existing().ownerUid == request.auth.uid || isAdmin());
     }
 
     // 5. Verified Course Memberships
     match /courseMembers/{memberDocId} {
       allow get: if isVerifiedUser()
         && isValidId(memberDocId)
-        && (existing().ownerUid == request.auth.uid || existing().studentUid == request.auth.uid);
+        && (existing().ownerUid == request.auth.uid || existing().studentUid == request.auth.uid || isAdmin());
       allow list: if isVerifiedUser()
-        && (existing().ownerUid == request.auth.uid || existing().studentUid == request.auth.uid);
+        && (existing().ownerUid == request.auth.uid || existing().studentUid == request.auth.uid || isAdmin());
       allow create: if isVerifiedUser()
         && isValidId(memberDocId)
         && isValidCourseMember(incoming())
@@ -437,7 +441,7 @@ service cloud.firestore {
       allow update: if false;
       allow delete: if isVerifiedUser()
         && isValidId(memberDocId)
-        && (existing().ownerUid == request.auth.uid || existing().studentUid == request.auth.uid);
+        && (existing().ownerUid == request.auth.uid || existing().studentUid == request.auth.uid || isAdmin());
     }
 
     // 6. Real-Time Course Assignment Feeds
@@ -448,7 +452,7 @@ service cloud.firestore {
           existing().ownerUid == request.auth.uid
           || isEnrolledInCourse(existing().ownerUid, existing().courseId)
         );
-      allow list: if isVerifiedUser() && existing().ownerUid == request.auth.uid;
+      allow list: if isVerifiedUser() && (existing().ownerUid == request.auth.uid || isAdmin());
       allow create: if isVerifiedUser()
         && isValidId(courseFeedId)
         && isValidCourseFeed(incoming())
@@ -469,7 +473,7 @@ service cloud.firestore {
         && incoming().diff(existing()).affectedKeys().hasOnly(['assignmentIds', 'serverUpdatedAt']);
       allow delete: if isVerifiedUser()
         && isValidId(courseFeedId)
-        && existing().ownerUid == request.auth.uid;
+        && (existing().ownerUid == request.auth.uid || isAdmin());
     }
 
     // 7. Quiz Assignments
@@ -480,7 +484,7 @@ service cloud.firestore {
           existing().ownerUid == request.auth.uid
           || isEnrolledInCourse(existing().ownerUid, existing().courseId)
         );
-      allow list: if isVerifiedUser() && existing().ownerUid == request.auth.uid;
+      allow list: if isVerifiedUser() && (existing().ownerUid == request.auth.uid || isAdmin());
       allow create: if isVerifiedUser()
         && isValidId(assignmentDocId)
         && isValidQuizAssignment(incoming())
@@ -502,16 +506,16 @@ service cloud.firestore {
         ]);
       allow delete: if isVerifiedUser()
         && isValidId(assignmentDocId)
-        && existing().ownerUid == request.auth.uid;
+        && (existing().ownerUid == request.auth.uid || isAdmin());
     }
 
     // 8. Quiz Attempts & Grades (Shared Student <-> Teacher Sync)
     match /attempts/{attemptDocId} {
       allow get: if isVerifiedUser()
         && isValidId(attemptDocId)
-        && (existing().ownerUid == request.auth.uid || existing().studentUid == request.auth.uid);
+        && (existing().ownerUid == request.auth.uid || existing().studentUid == request.auth.uid || isAdmin());
       allow list: if isVerifiedUser()
-        && (existing().ownerUid == request.auth.uid || existing().studentUid == request.auth.uid);
+        && (existing().ownerUid == request.auth.uid || existing().studentUid == request.auth.uid || isAdmin());
       allow create: if isVerifiedUser()
         && isValidId(attemptDocId)
         && isValidQuizAttempt(incoming())
@@ -562,7 +566,7 @@ service cloud.firestore {
         );
       allow delete: if isVerifiedUser()
         && isValidId(attemptDocId)
-        && existing().ownerUid == request.auth.uid;
+        && (existing().ownerUid == request.auth.uid || isAdmin());
     }
   }
 }

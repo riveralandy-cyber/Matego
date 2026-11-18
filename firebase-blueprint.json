@@ -678,7 +678,7 @@
   "firestore": {
     "/teachers/{teacherUid}": {
       "schema": { "$ref": "#/entities/TeacherProfile" },
-      "description": "Private teacher profile and app settings owned by teacherUid."
+      "description": "Teacher profile and app settings owned by teacherUid (deletable by owner or verified platform admin)."
     },
     "/teacherRosterStudents/{studentDocId}": {
       "schema": { "$ref": "#/entities/RosterStudent" },

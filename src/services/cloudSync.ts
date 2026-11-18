@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -953,4 +954,37 @@ export function subscribeStudentCourseAndAttemptsCloud(
     assignmentUnsubs.forEach(u => u());
     assignmentUnsubs.clear();
   };
+}
+
+export async function listAllCloudTeachers(): Promise<CloudTeacherProfile[]> {
+  try {
+    const snap = await getDocs(collection(db, 'teachers'));
+    const list = snap.docs.map(d => {
+      const data = d.data() as CloudTeacherProfile;
+      return {
+        uid: data.uid,
+        teacherId: data.teacherId,
+        name: data.name || 'Docente',
+        email: data.email || '',
+        schoolName: data.schoolName || 'Escuela Ricardo Silva Arriagada',
+        commune: data.commune || 'SLEP Chinchorro · Arica',
+        rbd: data.rbd || '102-4',
+        activeTheme: normalizeTheme(data.activeTheme),
+        seededInitialData: Boolean(data.seededInitialData),
+      };
+    });
+    list.sort((a, b) => a.name.localeCompare(b.name, 'es'));
+    return list;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, 'teachers');
+  }
+}
+
+export async function deleteTeacherProfileAndDataCloud(targetUid: string): Promise<void> {
+  await clearAllTeacherCloudData(targetUid);
+  try {
+    await deleteDoc(doc(db, 'teachers', targetUid));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `teachers/${targetUid}`);
+  }
 }
