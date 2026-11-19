@@ -242,13 +242,13 @@ export const SimceCreatorView: React.FC = () => {
           <div className="space-y-0.5 min-w-0">
             <div className="flex items-center gap-1.5 text-[11px] font-bold tq-text-accent">
               <Award className="w-3.5 h-3.5 shrink-0" />
-              <span>Banco Oficial SIMCE Chile · Preguntas Liberadas</span>
+              <span>Banco Oficial SIMCE Chile + Generador Paramétrico</span>
             </div>
             <h1 className="text-lg font-bold tq-text leading-tight">
               Sección Especial SIMCE · 4°, 6° y 8° Básico
             </h1>
             <p className="text-xs tq-text-muted max-w-2xl">
-              Crea evaluaciones formato SIMCE (A, B, C, D) con ítems reales para asignar a tus cursos o proyectar en clases.
+              Combina ítems oficiales liberados con variaciones paramétricas (números, tablas y gráficos nuevos en cada ensayo semanal).
             </p>
           </div>
 
@@ -278,7 +278,7 @@ export const SimceCreatorView: React.FC = () => {
         <div className="px-3 py-2 tq-subtle border rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs">
           <span className="tq-text-2 font-medium">{activeGradeInfo.targetDesc}</span>
           <span className="font-mono font-bold tq-text-accent shrink-0">
-            {fullBankForGrade.length} ítems reales ({simceGrade.replace('_basico', '° Básico')})
+            {fullBankForGrade.length} ítems base + ∞ variaciones ({simceGrade.replace('_basico', '° Básico')})
           </span>
         </div>
       </div>
