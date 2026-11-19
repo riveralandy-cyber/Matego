@@ -291,6 +291,266 @@ export const MathVisuals: React.FC<MathVisualsProps> = ({ visualType, visualData
     );
   }
 
+  if (visualType === 'double_bar_chart') {
+    const {
+      title = 'Gráfico de Barra Doble',
+      unit = '',
+      seriesA = 'Grupo A',
+      seriesB = 'Grupo B',
+      items = [],
+    } = visualData as {
+      title?: string;
+      unit?: string;
+      seriesA?: string;
+      seriesB?: string;
+      items: { label: string; valueA: number; valueB: number }[];
+    };
+    const allVals = items.flatMap(i => [i.valueA, i.valueB]);
+    const maxVal = Math.max(10, ...allVals);
+    const ceilMax = Math.ceil(maxVal / 5) * 5;
+    const colorA = '#0284c7';
+    const colorB = '#f59e0b';
+
+    return (
+      <div className="my-2 flex flex-col items-center w-full">
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 sm:p-3 w-full max-w-md shadow-xs text-slate-900">
+          <div className="text-xs font-bold text-center text-slate-800 mb-1">
+            {title} {unit ? `(${unit})` : ''}
+          </div>
+          {/* Series Legend */}
+          <div className="flex items-center justify-center gap-4 text-[11px] font-semibold text-slate-700 mb-1.5">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-xs inline-block" style={{ backgroundColor: colorA }} />
+              {seriesA}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-xs inline-block" style={{ backgroundColor: colorB }} />
+              {seriesB}
+            </span>
+          </div>
+          <svg viewBox="0 0 330 158" className="w-full h-36 sm:h-40">
+            {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
+              const y = 122 - ratio * 95;
+              const tickVal = Math.round(ceilMax * ratio);
+              return (
+                <g key={idx}>
+                  <line
+                    x1="36"
+                    y1={y}
+                    x2="316"
+                    y2={y}
+                    stroke="#cbd5e1"
+                    strokeWidth="1"
+                    strokeDasharray={idx === 0 ? undefined : '2,2'}
+                  />
+                  <text x="30" y={y + 3} textAnchor="end" fontSize="9" fill="#475569" fontWeight="600">
+                    {tickVal}
+                  </text>
+                </g>
+              );
+            })}
+            <line x1="36" y1="20" x2="36" y2="122" stroke="#334155" strokeWidth="1.5" />
+            <line x1="36" y1="122" x2="316" y2="122" stroke="#334155" strokeWidth="1.5" />
+
+            {items.map((item, idx) => {
+              const slotWidth = 270 / Math.max(1, items.length);
+              const barWidth = Math.min(22, slotWidth * 0.34);
+              const groupCenter = 42 + idx * slotWidth + slotWidth / 2;
+              const xA = groupCenter - barWidth - 1.5;
+              const xB = groupCenter + 1.5;
+              const hA = (item.valueA / ceilMax) * 95;
+              const hB = (item.valueB / ceilMax) * 95;
+              const yA = 122 - hA;
+              const yB = 122 - hB;
+              return (
+                <g key={idx}>
+                  <rect x={xA} y={yA} width={barWidth} height={Math.max(2, hA)} fill={colorA} rx="2.5" />
+                  <text x={xA + barWidth / 2} y={yA - 4} textAnchor="middle" fontSize="9" fontWeight="bold" fill="#0369a1">
+                    {item.valueA}
+                  </text>
+                  <rect x={xB} y={yB} width={barWidth} height={Math.max(2, hB)} fill={colorB} rx="2.5" />
+                  <text x={xB + barWidth / 2} y={yB - 4} textAnchor="middle" fontSize="9" fontWeight="bold" fill="#b45309">
+                    {item.valueB}
+                  </text>
+                  <text x={groupCenter} y="138" textAnchor="middle" fontSize="9.5" fontWeight="600" fill="#334155">
+                    {item.label}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+      </div>
+    );
+  }
+
+  if (visualType === 'pie_chart') {
+    const {
+      title = 'Gráfico Circular',
+      subtitle = '',
+      displayMode = 'percent',
+      items = [],
+    } = visualData as {
+      title?: string;
+      subtitle?: string;
+      displayMode?: 'percent' | 'degrees' | 'count';
+      items: { label: string; value: number; isUnknown?: boolean; color?: string }[];
+    };
+
+    const palette = ['#0284c7', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#0d9488'];
+    const total = Math.max(1, items.reduce((acc, it) => acc + Math.max(0, it.value), 0));
+    const cx = 70;
+    const cy = 70;
+    const r = 56;
+
+    let currentAngle = -Math.PI / 2;
+    const slices = items.map((item, idx) => {
+      const fraction = Math.max(0, item.value) / total;
+      const sweep = fraction * Math.PI * 2;
+      const startAngle = currentAngle;
+      const endAngle = currentAngle + sweep;
+      currentAngle = endAngle;
+
+      const x1 = cx + r * Math.cos(startAngle);
+      const y1 = cy + r * Math.sin(startAngle);
+      const x2 = cx + r * Math.cos(endAngle);
+      const y2 = cy + r * Math.sin(endAngle);
+      const largeArc = sweep > Math.PI ? 1 : 0;
+
+      const midAngle = startAngle + sweep / 2;
+      const lx = cx + r * 0.62 * Math.cos(midAngle);
+      const ly = cy + r * 0.62 * Math.sin(midAngle);
+
+      const unitSuffix = displayMode === 'percent' ? '%' : displayMode === 'degrees' ? '°' : '';
+      const displayLabel = item.isUnknown ? `?${unitSuffix}` : `${item.value}${unitSuffix}`;
+
+      const pathData =
+        fraction >= 0.999
+          ? `M ${cx} ${cy - r} A ${r} ${r} 0 1 1 ${cx - 0.01} ${cy - r} Z`
+          : `M ${cx} ${cy} L ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 ${largeArc} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z`;
+
+      return {
+        ...item,
+        color: item.color || palette[idx % palette.length],
+        pathData,
+        lx,
+        ly,
+        showInside: fraction >= 0.11,
+        displayLabel,
+      };
+    });
+
+    return (
+      <div className="my-2 flex flex-col items-center w-full">
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 sm:p-3 w-full max-w-md shadow-xs text-slate-900">
+          <div className="text-xs font-bold text-center text-slate-800">{title}</div>
+          {subtitle && (
+            <div className="text-[11px] text-center text-slate-500 mb-1">{subtitle}</div>
+          )}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-1.5">
+            <svg viewBox="0 0 140 140" className="w-32 h-32 sm:w-36 sm:h-36 shrink-0">
+              {slices.map((s, idx) => (
+                <g key={idx}>
+                  <path d={s.pathData} fill={s.color} stroke="#ffffff" strokeWidth="1.8" />
+                  {s.showInside && (
+                    <text
+                      x={s.lx}
+                      y={s.ly + 3.5}
+                      textAnchor="middle"
+                      fontSize="9.5"
+                      fontWeight="bold"
+                      fill="#ffffff"
+                    >
+                      {s.displayLabel}
+                    </text>
+                  )}
+                </g>
+              ))}
+            </svg>
+            <div className="w-full sm:w-auto flex-1 space-y-1.5 text-xs">
+              {slices.map((s, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between gap-2 px-2 py-1 rounded-md bg-white border border-slate-200"
+                >
+                  <span className="flex items-center gap-1.5 font-semibold text-slate-700 truncate">
+                    <span className="w-2.5 h-2.5 rounded-xs shrink-0" style={{ backgroundColor: s.color }} />
+                    <span className="truncate">{s.label}</span>
+                  </span>
+                  <span
+                    className={`font-mono font-bold tabular-nums shrink-0 ${
+                      s.isUnknown ? 'text-rose-600' : 'text-slate-900'
+                    }`}
+                  >
+                    {s.displayLabel}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (visualType === 'line_chart') {
+    const { title = 'Gráfico de Línea', unit = '', items = [] } = visualData as {
+      title?: string;
+      unit?: string;
+      items: { label: string; value: number }[];
+    };
+    const vals = items.map(i => i.value);
+    const maxVal = Math.max(10, ...vals);
+    const ceilMax = Math.ceil(maxVal / 5) * 5;
+    const slotW = 260 / Math.max(1, items.length - 1);
+    const coords = items.map((item, idx) => ({
+      x: items.length === 1 ? 170 : 48 + idx * slotW,
+      y: 120 - (item.value / ceilMax) * 95,
+      ...item,
+    }));
+    const polyPoints = coords.map(c => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
+
+    return (
+      <div className="my-2 flex flex-col items-center w-full">
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 sm:p-3 w-full max-w-md shadow-xs text-slate-900">
+          <div className="text-xs font-bold text-center text-slate-800 mb-1.5">
+            {title} {unit ? `(${unit})` : ''}
+          </div>
+          <svg viewBox="0 0 330 155" className="w-full h-32 sm:h-36">
+            {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
+              const y = 120 - ratio * 95;
+              const tickVal = Math.round(ceilMax * ratio);
+              return (
+                <g key={idx}>
+                  <line x1="36" y1={y} x2="315" y2={y} stroke="#cbd5e1" strokeWidth="1" strokeDasharray={idx === 0 ? undefined : '2,2'} />
+                  <text x="30" y={y + 3} textAnchor="end" fontSize="9" fill="#475569" fontWeight="600">
+                    {tickVal}
+                  </text>
+                </g>
+              );
+            })}
+            <line x1="36" y1="20" x2="36" y2="120" stroke="#334155" strokeWidth="1.5" />
+            <line x1="36" y1="120" x2="315" y2="120" stroke="#334155" strokeWidth="1.5" />
+            {coords.length > 1 && (
+              <polyline fill="none" stroke="#0284c7" strokeWidth="2.5" points={polyPoints} />
+            )}
+            {coords.map((c, idx) => (
+              <g key={idx}>
+                <circle cx={c.x} cy={c.y} r="4" fill="#0284c7" stroke="#ffffff" strokeWidth="1.5" />
+                <text x={c.x} y={c.y - 8} textAnchor="middle" fontSize="9.5" fontWeight="bold" fill="#0f172a">
+                  {c.value}
+                </text>
+                <text x={c.x} y="136" textAnchor="middle" fontSize="9.5" fontWeight="600" fill="#334155">
+                  {c.label}
+                </text>
+              </g>
+            ))}
+          </svg>
+        </div>
+      </div>
+    );
+  }
+
   if (visualType === 'table_data') {
     const { title, headers = [], rows = [] } = visualData as {
       title?: string;

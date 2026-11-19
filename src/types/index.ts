@@ -40,6 +40,9 @@ export type VisualType =
   | 'number_line' 
   | 'balance_equation'
   | 'bar_chart'
+  | 'double_bar_chart'
+  | 'pie_chart'
+  | 'line_chart'
   | 'table_data'
   | 'angle_figure'
   | 'cube_prism';

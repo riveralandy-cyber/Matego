@@ -3998,72 +3998,639 @@ const TOPIC_GENERATORS: Record<TopicKey, TopicGenerator> = {
     }
   },
 
-  // 33. Tablas, Gráficos y Pictogramas
+  // 33. Tablas, Gráficos y Pictogramas (con gráficos visuales reales)
   tablas_graficos_pictogramas: (level, grade, oa, qId, variant) => {
-    const c1 = randInt(4, 10);
-    const c2 = randInt(11, 16);
-    const c3 = randInt(2, 8);
-    const total = c1 + c2 + c3;
     const v = Math.abs(variant);
 
-    if (level === 'facil') {
-      return {
-        id: qId,
-        prompt: `En una votación del curso: Fútbol obtuvo ${c1} votos, Básquetbol obtuvo ${c2} votos y Atletismo obtuvo ${c3} votos. ¿Cuál fue el deporte que obtuvo la MAYOR cantidad de preferencias?`,
-        visualType: 'none',
-        questionType: 'multiple_choice',
-        options: shuffle(['Básquetbol', 'Fútbol', 'Atletismo']),
-        correctAnswer: 'Básquetbol',
-        explanation: `Básquetbol obtuvo ${c2} votos, superando a Fútbol (${c1}) y Atletismo (${c3}).`,
-        oaCode: oa.code,
-        difficulty: level,
-        categoryLabel: 'Nivel 1: Ejercitación Básica'
-      };
-    } else if (level === 'medio') {
-      const diff = Math.abs(c2 - c1);
-      return {
-        id: qId,
-        prompt: `En una tabla de frecuencias del curso, Fútbol registró ${c1} votos y Básquetbol ${c2} votos. ¿Cuántos votos más obtuvo el deporte ganador respecto a Fútbol?`,
-        visualType: 'none',
-        questionType: 'numeric',
-        correctAnswer: diff.toString(),
-        explanation: `Diferencia de preferencias: ${c2} - ${c1} = ${diff} votos.`,
-        oaCode: oa.code,
-        difficulty: level,
-        categoryLabel: 'Nivel 2: Aplicación Intermedia'
-      };
-    } else {
-      const escala = randChoice([2, 3, 4, 5]);
-      const iconos = randInt(3, 7);
-      const scenarios = [
-        {
-          prompt: `En una encuesta escolar en la Escuela Ricardo Silva Arriagada se registraron los votos de los tres deportes favoritos: Fútbol (${c1}), Básquetbol (${c2}) y Atletismo (${c3}). ¿Cuántos estudiantes participaron en total?`,
-          ans: total,
-          exp: `Sumamos todos los votos: ${c1} + ${c2} + ${c3} = ${total} estudiantes.`
-        },
-        {
-          prompt: `En un pictograma sobre árboles plantados en Arica, cada dibujo de árbol representa ${escala} árboles reales. Si la fila del mes de septiembre muestra ${iconos} dibujos, ¿cuántos árboles se plantaron en septiembre?`,
-          ans: escala * iconos,
-          exp: `${iconos} íconos × ${escala} árboles por ícono = ${escala * iconos} árboles.`
-        },
-        {
-          prompt: `Un gráfico de barras muestra la venta de colaciones saludables: lunes ${c1}, martes ${c2} y miércoles ${c3}. ¿Cuántas colaciones más se vendieron el día de mayor venta comparado con el día de menor venta?`,
-          ans: c2 - Math.min(c1, c3),
-          exp: `${c2} - ${Math.min(c1, c3)} = ${c2 - Math.min(c1, c3)} colaciones.`
-        }
+    const THEMES = [
+      {
+        title: 'Deportes Favoritos',
+        unit: 'votos',
+        cats: ['Fútbol', 'Básquetbol', 'Vóleibol', 'Atletismo'],
+        noun: 'estudiantes',
+        context: 'una encuesta deportiva escolar'
+      },
+      {
+        title: 'Talleres Artísticos',
+        unit: 'est.',
+        cats: ['Música', 'Pintura', 'Teatro', 'Danza'],
+        noun: 'estudiantes',
+        context: 'la inscripción de talleres'
+      },
+      {
+        title: 'Colaciones Saludables',
+        unit: 'pref.',
+        cats: ['Fruta', 'Yogurt', 'Sándwich', 'Frutos secos'],
+        noun: 'estudiantes',
+        context: 'las preferencias de colación'
+      },
+      {
+        title: 'Transporte Escolar',
+        unit: 'est.',
+        cats: ['Caminando', 'Furgón', 'Micro', 'Bicicleta'],
+        noun: 'estudiantes',
+        context: 'cómo llegan al colegio'
+      },
+      {
+        title: 'Lectura Mensual',
+        unit: 'lectores',
+        cats: ['Cómics', 'Aventuras', 'Ciencia', 'Poesía'],
+        noun: 'lectores',
+        context: 'los géneros más leídos en biblioteca'
+      }
+    ];
+    const theme = THEMES[v % THEMES.length];
+
+    // ------------------------------------------------------------------
+    // Rama especializada para 6° Básico OA 24:
+    // "Gráficos de barra doble y gráficos circulares"
+    // ------------------------------------------------------------------
+    if (grade === '6_basico' && oa.code === 'OA 24') {
+      const seriesPairs = [
+        ['6°A', '6°B'],
+        ['Mujeres', 'Hombres'],
+        ['Jornada Mañana', 'Jornada Tarde'],
       ];
-      const chosen = scenarios[v % scenarios.length];
-      return {
-        id: qId,
-        prompt: chosen.prompt,
-        visualType: 'none',
-        questionType: 'numeric',
-        correctAnswer: chosen.ans.toString(),
-        explanation: chosen.exp,
-        oaCode: oa.code,
-        difficulty: level,
-        categoryLabel: 'Nivel 3: Resolución de Problemas'
-      };
+      const [sA, sB] = seriesPairs[v % seriesPairs.length];
+
+      // Construct 4 distinct double-bar values
+      const doubleItems = theme.cats.map(label => ({
+        label,
+        valueA: randInt(6, 22),
+        valueB: randInt(6, 22),
+      }));
+      // Ensure a unique max in doubleItems for unambiguous comparison questions
+      doubleItems[1].valueA = Math.max(doubleItems[1].valueA, 24);
+      doubleItems[2].valueB = Math.max(doubleItems[2].valueB, 25);
+
+      // Clean percentage splits summing strictly to 100%
+      const pieSplits: number[][] = [
+        [40, 25, 20, 15],
+        [50, 20, 20, 10],
+        [35, 30, 20, 15],
+        [45, 25, 20, 10],
+        [30, 25, 25, 20],
+        [40, 30, 20, 10],
+      ];
+      const rawSplit = shuffle(pieSplits[v % pieSplits.length]);
+      const pieItems = theme.cats.map((label, idx) => ({ label, value: rawSplit[idx] }));
+
+      if (level === 'facil') {
+        const sub = v % 4;
+        if (sub === 0) {
+          // Pie chart: mayor o menor porcentaje
+          const askMax = v % 8 < 4;
+          // Ensure strictly unique top/bottom
+          const uniqSplit = [40, 30, 20, 10];
+          const rotated = theme.cats.map((label, i) => ({
+            label,
+            value: uniqSplit[(i + v) % 4],
+          }));
+          const target = [...rotated].sort((a, b) => (askMax ? b.value - a.value : a.value - b.value))[0];
+          return {
+            id: qId,
+            prompt: `Observa el gráfico circular sobre ${theme.context}. ¿Qué categoría obtuvo el ${askMax ? 'MAYOR' : 'MENOR'} porcentaje de preferencias?`,
+            visualType: 'pie_chart',
+            visualData: { title: theme.title, displayMode: 'percent', items: rotated },
+            questionType: 'multiple_choice',
+            options: shuffle(rotated.map(it => it.label)),
+            correctAnswer: target.label,
+            explanation: `${target.label} representa el ${target.value}%, siendo el sector ${askMax ? 'más grande' : 'más pequeño'} del gráfico circular.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 1: Gráfico Circular'
+          };
+        } else if (sub === 1) {
+          // Pie chart: porcentaje faltante (?%)
+          const unkIdx = v % 4;
+          const missingVal = pieItems[unkIdx].value;
+          const knownSum = 100 - missingVal;
+          const displayPie = pieItems.map((it, idx) =>
+            idx === unkIdx ? { ...it, isUnknown: true } : it
+          );
+          return {
+            id: qId,
+            prompt: `En el gráfico circular falta indicar el porcentaje de "${pieItems[unkIdx].label}". Sabiendo que el círculo completo representa el 100%, ¿qué porcentaje corresponde al sector "?"?`,
+            visualType: 'pie_chart',
+            visualData: { title: theme.title, displayMode: 'percent', items: displayPie },
+            questionType: 'numeric',
+            correctAnswer: missingVal.toString(),
+            explanation: `Los sectores conocidos suman ${knownSum}%. Para completar el 100%: 100 − ${knownSum} = ${missingVal}%.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 1: Gráfico Circular'
+          };
+        } else if (sub === 2) {
+          // Double bar chart: lectura directa de una serie o categoría
+          const targetIdx = v % doubleItems.length;
+          const useA = (v % 2) === 0;
+          const seriesName = useA ? sA : sB;
+          const ansVal = useA ? doubleItems[targetIdx].valueA : doubleItems[targetIdx].valueB;
+          return {
+            id: qId,
+            prompt: `Según el gráfico de barra doble, ¿cuántos ${theme.noun} del grupo "${seriesName}" eligieron la opción "${doubleItems[targetIdx].label}"?`,
+            visualType: 'double_bar_chart',
+            visualData: {
+              title: theme.title,
+              unit: theme.unit,
+              seriesA: sA,
+              seriesB: sB,
+              items: doubleItems,
+            },
+            questionType: 'numeric',
+            correctAnswer: ansVal.toString(),
+            explanation: `Ubicamos la categoría "${doubleItems[targetIdx].label}" y leemos la barra correspondiente a ${seriesName}: ${ansVal}.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 1: Gráfico de Barra Doble'
+          };
+        } else {
+          // Pie chart: ángulo notable (50% = 180°, 25% = 90°, 10% = 36°, 20% = 72°)
+          const notable = randChoice([
+            { pct: 50, deg: 180 },
+            { pct: 25, deg: 90 },
+            { pct: 20, deg: 72 },
+            { pct: 10, deg: 36 },
+          ]);
+          const rest = 100 - notable.pct;
+          const r1 = Math.floor(rest / 2);
+          const r2 = Math.floor((rest - r1) / 2);
+          const r3 = rest - r1 - r2;
+          const items = [
+            { label: theme.cats[0], value: notable.pct },
+            { label: theme.cats[1], value: r1 },
+            { label: theme.cats[2], value: r2 },
+            ...(r3 > 0 ? [{ label: theme.cats[3], value: r3 }] : []),
+          ];
+          return {
+            id: qId,
+            prompt: `En el gráfico circular, la categoría "${theme.cats[0]}" representa el ${notable.pct}% del total. ¿Cuántos grados mide su ángulo central en la circunferencia (360°)?`,
+            visualType: 'pie_chart',
+            visualData: { title: theme.title, displayMode: 'percent', items },
+            questionType: 'multiple_choice',
+            options: shuffle([`${notable.deg}°`, '45°', '60°', '120°', '144°'].filter((val, idx, arr) => arr.indexOf(val) === idx).slice(0, 4)),
+            correctAnswer: `${notable.deg}°`,
+            explanation: `El ${notable.pct}% de 360° se calcula como (${notable.pct} · 360°) : 100 = ${notable.deg}°.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 1: Gráfico Circular'
+          };
+        }
+      } else if (level === 'medio') {
+        const sub = v % 4;
+        if (sub === 0) {
+          // Double bar chart: diferencia entre las dos series en una categoría
+          const idx = v % doubleItems.length;
+          const it = doubleItems[idx];
+          if (it.valueA === it.valueB) it.valueA += 4;
+          const diff = Math.abs(it.valueA - it.valueB);
+          return {
+            id: qId,
+            prompt: `Observa el gráfico de barra doble. En la categoría "${it.label}", ¿cuál es la diferencia entre el grupo ${sA} y el grupo ${sB}?`,
+            visualType: 'double_bar_chart',
+            visualData: {
+              title: theme.title,
+              unit: theme.unit,
+              seriesA: sA,
+              seriesB: sB,
+              items: doubleItems,
+            },
+            questionType: 'numeric',
+            correctAnswer: diff.toString(),
+            explanation: `En "${it.label}", ${sA} tiene ${it.valueA} y ${sB} tiene ${it.valueB}. La diferencia es |${it.valueA} − ${it.valueB}| = ${diff}.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 2: Gráfico de Barra Doble'
+          };
+        } else if (sub === 1) {
+          // Pie chart: calcular cantidad de personas desde porcentaje y total
+          const totalPeople = randChoice([80, 100, 120, 200, 300]);
+          const idx = v % pieItems.length;
+          const pct = pieItems[idx].value;
+          const countAns = Math.round((totalPeople * pct) / 100);
+          return {
+            id: qId,
+            prompt: `El gráfico circular resume las respuestas de ${totalPeople} ${theme.noun} en ${theme.context}. ¿Cuántos ${theme.noun} eligieron "${pieItems[idx].label}"?`,
+            visualType: 'pie_chart',
+            visualData: {
+              title: theme.title,
+              subtitle: `Total encuestados: ${totalPeople}`,
+              displayMode: 'percent',
+              items: pieItems,
+            },
+            questionType: 'numeric',
+            correctAnswer: countAns.toString(),
+            explanation: `Calculamos el ${pct}% de ${totalPeople}: (${pct} × ${totalPeople}) : 100 = ${countAns}.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 2: Gráfico Circular'
+          };
+        } else if (sub === 2) {
+          // Double bar chart: suma combinada de una categoría o total de una serie
+          const askSeriesSum = v % 2 === 0;
+          if (askSeriesSum) {
+            const useA = v % 4 === 0;
+            const seriesName = useA ? sA : sB;
+            const totalSeries = doubleItems.reduce((acc, it) => acc + (useA ? it.valueA : it.valueB), 0);
+            return {
+              id: qId,
+              prompt: `Según el gráfico de barra doble, ¿cuántos ${theme.noun} participaron EN TOTAL en el grupo "${seriesName}" sumando las cuatro categorías?`,
+              visualType: 'double_bar_chart',
+              visualData: {
+                title: theme.title,
+                unit: theme.unit,
+                seriesA: sA,
+                seriesB: sB,
+                items: doubleItems,
+              },
+              questionType: 'numeric',
+              correctAnswer: totalSeries.toString(),
+              explanation: `Sumamos todas las barras de ${seriesName}: ${doubleItems.map(it => (useA ? it.valueA : it.valueB)).join(' + ')} = ${totalSeries}.`,
+              oaCode: oa.code,
+              difficulty: level,
+              categoryLabel: 'Nivel 2: Gráfico de Barra Doble'
+            };
+          } else {
+            const idx = v % doubleItems.length;
+            const it = doubleItems[idx];
+            const sumCat = it.valueA + it.valueB;
+            return {
+              id: qId,
+              prompt: `Observa el gráfico de barra doble. ¿Cuántos ${theme.noun} en total (juntando ${sA} y ${sB}) eligieron "${it.label}"?`,
+              visualType: 'double_bar_chart',
+              visualData: {
+                title: theme.title,
+                unit: theme.unit,
+                seriesA: sA,
+                seriesB: sB,
+                items: doubleItems,
+              },
+              questionType: 'numeric',
+              correctAnswer: sumCat.toString(),
+              explanation: `Sumamos ambas barras de "${it.label}": ${it.valueA} + ${it.valueB} = ${sumCat}.`,
+              oaCode: oa.code,
+              difficulty: level,
+              categoryLabel: 'Nivel 2: Gráfico de Barra Doble'
+            };
+          }
+        } else {
+          // Pie chart: calcular grados del ángulo central para cualquier % múltiplo de 5
+          const pct = randChoice([15, 20, 25, 30, 35, 40, 45]);
+          const deg = Math.round((pct / 100) * 360);
+          const rem = 100 - pct;
+          const p2 = Math.floor(rem / 2);
+          const p3 = rem - p2;
+          const items = [
+            { label: theme.cats[0], value: pct },
+            { label: theme.cats[1], value: p2 },
+            { label: theme.cats[2], value: p3 },
+          ];
+          return {
+            id: qId,
+            prompt: `En el gráfico circular de la figura, el sector "${theme.cats[0]}" representa el ${pct}% del total. ¿Cuántos grados mide su ángulo central?`,
+            visualType: 'pie_chart',
+            visualData: { title: theme.title, displayMode: 'percent', items },
+            questionType: 'numeric',
+            correctAnswer: deg.toString(),
+            explanation: `Un círculo completo mide 360°. El ${pct}% de 360° es (${pct} × 360) : 100 = ${deg}°.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 2: Gráfico Circular'
+          };
+        }
+      } else {
+        // level === 'dificil' -> 5 escenarios variados con gráficos reales
+        const sub = v % 5;
+        if (sub === 0) {
+          // Double bar chart: categoría con mayor diferencia entre grupos
+          const forced = [
+            { label: theme.cats[0], valueA: randInt(10, 14), valueB: randInt(11, 15) },
+            { label: theme.cats[1], valueA: 26, valueB: 10 }, // brecha 16
+            { label: theme.cats[2], valueA: randInt(12, 16), valueB: randInt(13, 17) },
+            { label: theme.cats[3], valueA: randInt(8, 12), valueB: randInt(9, 13) },
+          ];
+          // Guarantee index 1 has strictly greatest gap
+          const maxIdx = 1;
+          const gap = Math.abs(forced[maxIdx].valueA - forced[maxIdx].valueB);
+          return {
+            id: qId,
+            prompt: `Analiza el gráfico de barra doble. ¿En qué categoría se produce la MAYOR diferencia entre ${sA} y ${sB}?`,
+            visualType: 'double_bar_chart',
+            visualData: {
+              title: theme.title,
+              unit: theme.unit,
+              seriesA: sA,
+              seriesB: sB,
+              items: forced,
+            },
+            questionType: 'multiple_choice',
+            options: shuffle(forced.map(it => it.label)),
+            correctAnswer: forced[maxIdx].label,
+            explanation: `En "${forced[maxIdx].label}" la diferencia es |${forced[maxIdx].valueA} − ${forced[maxIdx].valueB}| = ${gap}, superior a la de las demás categorías.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 3: Análisis Barra Doble'
+          };
+        } else if (sub === 1) {
+          // Pie chart: diferencia en cantidad entre dos sectores dado el total N
+          const totalPeople = randChoice([100, 200, 300, 400]);
+          const s = shuffle([40, 30, 20, 10]);
+          const items = theme.cats.map((label, idx) => ({ label, value: s[idx] }));
+          const a = items[0];
+          const b = items[1];
+          const diffPct = Math.abs(a.value - b.value);
+          const diffPeople = Math.round((totalPeople * diffPct) / 100);
+          return {
+            id: qId,
+            prompt: `El gráfico circular representa una encuesta realizada a ${totalPeople} ${theme.noun}. ¿Cuántos ${theme.noun} más eligieron "${a.value > b.value ? a.label : b.label}" en comparación con "${a.value > b.value ? b.label : a.label}"?`,
+            visualType: 'pie_chart',
+            visualData: {
+              title: theme.title,
+              subtitle: `Total: ${totalPeople} ${theme.noun}`,
+              displayMode: 'percent',
+              items,
+            },
+            questionType: 'numeric',
+            correctAnswer: diffPeople.toString(),
+            explanation: `La diferencia porcentual es |${a.value}% − ${b.value}%| = ${diffPct}%. El ${diffPct}% de ${totalPeople} es ${diffPeople}.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 3: Problemas con Gráfico Circular'
+          };
+        } else if (sub === 2) {
+          // Pie chart: hallar el TOTAL a partir de la cantidad de un sector
+          const pct = randChoice([20, 25, 40, 50]);
+          const totalPeople = randChoice([80, 120, 160, 200]);
+          const partCount = Math.round((totalPeople * pct) / 100);
+          const rem = 100 - pct;
+          const p2 = Math.floor(rem / 2);
+          const p3 = rem - p2;
+          const items = [
+            { label: theme.cats[0], value: pct },
+            { label: theme.cats[1], value: p2 },
+            { label: theme.cats[2], value: p3 },
+          ];
+          return {
+            id: qId,
+            prompt: `En el gráfico circular de la figura, el sector "${theme.cats[0]}" (${pct}%) corresponde exactamente a ${partCount} ${theme.noun}. ¿Cuántos ${theme.noun} participaron EN TOTAL en la encuesta?`,
+            visualType: 'pie_chart',
+            visualData: { title: theme.title, displayMode: 'percent', items },
+            questionType: 'numeric',
+            correctAnswer: totalPeople.toString(),
+            explanation: `Si el ${pct}% equivale a ${partCount}, entonces el 100% es (${partCount} × 100) : ${pct} = ${totalPeople}.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 3: Problemas con Gráfico Circular'
+          };
+        } else if (sub === 3) {
+          // Double bar chart: comparar totales globales entre Serie A y Serie B
+          const sumA = doubleItems.reduce((acc, it) => acc + it.valueA, 0);
+          const sumB = doubleItems.reduce((acc, it) => acc + it.valueB, 0);
+          if (sumA === sumB) doubleItems[0].valueA += 5;
+          const finalSumA = doubleItems.reduce((acc, it) => acc + it.valueA, 0);
+          const finalSumB = doubleItems.reduce((acc, it) => acc + it.valueB, 0);
+          const winner = finalSumA > finalSumB ? sA : sB;
+          const diffTotal = Math.abs(finalSumA - finalSumB);
+          return {
+            id: qId,
+            prompt: `Considerando todas las categorías del gráfico de barra doble, ¿cuántos ${theme.noun} más sumó en total "${winner}" respecto del otro grupo?`,
+            visualType: 'double_bar_chart',
+            visualData: {
+              title: theme.title,
+              unit: theme.unit,
+              seriesA: sA,
+              seriesB: sB,
+              items: doubleItems,
+            },
+            questionType: 'numeric',
+            correctAnswer: diffTotal.toString(),
+            explanation: `Total ${sA} = ${finalSumA}; Total ${sB} = ${finalSumB}. Diferencia = |${finalSumA} − ${finalSumB}| = ${diffTotal}.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 3: Análisis Barra Doble'
+          };
+        } else {
+          // Pie chart en grados: convertir ángulo central a porcentaje
+          const degPairs = [
+            { deg: 144, pct: 40 },
+            { deg: 108, pct: 30 },
+            { deg: 90, pct: 25 },
+            { deg: 72, pct: 20 },
+            { deg: 180, pct: 50 },
+          ];
+          const chosen = degPairs[v % degPairs.length];
+          const remDeg = 360 - chosen.deg;
+          const d2 = Math.floor(remDeg / 2);
+          const d3 = remDeg - d2;
+          const items = [
+            { label: theme.cats[0], value: chosen.deg },
+            { label: theme.cats[1], value: d2 },
+            { label: theme.cats[2], value: d3 },
+          ];
+          return {
+            id: qId,
+            prompt: `El gráfico circular indica la medida del ángulo central (en grados) de cada sector. ¿Qué porcentaje del total representa "${theme.cats[0]}" (${chosen.deg}°)?`,
+            visualType: 'pie_chart',
+            visualData: { title: `${theme.title} (en grados)`, displayMode: 'degrees', items },
+            questionType: 'numeric',
+            correctAnswer: chosen.pct.toString(),
+            explanation: `Como el círculo completo mide 360° (100%), calculamos (${chosen.deg}° : 360°) × 100 = ${chosen.pct}%.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 3: Ángulos en Gráfico Circular'
+          };
+        }
+      }
+    }
+
+    // ------------------------------------------------------------------
+    // Resto de cursos (1° a 8° Básico) con gráficos de barra, línea y tablas reales
+    // ------------------------------------------------------------------
+    const barItems = theme.cats.map((label, idx) => ({
+      label,
+      value: idx === 1 ? randInt(16, 24) : idx === 3 ? randInt(4, 9) : randInt(10, 15),
+    }));
+    const useLine = grade === '5_basico' && oa.code === 'OA 26' && v % 2 === 1;
+    const lineDays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'].map(label => ({
+      label,
+      value: randInt(10, 28),
+    }));
+
+    if (level === 'facil') {
+      const sub = v % 3;
+      if (sub === 0) {
+        const sorted = [...barItems].sort((a, b) => b.value - a.value);
+        return {
+          id: qId,
+          prompt: `Observa el gráfico de barras sobre ${theme.context}. ¿Cuál categoría obtuvo la MAYOR cantidad de preferencias?`,
+          visualType: 'bar_chart',
+          visualData: { title: theme.title, unit: theme.unit, items: barItems },
+          questionType: 'multiple_choice',
+          options: shuffle(barItems.map(i => i.label)),
+          correctAnswer: sorted[0].label,
+          explanation: `${sorted[0].label} alcanza la barra más alta con ${sorted[0].value} ${theme.unit}.`,
+          oaCode: oa.code,
+          difficulty: level,
+          categoryLabel: 'Nivel 1: Lectura de Gráficos'
+        };
+      } else if (sub === 1) {
+        const pick = barItems[v % barItems.length];
+        return {
+          id: qId,
+          prompt: `Observa la tabla de frecuencias de ${theme.context}. ¿Cuántos ${theme.noun} eligieron "${pick.label}"?`,
+          visualType: 'table_data',
+          visualData: {
+            title: theme.title,
+            headers: ['Categoría', 'Frecuencia'],
+            rows: barItems.map(i => [i.label, String(i.value)]),
+          },
+          questionType: 'numeric',
+          correctAnswer: pick.value.toString(),
+          explanation: `En la fila correspondiente a "${pick.label}" aparece la frecuencia ${pick.value}.`,
+          oaCode: oa.code,
+          difficulty: level,
+          categoryLabel: 'Nivel 1: Tablas de Frecuencia'
+        };
+      } else {
+        const minIt = [...barItems].sort((a, b) => a.value - b.value)[0];
+        return {
+          id: qId,
+          prompt: `Según el gráfico de barras, ¿cuál fue la opción MENOS preferida en ${theme.context}?`,
+          visualType: 'bar_chart',
+          visualData: { title: theme.title, unit: theme.unit, items: barItems },
+          questionType: 'multiple_choice',
+          options: shuffle(barItems.map(i => i.label)),
+          correctAnswer: minIt.label,
+          explanation: `${minIt.label} tiene la barra más baja con ${minIt.value} ${theme.unit}.`,
+          oaCode: oa.code,
+          difficulty: level,
+          categoryLabel: 'Nivel 1: Lectura de Gráficos'
+        };
+      }
+    } else if (level === 'medio') {
+      if (useLine) {
+        const maxDay = [...lineDays].sort((a, b) => b.value - a.value)[0];
+        return {
+          id: qId,
+          prompt: `El gráfico de línea muestra las temperaturas diarias registradas durante la semana. ¿Qué día registró la temperatura más alta?`,
+          visualType: 'line_chart',
+          visualData: { title: 'Temperaturas Diarias', unit: '°C', items: lineDays },
+          questionType: 'multiple_choice',
+          options: shuffle(lineDays.slice(0, 4).some(d => d.label === maxDay.label) ? lineDays.slice(0, 4).map(d => d.label) : [maxDay.label, lineDays[0].label, lineDays[1].label, lineDays[2].label]),
+          correctAnswer: maxDay.label,
+          explanation: `El punto más alto del gráfico de línea está el día ${maxDay.label} con ${maxDay.value}°C.`,
+          oaCode: oa.code,
+          difficulty: level,
+          categoryLabel: 'Nivel 2: Gráfico de Línea'
+        };
+      }
+      const sub = v % 3;
+      if (sub === 0) {
+        const sorted = [...barItems].sort((a, b) => b.value - a.value);
+        const diff = sorted[0].value - sorted[sorted.length - 1].value;
+        return {
+          id: qId,
+          prompt: `Observa el gráfico de barras. ¿Cuál es la diferencia entre la categoría con mayor frecuencia y la de menor frecuencia?`,
+          visualType: 'bar_chart',
+          visualData: { title: theme.title, unit: theme.unit, items: barItems },
+          questionType: 'numeric',
+          correctAnswer: diff.toString(),
+          explanation: `La mayor es ${sorted[0].value} y la menor es ${sorted[sorted.length - 1].value}: ${sorted[0].value} − ${sorted[sorted.length - 1].value} = ${diff}.`,
+          oaCode: oa.code,
+          difficulty: level,
+          categoryLabel: 'Nivel 2: Interpretación de Gráficos'
+        };
+      } else if (sub === 1) {
+        const total = barItems.reduce((acc, i) => acc + i.value, 0);
+        return {
+          id: qId,
+          prompt: `La tabla resume los votos de todos los participantes. ¿Cuántos ${theme.noun} respondieron la encuesta en total?`,
+          visualType: 'table_data',
+          visualData: {
+            title: theme.title,
+            headers: ['Opción', 'Cantidad'],
+            rows: barItems.map(i => [i.label, String(i.value)]),
+          },
+          questionType: 'numeric',
+          correctAnswer: total.toString(),
+          explanation: `Sumamos todas las frecuencias: ${barItems.map(i => i.value).join(' + ')} = ${total}.`,
+          oaCode: oa.code,
+          difficulty: level,
+          categoryLabel: 'Nivel 2: Tablas de Frecuencia'
+        };
+      } else {
+        const sumTwo = barItems[0].value + barItems[2].value;
+        return {
+          id: qId,
+          prompt: `Según el gráfico de barras, ¿cuántos ${theme.noun} eligieron "${barItems[0].label}" o "${barItems[2].label}" en conjunto?`,
+          visualType: 'bar_chart',
+          visualData: { title: theme.title, unit: theme.unit, items: barItems },
+          questionType: 'numeric',
+          correctAnswer: sumTwo.toString(),
+          explanation: `Sumamos ambas barras: ${barItems[0].value} + ${barItems[2].value} = ${sumTwo}.`,
+          oaCode: oa.code,
+          difficulty: level,
+          categoryLabel: 'Nivel 2: Interpretación de Gráficos'
+        };
+      }
+    } else {
+      const sub = v % 3;
+      if (sub === 0) {
+        const escala = randChoice([2, 4, 5, 10]);
+        const icons = [randInt(3, 6), randInt(4, 7), randInt(2, 5)];
+        const total = icons.reduce((a, b) => a + b, 0) * escala;
+        return {
+          id: qId,
+          prompt: `En un pictograma de reciclaje escolar, cada ícono representa ${escala} botellas. La tabla muestra la cantidad de íconos por mes. ¿Cuántas botellas se reunieron en total?`,
+          visualType: 'table_data',
+          visualData: {
+            title: `Pictograma (1 ícono = ${escala} botellas)`,
+            headers: ['Mes', 'Cantidad de íconos'],
+            rows: [
+              ['Marzo', `${icons[0]} íconos`],
+              ['Abril', `${icons[1]} íconos`],
+              ['Mayo', `${icons[2]} íconos`],
+            ],
+          },
+          questionType: 'numeric',
+          correctAnswer: total.toString(),
+          explanation: `Hay ${icons.reduce((a, b) => a + b, 0)} íconos en total × ${escala} botellas = ${total} botellas.`,
+          oaCode: oa.code,
+          difficulty: level,
+          categoryLabel: 'Nivel 3: Pictogramas'
+        };
+      } else if (sub === 1) {
+        const maxDay = [...lineDays].sort((a, b) => b.value - a.value)[0];
+        const minDay = [...lineDays].sort((a, b) => a.value - b.value)[0];
+        const diff = maxDay.value - minDay.value;
+        return {
+          id: qId,
+          prompt: `Observa el gráfico de línea de temperaturas semanales. ¿Cuál fue la variación (diferencia) entre la temperatura máxima y la mínima registrada?`,
+          visualType: 'line_chart',
+          visualData: { title: 'Registro Semanal', unit: '°C', items: lineDays },
+          questionType: 'numeric',
+          correctAnswer: diff.toString(),
+          explanation: `Máxima (${maxDay.value}°C el ${maxDay.label}) menos mínima (${minDay.value}°C el ${minDay.label}) = ${diff}°C.`,
+          oaCode: oa.code,
+          difficulty: level,
+          categoryLabel: 'Nivel 3: Gráfico de Línea'
+        };
+      } else {
+        const totalBar = barItems.reduce((acc, i) => acc + i.value, 0);
+        const top = [...barItems].sort((a, b) => b.value - a.value)[0];
+        return {
+          id: qId,
+          prompt: `Observa el gráfico de barras de ${theme.context}. Si se suman los votos de las otras tres categorías (excluyendo a "${top.label}"), ¿cuántos votos suman entre las tres?`,
+          visualType: 'bar_chart',
+          visualData: { title: theme.title, unit: theme.unit, items: barItems },
+          questionType: 'numeric',
+          correctAnswer: (totalBar - top.value).toString(),
+          explanation: `Total general = ${totalBar}. Restando "${top.label}" (${top.value}): ${totalBar} − ${top.value} = ${totalBar - top.value}.`,
+          oaCode: oa.code,
+          difficulty: level,
+          categoryLabel: 'Nivel 3: Resolución de Problemas'
+        };
+      }
     }
   },
 
