@@ -166,28 +166,47 @@ export const MathVisuals: React.FC<MathVisualsProps> = ({ visualType, visualData
   }
 
   if (visualType === 'balance_equation') {
-    const { left = 'x + 5', right = '12' } = visualData;
+    const { left = 'x + 5', right = '12', operator = '=' } = visualData as {
+      left?: string;
+      right?: string;
+      operator?: '=' | '<' | '>';
+    };
+    const isLt = operator === '<';
+    const isGt = operator === '>';
+    const yLeft = isLt ? 35 : isGt ? 55 : 45;
+    const yRight = isLt ? 55 : isGt ? 35 : 45;
+    const symbolColor = operator === '=' ? '#059669' : '#d97706';
+    const caption =
+      operator === '<'
+        ? 'Balanza en desequilibrio (<) · el platillo izquierdo pesa menos'
+        : operator === '>'
+          ? 'Balanza en desequilibrio (>) · el platillo izquierdo pesa más'
+          : 'Balanza en equilibrio (=)';
+
     return (
       <div className="my-4 flex flex-col items-center">
-        <svg viewBox="0 0 280 120" className="w-72 h-32 bg-slate-50 border border-slate-200 rounded-lg">
-          {/* Base */}
-          <polygon points="140,80 120,110 160,110" fill="#64748b" />
-          <line x1="50" y1="45" x2="230" y2="45" stroke="#334155" strokeWidth="4" />
+        <svg viewBox="0 0 280 125" className="w-72 h-32 bg-slate-50 border border-slate-200 rounded-lg">
+          {/* Base & Pivot Stand */}
+          <polygon points="140,80 120,112 160,112" fill="#64748b" />
+          <line x1="140" y1="45" x2="140" y2="82" stroke="#64748b" strokeWidth="3.5" />
+          <line x1="50" y1={yLeft} x2="230" y2={yRight} stroke="#334155" strokeWidth="4" strokeLinecap="round" />
+          <circle cx="140" cy="45" r="4" fill="#334155" />
+
           {/* Left Pan */}
-          <line x1="60" y1="45" x2="60" y2="70" stroke="#475569" strokeWidth="1.5" />
-          <path d="M 35 70 Q 60 85 85 70 Z" fill="#cbd5e1" stroke="#475569" strokeWidth="1.5" />
-          <rect x="42" y="52" width="36" height="20" fill="#bae6fd" stroke="#0284c7" strokeWidth="1.5" rx="3" />
-          <text x="60" y="66" textAnchor="middle" fontSize="10" fill="#0369a1" fontWeight="bold">{left}</text>
+          <line x1="60" y1={yLeft} x2="60" y2={yLeft + 24} stroke="#475569" strokeWidth="1.5" />
+          <path d={`M 35 ${yLeft + 24} Q 60 ${yLeft + 39} 85 ${yLeft + 24} Z`} fill="#cbd5e1" stroke="#475569" strokeWidth="1.5" />
+          <rect x="40" y={yLeft + 6} width="40" height="20" fill="#bae6fd" stroke="#0284c7" strokeWidth="1.5" rx="3" />
+          <text x="60" y={yLeft + 20} textAnchor="middle" fontSize="10" fill="#0369a1" fontWeight="bold">{left}</text>
 
           {/* Right Pan */}
-          <line x1="220" y1="45" x2="220" y2="70" stroke="#475569" strokeWidth="1.5" />
-          <path d="M 195 70 Q 220 85 245 70 Z" fill="#cbd5e1" stroke="#475569" strokeWidth="1.5" />
-          <rect x="202" y="52" width="36" height="20" fill="#fef08a" stroke="#ca8a04" strokeWidth="1.5" rx="3" />
-          <text x="220" y="66" textAnchor="middle" fontSize="11" fill="#854d0e" fontWeight="bold">{right}</text>
-          
-          <text x="140" y="35" textAnchor="middle" fontSize="12" fill="#059669" fontWeight="bold">=</text>
+          <line x1="220" y1={yRight} x2="220" y2={yRight + 24} stroke="#475569" strokeWidth="1.5" />
+          <path d={`M 195 ${yRight + 24} Q 220 ${yRight + 39} 245 ${yRight + 24} Z`} fill="#cbd5e1" stroke="#475569" strokeWidth="1.5" />
+          <rect x="200" y={yRight + 6} width="40" height="20" fill="#fef08a" stroke="#ca8a04" strokeWidth="1.5" rx="3" />
+          <text x="220" y={yRight + 20} textAnchor="middle" fontSize="11" fill="#854d0e" fontWeight="bold">{right}</text>
+
+          <text x="140" y="30" textAnchor="middle" fontSize="14" fill={symbolColor} fontWeight="bold">{operator}</text>
         </svg>
-        <span className="text-xs tq-text-muted mt-1">Balanza en equilibrio (=)</span>
+        <span className="text-xs tq-text-muted mt-1 text-center">{caption}</span>
       </div>
     );
   }

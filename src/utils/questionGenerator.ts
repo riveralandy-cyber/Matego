@@ -2158,25 +2158,668 @@ const TOPIC_GENERATORS: Record<TopicKey, TopicGenerator> = {
 
   // 20. Ecuaciones e Inecuaciones
   ecuaciones_inecuaciones: (level, grade, oa, qId, variant) => {
+    const v = Math.abs(variant);
+    const titleDesc = `${oa.title} ${oa.description}`.toLowerCase();
+    const mentionsInequality = /inecuaci|desigualdad/.test(titleDesc);
+    const mentionsEquation = /(?:^|[^a-záéíóúñ])(?:ecuaci[oó]n(?:es)?|igualdad(?:es)?)/.test(titleDesc);
+    const isInequalityOnly = mentionsInequality && !mentionsEquation;
+    const supportsInequality = mentionsInequality;
+
+    // For OAs that cover both (e.g. 4° Básico OA 14, 5° OA 15, 7° OA 09, 1°/2° Básico),
+    // alternate evenly between equations and inequalities so every evaluation covers both.
+    const useInequality = isInequalityOnly || (supportsInequality && v % 2 === 1);
+    const subIdx = supportsInequality && !isInequalityOnly ? Math.floor(v / 2) : v;
+
+    const isLowerPrimary = grade === '1_basico' || grade === '2_basico'; // scope 0..20
+    const isOneStep100 = grade === '3_basico' || grade === '4_basico' || grade === '5_basico'; // 1-step +, -, 0..100
+    const name = randChoice(CHILEAN_NAMES);
+    const place = randChoice(CHILEAN_PLACES);
+
+    // ------------------------------------------------------------------
+    // A. INECUACIONES (Desigualdades con < y >)
+    // ------------------------------------------------------------------
+    if (useInequality) {
+      if (isLowerPrimary) {
+        const isLt = subIdx % 2 === 0;
+        const op = isLt ? '<' : '>';
+        const otherOp = isLt ? '>' : '<';
+        const a = randInt(2, 8);
+        const threshold = randInt(5, 11);
+        const limit = a + threshold; // <= 19 (scope 0..20)
+
+        if (level === 'facil') {
+          const valid = isLt ? threshold - randInt(1, 3) : threshold + randInt(1, 4);
+          const d1 = randInt(1, 2);
+          const d2 = randInt(1, 2);
+          const opts = isLt
+            ? [valid, threshold, threshold + d1, threshold + d1 + d2]
+            : [valid, threshold, threshold - 1, threshold - 3];
+          return {
+            id: qId,
+            prompt: `Observa la balanza en desequilibrio (x + ${a} ${op} ${limit}). ¿Qué valor puede tener "x" para que se cumpla?`,
+            context: `x + ${a} ${op} ${limit}`,
+            visualType: 'balance_equation',
+            visualData: { left: `x + ${a}`, right: limit.toString(), operator: op },
+            questionType: 'multiple_choice',
+            options: shuffle(opts.map(String)),
+            correctAnswer: valid.toString(),
+            explanation: `Si x = ${valid}, entonces ${valid} + ${a} = ${valid + a}, que sí es ${isLt ? 'menor' : 'mayor'} que ${limit}.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 1: Inecuaciones en Balanza'
+          };
+        } else if (level === 'medio') {
+          return {
+            id: qId,
+            prompt: `¿Qué expresión representa los posibles valores de x en la desigualdad x + ${a} ${op} ${limit}?`,
+            context: `x + ${a} ${op} ${limit}`,
+            visualType: 'none',
+            questionType: 'multiple_choice',
+            options: shuffle([`x ${op} ${threshold}`, `x ${otherOp} ${threshold}`, `x = ${threshold}`, `x ${op} ${limit + a}`]),
+            correctAnswer: `x ${op} ${threshold}`,
+            explanation: `Restamos ${a} a ambos lados: x ${op} ${limit} - ${a}, por lo tanto x ${op} ${threshold}.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 2: Aplicación Intermedia'
+          };
+        } else {
+          const ans = isLt ? threshold - 1 : threshold + 1;
+          return {
+            id: qId,
+            prompt: `${name} tiene ${a} lápices y junta "x" más, reuniendo ${isLt ? 'menos de' : 'más de'} ${limit} lápices (x + ${a} ${op} ${limit}). ¿Cuál es el ${isLt ? 'MAYOR' : 'MENOR'} número natural de lápices que puede representar x?`,
+            visualType: 'none',
+            questionType: 'numeric',
+            correctAnswer: ans.toString(),
+            explanation: `x + ${a} ${op} ${limit} ➔ x ${op} ${threshold}. El ${isLt ? 'mayor' : 'menor'} número natural posible es ${ans}.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 3: Resolución de Problemas'
+          };
+        }
+      }
+
+      // 3° a 5° Básico (especialmente 4° Básico OA 14: inecuaciones de un paso con + y -, ámbito 0 al 100)
+      if (isOneStep100) {
+        const format = subIdx % 3;
+        const isLt = Math.floor(subIdx / 3) % 2 === 0;
+        const op = isLt ? '<' : '>';
+        const otherOp = isLt ? '>' : '<';
+
+        if (level === 'facil') {
+          if (format === 0) {
+            // Balanza en desequilibrio pictórica (0..100)
+            const a = randInt(8, 35);
+            const threshold = randInt(10, 46);
+            const limit = a + threshold; // <= 81
+            const valid = isLt ? threshold - randInt(2, 6) : threshold + randInt(2, 8);
+            const d1 = randInt(1, 3);
+            const d2 = randInt(2, 4);
+            const opts = isLt
+              ? [valid, threshold, threshold + d1, threshold + d1 + d2]
+              : [valid, threshold, threshold - d1, threshold - d1 - d2];
+
+            return {
+              id: qId,
+              prompt: `Observa la balanza en desequilibrio (x + ${a} ${op} ${limit}). ¿Cuál valor de "x" hace verdadera esta inecuación?`,
+              context: `x + ${a} ${op} ${limit}`,
+              visualType: 'balance_equation',
+              visualData: { left: `x + ${a}`, right: limit.toString(), operator: op },
+              questionType: 'multiple_choice',
+              options: shuffle(opts.map(String)),
+              correctAnswer: valid.toString(),
+              explanation: `Al probar x = ${valid}, obtenemos ${valid} + ${a} = ${valid + a}, que es ${isLt ? 'menor' : 'mayor'} que ${limit}. Desde ${threshold} hacia ${isLt ? 'arriba' : 'abajo'} la desigualdad no se cumple.`,
+              oaCode: oa.code,
+              difficulty: level,
+              categoryLabel: 'Nivel 1: Inecuaciones en Balanza'
+            };
+          } else if (format === 1) {
+            // Comprobación simbólica de inecuación con adición (0..100)
+            const a = randInt(11, 40);
+            const threshold = randInt(10, 45);
+            const limit = a + threshold; // <= 85
+            const exprLeft = Math.floor(subIdx / 6) % 2 === 0 ? `x + ${a}` : `${a} + x`;
+            const valid = isLt ? threshold - randInt(2, 6) : threshold + randInt(2, 8);
+            const d1 = randInt(1, 3);
+            const d2 = randInt(2, 5);
+            const opts = isLt
+              ? [valid, threshold, threshold + d1, threshold + d1 + d2]
+              : [valid, threshold, threshold - d1, threshold - d1 - d2];
+
+            return {
+              id: qId,
+              prompt: `¿Cuál de los siguientes valores de x satisface la inecuación de un paso?`,
+              context: `${exprLeft} ${op} ${limit}`,
+              visualType: 'none',
+              questionType: 'multiple_choice',
+              options: shuffle(opts.map(String)),
+              correctAnswer: valid.toString(),
+              explanation: `Reemplazando x = ${valid}: ${valid + a} ${op} ${limit} es verdadero (la solución general es x ${op} ${threshold}).`,
+              oaCode: oa.code,
+              difficulty: level,
+              categoryLabel: 'Nivel 1: Ejercitación de Inecuaciones'
+            };
+          } else {
+            // Comprobación simbólica de inecuación con sustracción (0..100)
+            const a = randInt(5, 24);
+            const rhs = randInt(12, 42);
+            const threshold = a + rhs; // <= 66
+            const valid = isLt ? a + randInt(2, rhs - 2) : threshold + randInt(2, 9);
+            const d1 = randInt(1, 3);
+            const d2 = randInt(2, 5);
+            const opts = isLt
+              ? [valid, threshold, threshold + d1, threshold + d1 + d2]
+              : [valid, threshold, threshold - d1, threshold - d1 - d2];
+
+            return {
+              id: qId,
+              prompt: `¿Qué valor de x hace VERDADERA la siguiente inecuación?`,
+              context: `x - ${a} ${op} ${rhs}`,
+              visualType: 'none',
+              questionType: 'multiple_choice',
+              options: shuffle(opts.map(String)),
+              correctAnswer: valid.toString(),
+              explanation: `Al sustituir x = ${valid}: ${valid} - ${a} = ${valid - a}, que es ${isLt ? 'menor' : 'mayor'} que ${rhs} (solución: x ${op} ${threshold}).`,
+              oaCode: oa.code,
+              difficulty: level,
+              categoryLabel: 'Nivel 1: Ejercitación de Inecuaciones'
+            };
+          }
+        } else if (level === 'medio') {
+          if (format === 0) {
+            // Mayor o menor número natural que satisface la inecuación (0..100)
+            const useSub = Math.floor(subIdx / 6) % 2 === 1;
+            const ask = isLt ? 'MAYOR' : 'MENOR';
+            if (!useSub) {
+              const a = randInt(12, 42);
+              const threshold = randInt(12, 44);
+              const limit = a + threshold; // <= 86
+              const ans = isLt ? threshold - 1 : threshold + 1;
+              const showBal = Math.floor(subIdx / 3) % 2 === 0;
+              return {
+                id: qId,
+                prompt: `Resuelve la inecuación (x + ${a} ${op} ${limit}). Si "x" es un número natural, ¿cuál es el ${ask} valor que puede tomar x?`,
+                context: `x + ${a} ${op} ${limit}`,
+                visualType: showBal ? 'balance_equation' : 'none',
+                visualData: showBal ? { left: `x + ${a}`, right: limit.toString(), operator: op } : undefined,
+                questionType: 'numeric',
+                correctAnswer: ans.toString(),
+                explanation: `Restamos ${a} a ambos lados: x ${op} ${limit} - ${a}, es decir, x ${op} ${threshold}. El ${ask.toLowerCase()} número natural que cumple esto es ${ans}.`,
+                oaCode: oa.code,
+                difficulty: level,
+                categoryLabel: 'Nivel 2: Aplicación de Inecuaciones'
+              };
+            } else {
+              const a = randInt(7, 26);
+              const rhs = randInt(12, 48);
+              const threshold = a + rhs; // <= 74
+              const ans = isLt ? threshold - 1 : threshold + 1;
+              return {
+                id: qId,
+                prompt: `Resuelve la inecuación (x - ${a} ${op} ${rhs}). Si "x" es un número natural, ¿cuál es el ${ask} valor que puede tomar x?`,
+                context: `x - ${a} ${op} ${rhs}`,
+                visualType: 'none',
+                questionType: 'numeric',
+                correctAnswer: ans.toString(),
+                explanation: `Sumamos ${a} a ambos lados: x ${op} ${rhs} + ${a}, es decir, x ${op} ${threshold}. El ${ask.toLowerCase()} número natural que cumple esto es ${ans}.`,
+                oaCode: oa.code,
+                difficulty: level,
+                categoryLabel: 'Nivel 2: Aplicación de Inecuaciones'
+              };
+            }
+          } else if (format === 1) {
+            // Despeje simbólico de inecuación de un paso (0..100)
+            const useSub = Math.floor(subIdx / 6) % 2 === 1;
+            if (!useSub) {
+              const a = randInt(9, 28);
+              const sol = randInt(10, 34);
+              const limit = a + sol; // <= 62, limit + a <= 90
+              return {
+                id: qId,
+                prompt: `Al resolver la inecuación de un paso, ¿qué expresión representa su conjunto solución?`,
+                context: `x + ${a} ${op} ${limit}`,
+                visualType: 'none',
+                questionType: 'multiple_choice',
+                options: shuffle([`x ${op} ${sol}`, `x ${otherOp} ${sol}`, `x ${op} ${limit + a}`, `x = ${sol}`]),
+                correctAnswer: `x ${op} ${sol}`,
+                explanation: `Despejamos x restando ${a} en ambos lados: x ${op} ${limit} - ${a} ➔ x ${op} ${sol}.`,
+                oaCode: oa.code,
+                difficulty: level,
+                categoryLabel: 'Nivel 2: Despeje de Inecuaciones'
+              };
+            } else {
+              const a = randInt(6, 20);
+              const rhs = randInt(25, 46);
+              const sol = rhs + a; // <= 66
+              return {
+                id: qId,
+                prompt: `Al resolver la inecuación de un paso, ¿qué expresión representa su conjunto solución?`,
+                context: `x - ${a} ${op} ${rhs}`,
+                visualType: 'none',
+                questionType: 'multiple_choice',
+                options: shuffle([`x ${op} ${sol}`, `x ${otherOp} ${sol}`, `x ${op} ${rhs - a}`, `x = ${sol}`]),
+                correctAnswer: `x ${op} ${sol}`,
+                explanation: `Despejamos x sumando ${a} en ambos lados: x ${op} ${rhs} + ${a} ➔ x ${op} ${sol}.`,
+                oaCode: oa.code,
+                difficulty: level,
+                categoryLabel: 'Nivel 2: Despeje de Inecuaciones'
+              };
+            }
+          } else {
+            // ¿Qué valor NO pertenece al conjunto solución? (0..100)
+            const a = randInt(10, 35);
+            const threshold = randInt(14, 42);
+            const limit = a + threshold; // <= 77
+            const wrong = threshold;
+            const valids = isLt
+              ? [threshold - 2, threshold - 5, threshold - 9]
+              : [threshold + 2, threshold + 5, threshold + 9];
+            return {
+              id: qId,
+              prompt: `¿Cuál de los siguientes valores NO pertenece al conjunto solución de la inecuación ${a} + x ${op} ${limit}?`,
+              context: `${a} + x ${op} ${limit}`,
+              visualType: 'none',
+              questionType: 'multiple_choice',
+              options: shuffle([wrong, ...valids].map(String)),
+              correctAnswer: wrong.toString(),
+              explanation: `Al reemplazar x = ${wrong}: ${a} + ${wrong} = ${limit}, y ${limit} no es ${isLt ? 'menor' : 'mayor'} que ${limit}.`,
+              oaCode: oa.code,
+              difficulty: level,
+              categoryLabel: 'Nivel 2: Comprobación de Inecuaciones'
+            };
+          }
+        } else {
+          // Nivel 3 (dificil): Problemas cotidianos y pictóricos de inecuaciones (0..100)
+          const scenarioIdx = subIdx % 4;
+          if (scenarioIdx === 0) {
+            const balLt = Math.floor(subIdx / 4) % 2 === 0;
+            const balOp = balLt ? '<' : '>';
+            const a = randInt(14, 38);
+            const threshold = randInt(12, 44);
+            const limit = a + threshold; // <= 82
+            const ans = balLt ? threshold - 1 : threshold + 1;
+            const ask = balLt ? 'MAYOR' : 'MENOR';
+            return {
+              id: qId,
+              prompt: `Observa la balanza en desequilibrio. Si "x" es un número natural de kilogramos, ¿cuál es el ${ask} peso entero que puede tener la caja "x"?`,
+              visualType: 'balance_equation',
+              visualData: { left: `x + ${a}`, right: limit.toString(), operator: balOp },
+              questionType: 'numeric',
+              correctAnswer: ans.toString(),
+              explanation: `La balanza muestra x + ${a} ${balOp} ${limit} ➔ x ${balOp} ${threshold}. El ${ask.toLowerCase()} entero posible es ${ans} kg.`,
+              oaCode: oa.code,
+              difficulty: level,
+              categoryLabel: 'Nivel 3: Problemas con Inecuaciones'
+            };
+          } else if (scenarioIdx === 1) {
+            const a = randInt(15, 42);
+            const threshold = randInt(12, 40);
+            const limit = a + threshold; // <= 82
+            const ans = threshold - 1;
+            return {
+              id: qId,
+              prompt: `${name} ya tiene ${a} láminas de un álbum. Si después de comprar "x" láminas nuevas sigue teniendo menos de ${limit} láminas en total (x + ${a} < ${limit}), ¿cuál es el MAYOR número de láminas que pudo comprar?`,
+              visualType: 'none',
+              questionType: 'numeric',
+              correctAnswer: ans.toString(),
+              explanation: `Planteamos x + ${a} < ${limit} ➔ x < ${limit} - ${a} ➔ x < ${threshold}. El mayor número natural menor que ${threshold} es ${ans}.`,
+              oaCode: oa.code,
+              difficulty: level,
+              categoryLabel: 'Nivel 3: Problemas con Inecuaciones'
+            };
+          } else if (scenarioIdx === 2) {
+            const a = randInt(18, 45);
+            const threshold = randInt(10, 38);
+            const limit = a + threshold; // <= 83
+            const ans = threshold + 1;
+            return {
+              id: qId,
+              prompt: `Para ganar un premio en ${place}, ${name} debe superar los ${limit} puntos. Si ya lleva ${a} puntos y le falta su último turno de "x" puntos (x + ${a} > ${limit}), ¿cuál es el MENOR puntaje natural que necesita en su último turno?`,
+              visualType: 'none',
+              questionType: 'numeric',
+              correctAnswer: ans.toString(),
+              explanation: `Planteamos x + ${a} > ${limit} ➔ x > ${limit} - ${a} ➔ x > ${threshold}. El menor número natural mayor que ${threshold} es ${ans}.`,
+              oaCode: oa.code,
+              difficulty: level,
+              categoryLabel: 'Nivel 3: Problemas con Inecuaciones'
+            };
+          } else {
+            const useSubStory = Math.floor(subIdx / 4) % 2 === 1;
+            const storyLt = Math.floor(subIdx / 8) % 2 === 0;
+            const sOp = storyLt ? '<' : '>';
+            const sOther = storyLt ? '>' : '<';
+            const a = randInt(9, 28);
+            const rhs = randInt(18, 55);
+            if (useSubStory) {
+              const correct = `x - ${a} ${sOp} ${rhs}`;
+              return {
+                id: qId,
+                prompt: `${name} tenía "x" bolitas, regaló ${a} y le quedaron ${storyLt ? 'menos de' : 'más de'} ${rhs} bolitas. ¿Cuál inecuación modela correctamente esta situación?`,
+                visualType: 'none',
+                questionType: 'multiple_choice',
+                options: shuffle([correct, `x + ${a} ${sOp} ${rhs}`, `x - ${a} ${sOther} ${rhs}`, `x - ${a} = ${rhs}`]),
+                correctAnswer: correct,
+                explanation: `Si tenía "x" y regaló ${a}, queda (x - ${a}). Como es ${storyLt ? 'menor' : 'mayor'} que ${rhs}, la inecuación es ${correct}.`,
+                oaCode: oa.code,
+                difficulty: level,
+                categoryLabel: 'Nivel 3: Modelamiento de Inecuaciones'
+              };
+            } else {
+              const total = rhs + a; // <= 83
+              const correct = `x + ${a} ${sOp} ${total}`;
+              return {
+                id: qId,
+                prompt: `${name} ahorró "x" monedas y recibió ${a} más, juntando ${storyLt ? 'menos de' : 'más de'} ${total} monedas. ¿Qué inecuación representa esta situación?`,
+                visualType: 'none',
+                questionType: 'multiple_choice',
+                options: shuffle([correct, `x - ${a} ${sOp} ${total}`, `x + ${a} ${sOther} ${total}`, `x + ${a} = ${total}`]),
+                correctAnswer: correct,
+                explanation: `Sumar ${a} monedas a "x" da (x + ${a}), y al ser ${storyLt ? 'menos' : 'más'} que ${total}, se expresa como ${correct}.`,
+                oaCode: oa.code,
+                difficulty: level,
+                categoryLabel: 'Nivel 3: Modelamiento de Inecuaciones'
+              };
+            }
+          }
+        }
+      }
+
+      // 6° a 8° Básico: Inecuaciones lineales de 1 y 2 pasos (ax + b < c, ax - b > c)
+      const isLt = subIdx % 2 === 0;
+      const op = isLt ? '<' : '>';
+      const otherOp = isLt ? '>' : '<';
+      const m = randInt(2, 5);
+      const threshold = randInt(4, 12);
+      const a = randInt(3, 15);
+      const c = m * threshold + a;
+
+      if (level === 'facil') {
+        const valid = isLt ? threshold - randInt(1, 2) : threshold + randInt(1, 3);
+        const opts = isLt
+          ? [valid, threshold, threshold + 1, threshold + 3]
+          : [valid, threshold, threshold - 1, threshold - 2];
+        return {
+          id: qId,
+          prompt: `¿Cuál de los siguientes valores de x satisface la inecuación ${m}x ${op} ${m * threshold}?`,
+          context: `${m}x ${op} ${m * threshold}`,
+          visualType: 'none',
+          questionType: 'multiple_choice',
+          options: shuffle(opts.map(String)),
+          correctAnswer: valid.toString(),
+          explanation: `Dividiendo por ${m} obtenemos x ${op} ${threshold}. Solo ${valid} cumple esa condición.`,
+          oaCode: oa.code,
+          difficulty: level,
+          categoryLabel: 'Nivel 1: Ejercitación de Inecuaciones'
+        };
+      } else if (level === 'medio') {
+        if (subIdx % 2 === 0) {
+          return {
+            id: qId,
+            prompt: `Resuelve la inecuación lineal y selecciona su conjunto solución:`,
+            context: `${m}x + ${a} ${op} ${c}`,
+            visualType: 'none',
+            questionType: 'multiple_choice',
+            options: shuffle([`x ${op} ${threshold}`, `x ${otherOp} ${threshold}`, `x = ${threshold}`, `x ${op} ${threshold + m}`]),
+            correctAnswer: `x ${op} ${threshold}`,
+            explanation: `${m}x ${op} ${c} - ${a} = ${m * threshold} ➔ x ${op} ${threshold}.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 2: Aplicación de Inecuaciones'
+          };
+        } else {
+          const ans = isLt ? threshold - 1 : threshold + 1;
+          const ask = isLt ? 'MAYOR' : 'MENOR';
+          return {
+            id: qId,
+            prompt: `¿Cuál es el ${ask} número entero que satisface la inecuación ${m}x + ${a} ${op} ${c}?`,
+            context: `${m}x + ${a} ${op} ${c}`,
+            visualType: 'none',
+            questionType: 'numeric',
+            correctAnswer: ans.toString(),
+            explanation: `${m}x ${op} ${c} - ${a} = ${m * threshold} ➔ x ${op} ${threshold}. El ${ask.toLowerCase()} entero que cumple es ${ans}.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 2: Aplicación de Inecuaciones'
+          };
+        }
+      } else {
+        const precioUnit = randInt(400, 900);
+        const envio = randInt(500, 1500);
+        const maxUnidades = randInt(4, 9);
+        const tope = maxUnidades * precioUnit + envio + 200;
+        return {
+          id: qId,
+          prompt: `${name} quiere comprar "x" cuadernos a ${formatCLP(precioUnit)} cada uno más un despacho fijo de ${formatCLP(envio)}. Si su presupuesto debe ser menor a ${formatCLP(tope)} (${precioUnit}x + ${envio} < ${tope}), ¿cuál es la MAYOR cantidad entera de cuadernos que puede comprar?`,
+          visualType: 'none',
+          questionType: 'numeric',
+          correctAnswer: maxUnidades.toString(),
+          explanation: `${precioUnit}x < ${tope} - ${envio} = ${tope - envio} ➔ x < ${((tope - envio) / precioUnit).toFixed(2).replace('.', ',')}. La mayor cantidad entera es ${maxUnidades}.`,
+          oaCode: oa.code,
+          difficulty: level,
+          categoryLabel: 'Nivel 3: Problemas con Inecuaciones'
+        };
+      }
+    }
+
+    // ------------------------------------------------------------------
+    // B. ECUACIONES (Igualdades con =)
+    // ------------------------------------------------------------------
+    if (isLowerPrimary) {
+      const x = randInt(2, 10);
+      const a = randInt(2, 9);
+      const b = x + a; // <= 19
+      if (level === 'facil') {
+        const isAdd = subIdx % 2 === 0;
+        const showBal = Math.floor(subIdx / 2) % 2 === 0;
+        return {
+          id: qId,
+          prompt: isAdd && showBal
+            ? `Observa la balanza en equilibrio. ¿Cuál es el valor de "x"?`
+            : `Resuelve la ecuación de un paso: encuentra el valor de x:`,
+          context: isAdd ? `x + ${a} = ${b}` : `x - ${a} = ${x}`,
+          visualType: isAdd && showBal ? 'balance_equation' : 'none',
+          visualData: isAdd && showBal ? { left: `x + ${a}`, right: b.toString(), operator: '=' } : undefined,
+          questionType: 'numeric',
+          correctAnswer: isAdd ? x.toString() : b.toString(),
+          explanation: isAdd
+            ? `Restamos ${a}: x = ${b} - ${a} = ${x}.`
+            : `Sumamos ${a}: x = ${x} + ${a} = ${b}.`,
+          oaCode: oa.code,
+          difficulty: level,
+          categoryLabel: 'Nivel 1: Ejercitación Básica'
+        };
+      } else if (level === 'medio') {
+        const isAdd = subIdx % 2 === 0;
+        return {
+          id: qId,
+          prompt: `Encuentra el valor desconocido de x en la igualdad:`,
+          context: isAdd ? `${a} + x = ${b}` : `${b} - x = ${a}`,
+          visualType: 'none',
+          questionType: 'numeric',
+          correctAnswer: x.toString(),
+          explanation: `Como ${a} + ${x} = ${b}, el valor de x es ${x}.`,
+          oaCode: oa.code,
+          difficulty: level,
+          categoryLabel: 'Nivel 2: Aplicación Intermedia'
+        };
+      } else {
+        return {
+          id: qId,
+          prompt: `${name} pensó en un número secreto. Si le suma ${a}, obtiene ${b}. ¿Cuál es el número secreto?`,
+          visualType: 'none',
+          questionType: 'numeric',
+          correctAnswer: x.toString(),
+          explanation: `x + ${a} = ${b} ➔ x = ${b} - ${a} = ${x}.`,
+          oaCode: oa.code,
+          difficulty: level,
+          categoryLabel: 'Nivel 3: Resolución de Problemas'
+        };
+      }
+    }
+
+    if (isOneStep100) {
+      // 3° a 5° Básico: Ecuaciones de un paso (+ y -), ámbito 0 al 100
+      const x = randInt(9, 46);
+      const a = randInt(8, 44);
+      const b = x + a; // 17..90 <= 100
+
+      if (level === 'facil') {
+        const fmt = subIdx % 3;
+        if (fmt === 0) {
+          return {
+            id: qId,
+            prompt: `Observa la balanza en equilibrio. ¿Cuál es el valor de la incógnita "x"?`,
+            context: `x + ${a} = ${b}`,
+            visualType: 'balance_equation',
+            visualData: { left: `x + ${a}`, right: b.toString(), operator: '=' },
+            questionType: 'numeric',
+            correctAnswer: x.toString(),
+            explanation: `Para mantener el equilibrio restamos ${a} en ambos platillos: x = ${b} - ${a} = ${x}.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 1: Ecuaciones en Balanza'
+          };
+        } else if (fmt === 1) {
+          return {
+            id: qId,
+            prompt: `Resuelve la ecuación de un paso: encuentra el valor de x:`,
+            context: `x + ${a} = ${b}`,
+            visualType: 'none',
+            questionType: 'numeric',
+            correctAnswer: x.toString(),
+            explanation: `Restamos ${a} a ambos lados: x = ${b} - ${a} = ${x}.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 1: Ejercitación de Ecuaciones'
+          };
+        } else {
+          return {
+            id: qId,
+            prompt: `Resuelve la ecuación de un paso: encuentra el valor de x:`,
+            context: `x - ${a} = ${x}`,
+            visualType: 'none',
+            questionType: 'numeric',
+            correctAnswer: b.toString(),
+            explanation: `Sumamos ${a} a ambos lados: x = ${x} + ${a} = ${b}.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 1: Ejercitación de Ecuaciones'
+          };
+        }
+      } else if (level === 'medio') {
+        const fmt = subIdx % 3;
+        if (fmt === 0) {
+          return {
+            id: qId,
+            prompt: `Determina el valor de la incógnita x en la ecuación de un paso:`,
+            context: `${a} + x = ${b}`,
+            visualType: 'none',
+            questionType: 'numeric',
+            correctAnswer: x.toString(),
+            explanation: `Restamos ${a} a ${b}: x = ${b} - ${a} = ${x}. Comprobación: ${a} + ${x} = ${b}.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 2: Aplicación de Ecuaciones'
+          };
+        } else if (fmt === 1) {
+          return {
+            id: qId,
+            prompt: `Determina el valor de la incógnita x en la siguiente sustracción:`,
+            context: `${b} - x = ${a}`,
+            visualType: 'none',
+            questionType: 'numeric',
+            correctAnswer: x.toString(),
+            explanation: `Si ${b} - x = ${a}, entonces x = ${b} - ${a} = ${x}.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 2: Aplicación de Ecuaciones'
+          };
+        } else {
+          const d1 = x + randInt(4, 9);
+          const d2 = Math.max(1, x - randInt(3, 6));
+          const d3 = b + a;
+          return {
+            id: qId,
+            prompt: `¿Qué valor de "x" mantiene exactamente en equilibrio la siguiente balanza?`,
+            context: `${a} + x = ${b}`,
+            visualType: 'balance_equation',
+            visualData: { left: `${a} + x`, right: b.toString(), operator: '=' },
+            questionType: 'multiple_choice',
+            options: shuffle([x, d1, d2, d3].map(String)),
+            correctAnswer: x.toString(),
+            explanation: `${a} + ${x} = ${b}, por lo que x = ${b} - ${a} = ${x}.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 2: Comprobación en Balanza'
+          };
+        }
+      } else {
+        const pesoExtra = randInt(12, 38);
+        const pesoCaja = randInt(10, 48);
+        const pesoTotal = pesoCaja + pesoExtra; // <= 86
+        const scenarios: {
+          prompt: string;
+          ans: number;
+          exp: string;
+          visualType?: VisualType;
+          visualData?: any;
+        }[] = [
+          {
+            prompt: `${name} pensó en un número secreto. Si le suma ${a}, el resultado es ${b}. ¿Cuál es el número secreto en el que pensó ${name}?`,
+            ans: x,
+            exp: `Planteamos la ecuación: x + ${a} = ${b} ➔ x = ${b} - ${a} = ${x}.`
+          },
+          {
+            prompt: `En una balanza en equilibrio, el platillo izquierdo tiene una caja de masa "x" más ${pesoExtra} kg, y el platillo derecho marca ${pesoTotal} kg. ¿Cuántos kg pesa la caja "x"?`,
+            ans: pesoCaja,
+            exp: `x + ${pesoExtra} = ${pesoTotal} ➔ x = ${pesoTotal} - ${pesoExtra} = ${pesoCaja} kg.`,
+            visualType: 'balance_equation',
+            visualData: { left: `x + ${pesoExtra}`, right: pesoTotal.toString(), operator: '=' }
+          },
+          {
+            prompt: `${name} llevó $${b} a ${place}, gastó "x" pesos en una colación y le quedaron $${a} de vuelto. ¿Cuánto costó la colación?`,
+            ans: x,
+            exp: `${b} - x = ${a} ➔ x = ${b} - ${a} = $${x}.`
+          },
+          {
+            prompt: `${name} tenía "x" láminas de un álbum, regaló ${a} a un compañero y le quedaron ${x} láminas. ¿Cuántas láminas tenía al principio?`,
+            ans: b,
+            exp: `x - ${a} = ${x} ➔ x = ${x} + ${a} = ${b} láminas.`
+          }
+        ];
+        const chosen = scenarios[subIdx % scenarios.length];
+        return {
+          id: qId,
+          prompt: chosen.prompt,
+          visualType: chosen.visualType || 'none',
+          visualData: chosen.visualData,
+          questionType: 'numeric',
+          correctAnswer: chosen.ans.toString(),
+          explanation: chosen.exp,
+          oaCode: oa.code,
+          difficulty: level,
+          categoryLabel: 'Nivel 3: Problemas con Ecuaciones'
+        };
+      }
+    }
+
+    // 6° a 8° Básico: Ecuaciones lineales de 1 y 2 pasos
     const x = randInt(3, 14);
     const a = randInt(4, 18);
     const b = x + a;
-    const v = Math.abs(variant);
 
     if (level === 'facil') {
-      const isAdd = v % 2 === 0;
+      const isAdd = subIdx % 2 === 0;
       const rhs = isAdd ? b : x;
-      const lhsVal = isAdd ? a : a;
       return {
         id: qId,
         prompt: `Resuelve la ecuación de un paso: encuentra el valor de x:`,
-        context: isAdd ? `x + ${lhsVal} = ${rhs}` : `x - ${lhsVal} = ${x}`,
+        context: isAdd ? `x + ${a} = ${rhs}` : `x - ${a} = ${x}`,
         visualType: 'none',
         questionType: 'numeric',
-        correctAnswer: isAdd ? x.toString() : (x + lhsVal).toString(),
+        correctAnswer: isAdd ? x.toString() : (x + a).toString(),
         explanation: isAdd
-          ? `Restamos ${lhsVal} a ambos lados: x = ${rhs} - ${lhsVal} = ${x}.`
-          : `Sumamos ${lhsVal} a ambos lados: x = ${x} + ${lhsVal} = ${x + lhsVal}.`,
+          ? `Restamos ${a} a ambos lados: x = ${rhs} - ${a} = ${x}.`
+          : `Sumamos ${a} a ambos lados: x = ${x} + ${a} = ${x + a}.`,
         oaCode: oa.code,
         difficulty: level,
         categoryLabel: 'Nivel 1: Ejercitación Básica'
@@ -2197,7 +2840,6 @@ const TOPIC_GENERATORS: Record<TopicKey, TopicGenerator> = {
         categoryLabel: 'Nivel 2: Aplicación Intermedia'
       };
     } else {
-      const name = randChoice(CHILEAN_NAMES);
       const precioCuaderno = randInt(400, 900);
       const vuelto = randInt(200, 600);
       const billete = precioCuaderno + vuelto;
@@ -2225,7 +2867,7 @@ const TOPIC_GENERATORS: Record<TopicKey, TopicGenerator> = {
           exp: `2x + ${a} = ${2 * x + a} ➔ 2x = ${2 * x} ➔ x = ${x} años.`
         }
       ];
-      const chosen = scenarios[v % scenarios.length];
+      const chosen = scenarios[subIdx % scenarios.length];
       return {
         id: qId,
         prompt: chosen.prompt,
