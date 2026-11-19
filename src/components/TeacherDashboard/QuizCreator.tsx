@@ -148,20 +148,20 @@ export const QuizCreator: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3.5 min-w-0">
       {/* Top Title */}
-      <div className="tq-card border rounded-xl p-5 shadow-xs">
-        <h1 className="text-xl font-bold tq-text">
+      <div className="tq-card border rounded-xl p-3.5 sm:p-4 shadow-xs">
+        <h1 className="text-lg font-bold tq-text">
           Crear Nueva Evaluación MateClic
         </h1>
-        <p className="text-xs tq-text-muted mt-1">
+        <p className="text-xs tq-text-muted mt-0.5">
           Configura los contenidos curriculares MINEDUC, el nivel de dificultad y asigna una fecha límite para tus estudiantes.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 min-w-0">
         {/* Left Form: Parameters (5 cols) */}
-        <div className="lg:col-span-5 tq-card border rounded-xl p-5 shadow-xs space-y-4">
+        <div className="lg:col-span-5 tq-card border rounded-xl p-4 shadow-xs space-y-3 min-w-0">
           <h2 className="text-sm font-bold tq-text border-b tq-border pb-2">
             1. Parámetros Pedagógicos
           </h2>
@@ -396,7 +396,7 @@ export const QuizCreator: React.FC = () => {
         </div>
 
         {/* Right Panel: Interactive Question Preview (7 cols) */}
-        <div className="lg:col-span-7 tq-card border rounded-xl p-5 shadow-xs flex flex-col justify-between">
+        <div className="lg:col-span-7 tq-card border rounded-xl p-4 shadow-xs flex flex-col justify-between min-w-0">
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b tq-border pb-3 mb-4 gap-2">
               <div>

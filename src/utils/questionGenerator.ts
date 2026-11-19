@@ -1892,67 +1892,309 @@ const TOPIC_GENERATORS: Record<TopicKey, TopicGenerator> = {
   },
 
   // 17. Números Enteros (Z)
+  // Respeta estrictamente el OA:
+  // - 7° Básico OA 01: Adición y sustracción en Z (SIN multiplicaciones ni divisiones)
+  // - 8° Básico OA 01: Multiplicación y división en Z
   enteros: (level, grade, oa, qId, variant) => {
-    const a = randInt(-14, -2);
-    const b = randInt(3, 18);
-    const sum = a + b;
+    const negA = randInt(-16, -2);
+    const negC = randInt(-14, -2);
+    const posB = randInt(3, 19);
     const v = Math.abs(variant);
+    const titleLower = oa.title.toLowerCase();
+    const isMultDivZ =
+      titleLower.includes('multiplicación') ||
+      titleLower.includes('división') ||
+      (grade === '8_basico' && !titleLower.includes('adición') && !titleLower.includes('sustracción'));
 
+    if (!isMultDivZ) {
+      // 7° Básico OA 01: Exclusivamente Adición y Sustracción de Números Enteros
+      if (level === 'facil') {
+        const mode = v % 4;
+        if (mode === 0) {
+          const ans = negA + posB;
+          return {
+            id: qId,
+            prompt: `Resuelve la siguiente adición de números enteros:`,
+            context: `(${negA}) + ${posB} = ?`,
+            visualType: 'none',
+            questionType: 'numeric',
+            correctAnswer: ans.toString(),
+            explanation: `Signos distintos se restan sus valores absolutos (${Math.max(Math.abs(negA), posB)} - ${Math.min(Math.abs(negA), posB)}) y se conserva el signo del de mayor valor absoluto: (${negA}) + ${posB} = ${ans}.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 1: Ejercitación Básica'
+          };
+        } else if (mode === 1) {
+          const ans = posB + negA;
+          return {
+            id: qId,
+            prompt: `Resuelve la siguiente adición de números enteros:`,
+            context: `${posB} + (${negA}) = ?`,
+            visualType: 'none',
+            questionType: 'numeric',
+            correctAnswer: ans.toString(),
+            explanation: `Sumar (${negA}) equivale a restar ${Math.abs(negA)}: ${posB} - ${Math.abs(negA)} = ${ans}.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 1: Ejercitación Básica'
+          };
+        } else if (mode === 2) {
+          const ans = negA + negC;
+          return {
+            id: qId,
+            prompt: `Resuelve la siguiente adición de dos números negativos:`,
+            context: `(${negA}) + (${negC}) = ?`,
+            visualType: 'none',
+            questionType: 'numeric',
+            correctAnswer: ans.toString(),
+            explanation: `Al sumar dos enteros negativos se suman sus valores absolutos y se conserva el signo negativo: -(${Math.abs(negA)} + ${Math.abs(negC)}) = ${ans}.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 1: Ejercitación Básica'
+          };
+        } else {
+          const small = randInt(2, 10);
+          const large = small + randInt(3, 12);
+          const ans = small - large;
+          return {
+            id: qId,
+            prompt: `Resuelve la siguiente sustracción de números enteros:`,
+            context: `${small} - ${large} = ?`,
+            visualType: 'none',
+            questionType: 'numeric',
+            correctAnswer: ans.toString(),
+            explanation: `Como el sustraendo (${large}) es mayor que el minuendo (${small}), la diferencia es negativa: ${small} - ${large} = ${ans}.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 1: Ejercitación Básica'
+          };
+        }
+      } else if (level === 'medio') {
+        const mode = v % 4;
+        if (mode === 0) {
+          const ans = posB - negA;
+          return {
+            id: qId,
+            prompt: `Resuelve la siguiente sustracción con un número negativo:`,
+            context: `${posB} - (${negA}) = ?`,
+            visualType: 'none',
+            questionType: 'numeric',
+            correctAnswer: ans.toString(),
+            explanation: `Restar un número negativo equivale a sumar su inverso aditivo (opuesto): ${posB} + ${Math.abs(negA)} = ${ans}.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 2: Aplicación Intermedia'
+          };
+        } else if (mode === 1) {
+          const ans = negA - negC;
+          return {
+            id: qId,
+            prompt: `Calcula la sustracción entre números enteros negativos:`,
+            context: `(${negA}) - (${negC}) = ?`,
+            visualType: 'none',
+            questionType: 'numeric',
+            correctAnswer: ans.toString(),
+            explanation: `Restar (${negC}) equivale a sumar +${Math.abs(negC)}: ${negA} + ${Math.abs(negC)} = ${ans}.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 2: Aplicación Intermedia'
+          };
+        } else if (mode === 2) {
+          const target = randInt(-6, 8);
+          const missing = target - negA;
+          return {
+            id: qId,
+            prompt: `¿Qué número entero falta en la casilla para que se cumpla la igualdad?`,
+            context: `(${negA}) + [ ? ] = ${target}`,
+            visualType: 'none',
+            questionType: 'numeric',
+            correctAnswer: missing.toString(),
+            explanation: `Para llegar desde ${negA} hasta ${target}, calculamos ${target} - (${negA}) = ${missing}.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 2: Aplicación Intermedia'
+          };
+        } else {
+          const c = randInt(2, 9);
+          const ans = negA + posB - c;
+          return {
+            id: qId,
+            prompt: `Resuelve de izquierda a derecha esta operación de adición y sustracción en Z:`,
+            context: `(${negA}) + ${posB} - ${c} = ?`,
+            visualType: 'none',
+            questionType: 'numeric',
+            correctAnswer: ans.toString(),
+            explanation: `Primero (${negA}) + ${posB} = ${negA + posB}. Luego ${negA + posB} - ${c} = ${ans}.`,
+            oaCode: oa.code,
+            difficulty: level,
+            categoryLabel: 'Nivel 2: Aplicación Intermedia'
+          };
+        }
+      } else {
+        const tInicial = randInt(-9, -1);
+        const subida = randInt(5, 16);
+        const tFinal = tInicial + subida;
+        const tMax = randInt(7, 16);
+        const tMin = randInt(-7, -1);
+        const pisoSub = randInt(-4, -1);
+        const pisosSube = randInt(5, 9);
+        const buzProf = randInt(10, 24);
+        const buzSube = randInt(3, 8);
+        const scenarios = [
+          {
+            prompt: `En la madrugada, la temperatura en Putre era de ${tInicial}°C. Al mediodía, la temperatura subió ${subida}°C. ¿Qué temperatura marcó el termómetro al mediodía?`,
+            ans: tFinal,
+            exp: `${tInicial}°C + ${subida}°C = ${tFinal}°C.`
+          },
+          {
+            prompt: `En la cordillera se registró una temperatura máxima de ${tMax}°C y una mínima de ${tMin}°C. ¿Cuál fue la variación (diferencia) de temperatura en grados entre ambos registros?`,
+            ans: tMax - tMin,
+            exp: `La diferencia es ${tMax} - (${tMin}) = ${tMax} + ${Math.abs(tMin)} = ${tMax - tMin}°C.`
+          },
+          {
+            prompt: `Un ascensor está en el estacionamiento subterráneo piso ${pisoSub}. Si sube ${pisosSube} pisos, ¿a qué piso llega?`,
+            ans: pisoSub + pisosSube,
+            exp: `${pisoSub} + ${pisosSube} = piso ${pisoSub + pisosSube}.`
+          },
+          {
+            prompt: `Un buzo en las costas de Arica se encuentra a ${buzProf} metros bajo el nivel del mar (-${buzProf} m) y asciende ${buzSube} metros. ¿A qué profundidad (número entero negativo) queda?`,
+            ans: -buzProf + buzSube,
+            exp: `(-${buzProf}) + ${buzSube} = ${-buzProf + buzSube} m.`
+          },
+          {
+            prompt: `En la cuenta del centro de alumnos había ${formatCLP(posB * 1000)} y se realizó un gasto de ${formatCLP((Math.abs(negA) + posB) * 1000)}. ¿Cuál es el saldo resultante en miles de pesos?`,
+            ans: negA,
+            exp: `${posB} - ${Math.abs(negA) + posB} = ${negA}.`
+          }
+        ];
+        const chosen = scenarios[v % scenarios.length];
+        return {
+          id: qId,
+          prompt: chosen.prompt,
+          visualType: 'none',
+          questionType: 'numeric',
+          correctAnswer: chosen.ans.toString(),
+          explanation: chosen.exp,
+          oaCode: oa.code,
+          difficulty: level,
+          categoryLabel: 'Nivel 3: Resolución de Problemas'
+        };
+      }
+    }
+
+    // 8° Básico OA 01: Multiplicación y División de Números Enteros en Z
+    const f1 = randInt(2, 9);
+    const f2 = randInt(2, 9);
     if (level === 'facil') {
-      return {
-        id: qId,
-        prompt: `Resuelve la siguiente adición de números enteros:`,
-        context: `(${a}) + (${b}) = ?`,
-        visualType: 'none',
-        questionType: 'numeric',
-        correctAnswer: sum.toString(),
-        explanation: `Signos distintos se restan los valores absolutos y se conserva el signo del mayor: ${b} - ${Math.abs(a)} = ${sum}.`,
-        oaCode: oa.code,
-        difficulty: level,
-        categoryLabel: 'Nivel 1: Ejercitación Básica'
-      };
+      const mode = v % 3;
+      if (mode === 0) {
+        const prod = -f1 * f2;
+        return {
+          id: qId,
+          prompt: `Calcula la multiplicación de números enteros aplicando la regla de los signos:`,
+          context: `(-${f1}) × ${f2} = ?`,
+          visualType: 'none',
+          questionType: 'numeric',
+          correctAnswer: prod.toString(),
+          explanation: `Negativo por positivo da negativo: (-${f1}) × ${f2} = ${prod}.`,
+          oaCode: oa.code,
+          difficulty: level,
+          categoryLabel: 'Nivel 1: Ejercitación Básica'
+        };
+      } else if (mode === 1) {
+        const prod = f1 * f2;
+        return {
+          id: qId,
+          prompt: `Calcula la multiplicación de dos enteros negativos:`,
+          context: `(-${f1}) × (-${f2}) = ?`,
+          visualType: 'none',
+          questionType: 'numeric',
+          correctAnswer: prod.toString(),
+          explanation: `Por regla de los signos, negativo por negativo da positivo: (-${f1}) × (-${f2}) = ${prod}.`,
+          oaCode: oa.code,
+          difficulty: level,
+          categoryLabel: 'Nivel 1: Ejercitación Básica'
+        };
+      } else {
+        const prod = -f1 * f2;
+        return {
+          id: qId,
+          prompt: `Calcula el producto de números enteros:`,
+          context: `${f1} × (-${f2}) = ?`,
+          visualType: 'none',
+          questionType: 'numeric',
+          correctAnswer: prod.toString(),
+          explanation: `Positivo por negativo da negativo: ${f1} × (-${f2}) = ${prod}.`,
+          oaCode: oa.code,
+          difficulty: level,
+          categoryLabel: 'Nivel 1: Ejercitación Básica'
+        };
+      }
     } else if (level === 'medio') {
-      const prod = a * b;
-      return {
-        id: qId,
-        prompt: `Calcula la multiplicación de enteros aplicando la regla de los signos:`,
-        context: `(${a}) × (${b}) = ?`,
-        visualType: 'none',
-        questionType: 'numeric',
-        correctAnswer: prod.toString(),
-        explanation: `Negativo por positivo da negativo: (${a}) × (${b}) = ${prod}.`,
-        oaCode: oa.code,
-        difficulty: level,
-        categoryLabel: 'Nivel 2: Aplicación Intermedia'
-      };
+      const mode = v % 3;
+      const prod = f1 * f2;
+      if (mode === 0) {
+        return {
+          id: qId,
+          prompt: `Calcula la división exacta de números enteros:`,
+          context: `(-${prod}) ÷ ${f1} = ?`,
+          visualType: 'none',
+          questionType: 'numeric',
+          correctAnswer: (-f2).toString(),
+          explanation: `Negativo dividido por positivo da negativo: (-${prod}) ÷ ${f1} = -${f2}.`,
+          oaCode: oa.code,
+          difficulty: level,
+          categoryLabel: 'Nivel 2: Aplicación Intermedia'
+        };
+      } else if (mode === 1) {
+        return {
+          id: qId,
+          prompt: `Calcula la división exacta de dos números negativos:`,
+          context: `(-${prod}) ÷ (-${f1}) = ?`,
+          visualType: 'none',
+          questionType: 'numeric',
+          correctAnswer: f2.toString(),
+          explanation: `Negativo dividido por negativo da positivo: (-${prod}) ÷ (-${f1}) = ${f2}.`,
+          oaCode: oa.code,
+          difficulty: level,
+          categoryLabel: 'Nivel 2: Aplicación Intermedia'
+        };
+      } else {
+        return {
+          id: qId,
+          prompt: `¿Qué factor entero falta para que se cumpla la multiplicación?`,
+          context: `(-${f1}) × [ ? ] = ${prod}`,
+          visualType: 'none',
+          questionType: 'numeric',
+          correctAnswer: (-f2).toString(),
+          explanation: `Como el producto es positivo (${prod}) y un factor es negativo (-${f1}), el otro factor debe ser negativo: -${f2}.`,
+          oaCode: oa.code,
+          difficulty: level,
+          categoryLabel: 'Nivel 2: Aplicación Intermedia'
+        };
+      }
     } else {
-      const tInicial = randInt(-8, -1);
-      const subida = randInt(6, 15);
-      const tFinal = tInicial + subida;
-      const pisoSub = randInt(-4, -1);
-      const pisosSube = randInt(5, 9);
-      const buzProf = randInt(8, 22);
-      const buzSube = randInt(3, 7);
+      const bajaHora = randInt(2, 5);
+      const horas = randInt(3, 6);
+      const descMin = randInt(4, 9);
+      const mins = randInt(3, 7);
+      const cuotas = randInt(4, 6);
+      const montoCuota = randInt(3, 9);
       const scenarios = [
         {
-          prompt: `En la madrugada, la temperatura en Putre era de ${tInicial}°C. Al mediodía, la temperatura subió ${subida}°C. ¿Qué temperatura marcó el termómetro al mediodía?`,
-          ans: tFinal,
-          exp: `${tInicial}°C + ${subida}°C = ${tFinal}°C.`
+          prompt: `Una cámara frigorífica en Arica disminuye su temperatura ${bajaHora}°C cada hora (-${bajaHora}°C/h). ¿Cuál es la variación total de temperatura luego de ${horas} horas?`,
+          ans: -bajaHora * horas,
+          exp: `(-${bajaHora}) × ${horas} = ${-bajaHora * horas}°C.`
         },
         {
-          prompt: `Un ascensor está en el estacionamiento subterráneo piso ${pisoSub}. Si sube ${pisosSube} pisos, ¿a qué piso llega?`,
-          ans: pisoSub + pisosSube,
-          exp: `${pisoSub} + ${pisosSube} = piso ${pisoSub + pisosSube}.`
+          prompt: `Un robot submarino desciende ${descMin} metros por minuto (-${descMin} m/min) desde la superficie. ¿A qué profundidad (número negativo) estará después de ${mins} minutos?`,
+          ans: -descMin * mins,
+          exp: `(-${descMin}) × ${mins} = ${-descMin * mins} metros.`
         },
         {
-          prompt: `Un buzo en las costas de Arica se encuentra a ${buzProf} metros bajo el nivel del mar (-${buzProf} m) y asciende ${buzSube} metros. ¿A qué profundidad (número entero negativo) queda?`,
-          ans: -buzProf + buzSube,
-          exp: `(-${buzProf}) + ${buzSube} = ${-buzProf + buzSube} m.`
-        },
-        {
-          prompt: `En la cuenta de ahorro de un proyecto había ${formatCLP(b * 1000)} y se realizó un gasto de ${formatCLP(Math.abs(a) * 1000 + b * 1000)}. ¿Cuál es el saldo resultante en miles?`,
-          ans: a,
-          exp: `${b} - (${Math.abs(a) + b}) = ${a}.`
+          prompt: `Una deuda de -${cuotas * montoCuota} puntos en un juego se reparte en partes iguales entre ${cuotas} participantes. ¿Cuántos puntos negativos corresponde a cada participante?`,
+          ans: -montoCuota,
+          exp: `(-${cuotas * montoCuota}) ÷ ${cuotas} = -${montoCuota} puntos.`
         }
       ];
       const chosen = scenarios[v % scenarios.length];

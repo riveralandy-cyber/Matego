@@ -55,7 +55,19 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     studentAssignments.find(a => a.teacherName)?.teacherName ||
     course?.teacherName ||
     'Docente';
-  const studentAttempts = attempts.filter(att => att.studentId === currentStudent.id);
+  const rawStudentAttempts = attempts.filter(att => att.studentId === currentStudent.id);
+
+  // Deduplicate keeping the earliest/first completed official attempt per quiz
+  const studentAttempts = React.useMemo(() => {
+    const firstByQuiz = new Map<string, QuizAttempt>();
+    [...rawStudentAttempts].reverse().forEach(att => {
+      if (!firstByQuiz.has(att.quizId)) {
+        firstByQuiz.set(att.quizId, att);
+      }
+    });
+    // Display newest-completed quiz first in history while keeping each quiz's first official attempt
+    return Array.from(firstByQuiz.values()).reverse();
+  }, [rawStudentAttempts]);
 
   const completedQuizIds = new Set(studentAttempts.map(a => a.quizId));
   const pendingQuizzes = studentAssignments.filter(a => !completedQuizIds.has(a.id));
@@ -70,7 +82,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   };
 
   return (
-    <div className="max-w-5xl mx-auto py-8 px-4 font-sans">
+    <div className="max-w-5xl mx-auto py-2 sm:py-3 px-2 sm:px-4 font-sans min-w-0">
       <ChangePinModal
         isOpen={isChangePinOpen}
         onClose={() => setIsChangePinOpen(false)}
@@ -78,9 +90,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
       />
 
       {/* Student Banner */}
-      <div className="tq-card border rounded-2xl p-6 shadow-xs mb-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 tq-brand-badge border rounded-2xl flex items-center justify-center font-bold text-xl shadow-2xs shrink-0">
+      <div className="tq-card border rounded-2xl p-3.5 sm:p-4 shadow-xs mb-3.5 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-11 h-11 tq-brand-badge border rounded-xl flex items-center justify-center font-bold text-lg shadow-2xs shrink-0">
             {currentStudent.name.charAt(0)}
           </div>
           <div>
@@ -88,9 +100,6 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
               <h1 className="text-xl font-bold tq-text">
                 {currentStudent.name}
               </h1>
-              <span className="font-mono text-xs tq-muted px-2.5 py-0.5 rounded-lg border">
-                {currentStudent.accessCode}
-              </span>
               <button
                 type="button"
                 onClick={() => handleOpenChangePin(false)}
@@ -154,7 +163,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
       {/* Expandable Palette Configurator */}
       {showThemePicker && (
-        <div className="mb-6 p-5 tq-card border-2 rounded-2xl shadow-xs">
+        <div className="mb-3.5 p-4 tq-card border-2 rounded-2xl shadow-xs">
           <ThemePaletteSelector
             variant="cards"
             title="Configura la paleta de colores de tu plataforma"
@@ -165,7 +174,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
       {/* First login recommendation banner if student still uses default PIN */}
       {!currentStudent.hasCustomPin && (
-        <div className="mb-6 p-4 tq-tint border-2 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+        <div className="mb-3.5 p-3 tq-tint border-2 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-2xs">
           <div className="flex items-start sm:items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/70 text-amber-800 dark:text-amber-200 flex items-center justify-center shrink-0">
               <KeyRound className="w-5 h-5" />
@@ -196,9 +205,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5 min-w-0">
         {/* Left Column: Pending Quizzes */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4 min-w-0">
           <div>
             <h2 className="text-lg font-bold tq-text mb-1 flex items-center gap-2">
               <span>Evaluaciones Pendientes Asignadas</span>
@@ -448,18 +457,30 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         <span>Ver corrección</span>
                       </button>
 
-                      {/* Re-take option */}
-                      {studentAssignments.find(a => a.id === att.quizId) && (
+                      {/* Practice same topic without affecting official grade */}
+                      {onStartIndependentSimce && (
                         <button
                           type="button"
                           onClick={() => {
-                            const q = studentAssignments.find(a => a.id === att.quizId);
-                            if (q) onStartQuiz(q);
+                            const matchedQuiz = studentAssignments.find(a => a.id === att.quizId);
+                            const resolvedGrade = matchedQuiz?.gradeLevel || course?.grade || '7_basico';
+                            onStartIndependentSimce({
+                              grade: resolvedGrade,
+                              oaCode: matchedQuiz?.oaCode || att.oaCode,
+                              difficulty: matchedQuiz?.difficulty || 'progresivo',
+                              count: matchedQuiz?.totalQuestions || att.totalQuestions || 10,
+                              timeLimitMinutes: 0,
+                              title: `Práctica: ${matchedQuiz?.title || att.quizTitle}`,
+                              axis: matchedQuiz?.axis || att.axis,
+                              isSimce: matchedQuiz?.isSimce ?? att.isSimce,
+                              simceAxisFilter: matchedQuiz?.simceAxisFilter || (att.oaCode.includes('Integral') ? 'all' : att.axis),
+                            });
                           }}
-                          className="tq-text-muted hover:tq-text flex items-center gap-1 text-[11px] cursor-pointer"
+                          className="tq-text-muted hover:tq-text-accent flex items-center gap-1 text-[11px] font-medium cursor-pointer"
+                          title="Genera nuevos ejercicios del mismo objetivo sin cambiar tu nota oficial"
                         >
                           <RotateCcw className="w-3 h-3" />
-                          <span>Practicar de nuevo</span>
+                          <span>Practicar tema (sin nota)</span>
                         </button>
                       )}
                     </div>

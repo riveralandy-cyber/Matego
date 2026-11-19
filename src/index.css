@@ -180,9 +180,12 @@
   --tq-input-text: #111827;
 }
 
+html,
 body {
   background: var(--tq-page-bg);
   color: var(--tq-text);
+  overflow-x: hidden;
+  max-width: 100%;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 

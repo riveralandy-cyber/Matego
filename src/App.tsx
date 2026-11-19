@@ -50,8 +50,8 @@ const MainAppContent: React.FC = () => {
     setActiveQuizTaking,
     latestCompletedAttempt,
     setLatestCompletedAttempt,
-    students,
-    teacherStudents,
+    assignments,
+    courses,
   } = useApp();
 
   const [selectedStudentForReport, setSelectedStudentForReport] = useState<string>('');
@@ -110,6 +110,35 @@ const MainAppContent: React.FC = () => {
     setStudentIndependentQuiz(buildEphemeralPracticeQuiz(config));
   };
 
+  const buildPracticeConfigFromQuiz = (quiz: QuizAssignment): FreePracticeConfig => ({
+    grade: quiz.gradeLevel,
+    oaCode: quiz.oaCode,
+    difficulty: quiz.difficulty,
+    count: quiz.totalQuestions || 10,
+    timeLimitMinutes: 0,
+    title: `Práctica: ${quiz.title}`,
+    axis: quiz.axis,
+    isSimce: quiz.isSimce,
+    simceAxisFilter: quiz.simceAxisFilter || (quiz.oaCode.includes('Integral') ? 'all' : quiz.axis),
+  });
+
+  const buildPracticeConfigFromAttempt = (att: QuizAttempt): FreePracticeConfig => {
+    const matchedQuiz = assignments.find(a => a.id === att.quizId);
+    if (matchedQuiz) return buildPracticeConfigFromQuiz(matchedQuiz);
+    const matchedCourse = courses.find(c => c.id === att.courseId);
+    return {
+      grade: matchedCourse?.grade || '7_basico',
+      oaCode: att.oaCode,
+      difficulty: 'progresivo',
+      count: att.totalQuestions || 10,
+      timeLimitMinutes: 0,
+      title: `Práctica: ${att.quizTitle}`,
+      axis: att.axis,
+      isSimce: att.isSimce,
+      simceAxisFilter: att.oaCode.includes('Integral') ? 'all' : att.axis,
+    };
+  };
+
   // If in active quiz examination mode (either student or teacher test-run)
   if (activeQuizTaking) {
     const teacherPreviewStudent: Student = {
@@ -121,13 +150,27 @@ const MainAppContent: React.FC = () => {
       accessCode: 'DOCENTE',
       pin: '',
     };
-    const activeStudent = currentStudent || teacherStudents[0] || students[0] || teacherPreviewStudent;
+    const isTeacherSoloPreview = isTeacherAuthenticated && !currentStudent;
+    const activeStudent = currentStudent || teacherPreviewStudent;
     return (
       <ThatQuizExam
         quiz={activeQuizTaking}
         student={activeStudent}
+        isFreePractice={isTeacherSoloPreview}
+        onPracticeSameTopic={() => {
+          const cfg = buildPracticeConfigFromQuiz(activeQuizTaking);
+          setActiveQuizTaking(null);
+          setLatestCompletedAttempt(null);
+          if (currentStudent && role === 'student') {
+            startStudentIndependentSimce(cfg);
+          } else {
+            startPracticeSession(cfg);
+            setRole('practice');
+          }
+        }}
         onExit={() => {
           setActiveQuizTaking(null);
+          setLatestCompletedAttempt(null);
           if (isTeacherAuthenticated && !currentStudent) {
             setRole('teacher');
           }
@@ -158,7 +201,7 @@ const MainAppContent: React.FC = () => {
     return (
       <div className="min-h-screen tq-page flex flex-col font-sans">
         <Navigation />
-        <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6">
+        <main className="flex-1 max-w-7xl w-full mx-auto p-2.5 sm:p-4 min-w-0">
           <FreePracticeView onStartPractice={startPracticeSession} />
         </main>
       </div>
@@ -188,7 +231,7 @@ const MainAppContent: React.FC = () => {
       <div className="min-h-screen tq-page flex flex-col font-sans">
         <Navigation />
 
-        <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6">
+        <main className="flex-1 max-w-7xl w-full mx-auto p-2.5 sm:p-4 min-w-0">
           {!currentStudent ? (
             <StudentLogin
               onLoginSuccess={() => {
@@ -200,6 +243,11 @@ const MainAppContent: React.FC = () => {
               attempt={latestCompletedAttempt}
               onRetry={() => {
                 setLatestCompletedAttempt(null);
+              }}
+              onPracticeSameTopic={() => {
+                const cfg = buildPracticeConfigFromAttempt(latestCompletedAttempt);
+                setLatestCompletedAttempt(null);
+                startStudentIndependentSimce(cfg);
               }}
               onExit={() => {
                 setLatestCompletedAttempt(null);
@@ -226,7 +274,7 @@ const MainAppContent: React.FC = () => {
     return (
       <div className="min-h-screen tq-page flex flex-col font-sans">
         <Navigation />
-        <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6">
+        <main className="flex-1 max-w-7xl w-full mx-auto p-2.5 sm:p-4 min-w-0">
           <TeacherLoginView />
         </main>
       </div>
@@ -235,16 +283,16 @@ const MainAppContent: React.FC = () => {
 
   // Teacher view with authentic ThatQuiz layout (authenticated only)
   return (
-    <div className="min-h-screen tq-page flex flex-col font-sans">
+    <div className="min-h-screen md:h-screen tq-page flex flex-col font-sans md:overflow-hidden">
       <Navigation />
       <TeacherLoginModal />
 
-      <div className="flex-1 flex flex-col md:flex-row w-full max-w-[1600px] mx-auto min-h-[calc(100vh-64px)]">
+      <div className="flex-1 flex flex-col md:flex-row w-full max-w-[1600px] mx-auto md:h-[calc(100vh-56px)] md:overflow-hidden min-w-0">
         {/* Left ThatQuiz Sidebar */}
         <ThatQuizSidebar />
 
         {/* Main Content Area */}
-        <main className="flex-1 p-3 sm:p-5 overflow-x-auto tq-main-pane">
+        <main className="flex-1 min-w-0 p-2.5 sm:p-4 md:overflow-y-auto tq-main-pane">
           {activeTeacherTab === 'matrix' && (
             <ThatQuizGradeMatrix onSelectStudentForReport={handleSelectStudentForReport} />
           )}

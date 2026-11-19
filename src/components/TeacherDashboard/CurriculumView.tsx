@@ -85,43 +85,42 @@ export const CurriculumView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 font-sans">
+    <div className="space-y-3.5 font-sans min-w-0">
       {/* Header card */}
-      <div className="tq-card border rounded-3xl p-6 shadow-xs">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b tq-border pb-5">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider tq-accent-soft px-2.5 py-0.5 rounded-full border tq-border">
-                Curículum Nacional MINEDUC
+      <div className="tq-card border rounded-2xl p-3.5 sm:p-4 shadow-xs">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 border-b tq-border pb-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider tq-accent-soft px-2 py-0.5 rounded-full border tq-border">
+                Currículum Nacional MINEDUC
               </span>
-              <span className="text-xs font-semibold tq-text-muted">
+              <span className="text-[11px] font-semibold tq-text-muted">
                 Escuela Ricardo Silva Arriagada · SLEP Chinchorro
               </span>
             </div>
-            <h1 className="text-2xl font-black tq-text mt-1 flex items-center gap-2">
+            <h1 className="text-lg sm:text-xl font-black tq-text mt-1 flex items-center gap-2">
               <span>Objetivos de Aprendizaje (OA) Matemática</span>
-              <Sparkles className="w-5 h-5 text-amber-400" />
+              <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
             </h1>
-            <p className="text-xs tq-text-muted mt-1 max-w-3xl">
-              Bases curriculares oficiales de 1° a 8° año Básico para la asignatura de Matemática. Cada objetivo incluye sus indicadores de logro pedagógicos oficiales y permite generar automáticamente evaluaciones MateClic personalizadas con 5 a 20 ejercicios interactivos.
+            <p className="text-xs tq-text-muted mt-0.5 max-w-3xl">
+              Bases curriculares oficiales de 1° a 8° Básico con indicadores de logro y generación directa de evaluaciones MateClic.
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5 shrink-0">
-            <div className="tq-tint p-3 rounded-2xl border text-right">
-              <div className="text-[10px] tq-text-accent font-bold uppercase">Docente responsable</div>
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="tq-tint px-3 py-2 rounded-xl border text-right">
+              <div className="text-[10px] tq-text-accent font-bold uppercase">Docente</div>
               <div className="text-xs font-bold tq-text">{currentTeacher?.name ? `Prof. ${currentTeacher.name}` : 'Docente'}</div>
-              <div className="text-[10px] tq-text-muted">Arica, Región XV</div>
             </div>
           </div>
         </div>
 
         {/* Grade Level Selectors (1° to 8° Básico) */}
-        <div className="mt-5">
-          <label className="text-xs font-bold tq-text-2 uppercase tracking-wider block mb-2">
+        <div className="mt-3">
+          <label className="text-[11px] font-bold tq-text-2 uppercase tracking-wider block mb-1.5">
             Selecciona el Nivel Educativo:
           </label>
-          <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+          <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
             {GRADE_BUTTONS.map(btn => {
               const isSelected = selectedGrade === btn.id;
               const countInGrade = MINEDUC_OBJECTIVES.filter(o => o.grade === btn.id).length;
@@ -130,12 +129,12 @@ export const CurriculumView: React.FC = () => {
                   key={btn.id}
                   type="button"
                   onClick={() => setSelectedGrade(btn.id)}
-                  className={`p-2.5 rounded-2xl border transition-all text-center flex flex-col items-center justify-center cursor-pointer ${
+                  className={`py-2 px-1.5 rounded-xl border transition-all text-center flex flex-col items-center justify-center cursor-pointer ${
                     isSelected ? btn.pastelActive : `tq-card ${btn.pastelIdle}`
                   }`}
                 >
                   <span className="text-xs">{btn.label}</span>
-                  <span className="text-[10px] opacity-75 mt-0.5">{countInGrade} Objetivos</span>
+                  <span className="text-[10px] opacity-75">{countInGrade} OAs</span>
                 </button>
               );
             })}
@@ -143,7 +142,7 @@ export const CurriculumView: React.FC = () => {
         </div>
 
         {/* Thematic Axes Pills & Search Filter */}
-        <div className="mt-5 pt-4 border-t tq-border flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <div className="mt-3 pt-2.5 border-t tq-border flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-xs font-bold tq-text-2 mr-1 flex items-center gap-1">
               <Filter className="w-3.5 h-3.5 tq-text-accent" />
@@ -156,7 +155,7 @@ export const CurriculumView: React.FC = () => {
                   key={ax.id}
                   type="button"
                   onClick={() => setSelectedAxis(ax.id)}
-                  className={`px-3 py-1 text-xs rounded-xl border transition-all font-semibold cursor-pointer ${
+                  className={`px-2.5 py-1 text-xs rounded-xl border transition-all font-semibold cursor-pointer ${
                     isSelected
                       ? 'tq-btn-primary border-[var(--tq-accent)] shadow-2xs font-bold'
                       : `${ax.chipClass} hover:opacity-85`
@@ -168,14 +167,14 @@ export const CurriculumView: React.FC = () => {
             })}
           </div>
 
-          <div className="relative w-full lg:w-72">
-            <Search className="w-4 h-4 tq-text-muted absolute left-3 top-2.5" />
+          <div className="relative w-full lg:w-64">
+            <Search className="w-3.5 h-3.5 tq-text-muted absolute left-3 top-2.5" />
             <input
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Buscar en OA (ej: fracciones, ángulos)..."
-              className="w-full pl-9 pr-3 py-2 text-xs tq-input border rounded-xl focus:outline-hidden transition-all font-medium"
+              placeholder="Buscar en OA (ej: fracciones)..."
+              className="w-full pl-8 pr-3 py-1.5 text-xs tq-input border rounded-xl focus:outline-hidden transition-all font-medium"
             />
           </div>
         </div>

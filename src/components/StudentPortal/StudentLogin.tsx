@@ -250,30 +250,32 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
   };
 
   return (
-    <div className="max-w-md mx-auto my-8 p-7 tq-card border-2 rounded-3xl shadow-sm">
-      <div className="text-center mb-5">
-        <div className="w-14 h-14 tq-brand-badge border rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-2xs">
-          <KeyRound className="w-7 h-7" />
+    <div className="max-w-lg mx-auto my-1 sm:my-2 p-4 sm:p-5 tq-card border-2 rounded-2xl shadow-sm">
+      <div className="flex items-center gap-3 mb-3 pb-2.5 border-b tq-border">
+        <div className="w-10 h-10 tq-brand-badge border rounded-xl flex items-center justify-center shrink-0 shadow-2xs">
+          <KeyRound className="w-5 h-5" />
         </div>
-        <h1 className="text-2xl font-bold tq-text">¡Hola estudiante!</h1>
-        <p className="text-xs tq-text-muted mt-1 font-medium">
-          Escuela Ricardo Silva Arriagada · Elige tu curso, busca tu nombre e ingresa tu clave (sin correo)
-        </p>
+        <div className="min-w-0">
+          <h1 className="text-lg sm:text-xl font-bold tq-text leading-tight">¡Hola estudiante!</h1>
+          <p className="text-[11px] tq-text-muted font-medium truncate">
+            Elige tu curso, busca tu nombre e ingresa tu clave (sin correo)
+          </p>
+        </div>
       </div>
 
       {/* QR Deep-Link Course Banner */}
       {urlCourseJoinCode && (
-        <div className="mb-4 p-3 rounded-2xl border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50/90 dark:bg-indigo-950/50 flex items-center justify-between gap-2 text-xs">
+        <div className="mb-3 p-2.5 rounded-xl border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50/90 dark:bg-indigo-950/50 flex items-center justify-between gap-2 text-xs">
           <div className="flex items-center gap-2 min-w-0">
             <QrCode className="w-4 h-4 text-indigo-700 dark:text-indigo-300 shrink-0" />
             <div className="min-w-0">
               <span className="font-bold text-indigo-950 dark:text-indigo-100 block truncate">
                 {activeCloudDirectory
-                  ? `Curso cargado desde QR: ${activeCloudDirectory.courseSection}`
+                  ? `Curso QR: ${activeCloudDirectory.courseSection}`
                   : 'Ingresando desde enlace QR del curso'}
               </span>
-              <span className="text-[11px] text-indigo-800/85 dark:text-indigo-200/80 block">
-                Elige tu nombre de la lista e ingresa la clave entregada por tu docente.
+              <span className="text-[11px] text-indigo-800/85 dark:text-indigo-200/80 block truncate">
+                Elige tu nombre e ingresa la clave entregada por tu docente.
               </span>
             </div>
           </div>
@@ -290,7 +292,7 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
 
       {/* Automatic Cloud Connection Status (shown only while initializing or on connection error) */}
       {!useLocalFallback && !isCloudSignedIn && (
-        <div className="mb-4 p-3.5 rounded-2xl border tq-tint text-xs">
+        <div className="mb-3 p-2.5 rounded-xl border tq-tint text-xs">
           {studentCloudError ? (
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-rose-700 dark:text-rose-300 font-semibold">
@@ -307,7 +309,7 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
               </button>
             </div>
           ) : (
-            <div className="flex items-center justify-center gap-2 tq-text-2 font-medium py-1">
+            <div className="flex items-center justify-center gap-2 tq-text-2 font-medium py-0.5">
               <Cloud className="w-4 h-4 tq-text-accent animate-pulse" />
               <span>Conectando con la nube de MateClic...</span>
             </div>
@@ -316,7 +318,7 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
       )}
 
       {errorMessage && (
-        <div className="mb-4 p-3.5 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs rounded-xl font-medium flex items-center gap-2">
+        <div className="mb-3 p-2.5 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs rounded-xl font-medium flex items-center gap-2">
           <ShieldAlert className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
           <span>{errorMessage}</span>
         </div>
@@ -326,15 +328,22 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
       {(isCloudSignedIn || useLocalFallback) && (
         useLocalFallback ? (
           activeCourseTeacherLists.length === 0 ? (
-            <div className="p-4 tq-subtle border tq-border rounded-2xl text-center text-xs tq-text-muted">
+            <div className="p-3.5 tq-subtle border tq-border rounded-xl text-center text-xs tq-text-muted">
               Aún no hay listas de curso locales guardadas en este navegador.
             </div>
           ) : (
-            <form onSubmit={handleLocalListLogin} className="space-y-4">
+            <form onSubmit={handleLocalListLogin} className="space-y-2.5">
               <div>
-                <label className="block text-xs font-bold tq-text-2 mb-1">
-                  1. Selecciona tu Curso:
-                </label>
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <label className="text-xs font-bold tq-text-2">
+                    1. Selecciona tu Curso:
+                  </label>
+                  {selectedCourseObj && (
+                    <span className="text-[10px] tq-text-muted font-semibold truncate">
+                      Prof. {selectedTeacherObj?.name || selectedCourseObj.teacherName} (Local)
+                    </span>
+                  )}
+                </div>
                 <select
                   value={selectedListKey}
                   onChange={e => {
@@ -344,7 +353,7 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
                     setPin('');
                     setErrorMessage('');
                   }}
-                  className="w-full text-xs font-bold border rounded-xl p-3 tq-input focus:outline-hidden"
+                  className="w-full text-xs font-bold border rounded-xl px-3 py-2 tq-input focus:outline-hidden"
                 >
                   {activeCourseTeacherLists.map(item => {
                     const c = courses.find(co => co.id === item.courseId);
@@ -356,122 +365,111 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
                     );
                   })}
                 </select>
-
-                {selectedCourseObj && (
-                  <div className="mt-2 p-2.5 tq-tint border rounded-2xl flex items-center justify-between text-xs">
-                    <span className="font-bold tq-text">
-                      Prof. {selectedTeacherObj?.name || selectedCourseObj.teacherName}
-                    </span>
-                    <span className="text-[10px] tq-text-muted font-medium">Modo Local</span>
-                  </div>
-                )}
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <label className="block text-xs font-bold tq-text-2">
                   2. Busca y selecciona tu Nombre:
                 </label>
-                <div className="relative">
-                  <Search className="w-3.5 h-3.5 tq-text-muted absolute left-3 top-2.5" />
-                  <input
-                    type="text"
-                    value={nameSearchQuery}
-                    onChange={e => {
-                      const q = e.target.value;
-                      setNameSearchQuery(q);
-                      setErrorMessage('');
-                      const needle = q.trim().toLowerCase();
-                      if (needle.length >= 2) {
-                        const matches = courseStudents.filter(st =>
-                          st.name.toLowerCase().includes(needle)
-                        );
-                        if (matches.length === 1) {
-                          setSelectedStudentId(matches[0].id);
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 tq-text-muted absolute left-2.5 top-2.5" />
+                    <input
+                      type="text"
+                      value={nameSearchQuery}
+                      onChange={e => {
+                        const q = e.target.value;
+                        setNameSearchQuery(q);
+                        setErrorMessage('');
+                        const needle = q.trim().toLowerCase();
+                        if (needle.length >= 2) {
+                          const matches = courseStudents.filter(st =>
+                            st.name.toLowerCase().includes(needle)
+                          );
+                          if (matches.length === 1) {
+                            setSelectedStudentId(matches[0].id);
+                          }
                         }
-                      }
+                      }}
+                      placeholder="Filtrar nombre..."
+                      className="w-full pl-8 pr-2.5 py-2 text-xs border rounded-xl tq-input focus:outline-hidden"
+                    />
+                  </div>
+                  <select
+                    value={selectedStudentId}
+                    onChange={e => {
+                      setSelectedStudentId(e.target.value);
+                      setPin('');
+                      setErrorMessage('');
                     }}
-                    placeholder="Escribir nombre o apellido para filtrar..."
-                    className="w-full pl-8 pr-3 py-2 text-xs border rounded-xl tq-input focus:outline-hidden"
-                  />
+                    className="w-full text-xs font-bold border rounded-xl px-2.5 py-2 tq-input focus:outline-hidden"
+                  >
+                    <option value="">
+                      {filteredLocalStudents.length === 0
+                        ? '-- Sin coincidencias --'
+                        : '-- Elige tu nombre --'}
+                    </option>
+                    {filteredLocalStudents.map(st => (
+                      <option key={st.id} value={st.id}>
+                        {st.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 {cleanNameFilter.length >= 1 && (
                   <span className="text-[11px] tq-text-muted block">
                     {filteredLocalStudents.length === 1
-                      ? `1 coincidencia encontrada (${filteredLocalStudents[0].name})`
-                      : `${filteredLocalStudents.length} coincidencias — elige tu nombre abajo`}
+                      ? `1 coincidencia: ${filteredLocalStudents[0].name}`
+                      : `${filteredLocalStudents.length} coincidencias`}
                   </span>
                 )}
-                <select
-                  value={selectedStudentId}
-                  onChange={e => {
-                    setSelectedStudentId(e.target.value);
-                    setPin('');
-                    setErrorMessage('');
-                  }}
-                  className="w-full text-xs font-bold border rounded-xl p-3 tq-input focus:outline-hidden"
-                >
-                  <option value="">
-                    {filteredLocalStudents.length === 0
-                      ? '-- No se encontraron nombres con ese filtro --'
-                      : '-- Elige tu nombre de la lista --'}
-                  </option>
-                  {filteredLocalStudents.map(st => (
-                    <option key={st.id} value={st.id}>
-                      {st.name}
-                    </option>
-                  ))}
-                </select>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold tq-text-2 mb-1">
-                  3. Clave de Acceso (entregada por tu docente):
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPin ? 'text' : 'password'}
-                    inputMode="numeric"
-                    maxLength={16}
-                    value={pin}
-                    onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
-                    placeholder="••••"
-                    autoComplete="off"
-                    className="w-full text-center text-xl font-mono font-bold tracking-widest border rounded-xl p-3 pr-10 tq-input focus:outline-hidden"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPin(prev => !prev)}
-                    className="absolute right-3 top-3.5 tq-text-muted hover:tq-text p-0.5 cursor-pointer"
-                    title={showPin ? 'Ocultar clave' : 'Ver clave ingresada'}
-                  >
-                    {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-xs font-bold tq-text-2 mb-1">
+                    3. Clave / PIN:
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPin ? 'text' : 'password'}
+                      inputMode="numeric"
+                      maxLength={16}
+                      value={pin}
+                      onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
+                      placeholder="••••"
+                      autoComplete="off"
+                      className="w-full text-center text-base font-mono font-bold tracking-widest border rounded-xl py-2 pl-3 pr-9 tq-input focus:outline-hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPin(prev => !prev)}
+                      className="absolute right-2.5 top-2.5 tq-text-muted hover:tq-text p-0.5 cursor-pointer"
+                      title={showPin ? 'Ocultar clave' : 'Ver clave ingresada'}
+                    >
+                      {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
-                <span className="text-[11px] tq-text-muted mt-1 block">
-                  Ingresa tu clave numérica (sin espacios). Una vez dentro, podrás cambiarla por una clave personal.
-                </span>
-              </div>
 
-              <div>
-                <label className="flex items-center gap-1.5 text-xs font-bold tq-text-2 mb-1">
-                  <FileText className="w-3.5 h-3.5 tq-text-accent" />
-                  <span>4. Código de Evaluación (Opcional):</span>
-                </label>
-                <input
-                  type="text"
-                  value={quizDirectCode}
-                  onChange={e => setQuizDirectCode(e.target.value)}
-                  placeholder="Ej: QUIZ-701"
-                  className="w-full font-mono text-xs border rounded-xl p-2.5 tq-input uppercase focus:outline-hidden"
-                />
-                <span className="text-[11px] tq-text-muted mt-1 block">
-                  Si tu profesor(a) te dio un código directo de prueba, ingrésalo aquí para abrirla al instante.
-                </span>
+                <div>
+                  <label className="flex items-center gap-1 text-xs font-bold tq-text-2 mb-1">
+                    <FileText className="w-3.5 h-3.5 tq-text-accent shrink-0" />
+                    <span className="truncate">4. Cód. Prueba (Opcional):</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={quizDirectCode}
+                    onChange={e => setQuizDirectCode(e.target.value)}
+                    placeholder="Ej: QUIZ-701"
+                    className="w-full font-mono text-xs border rounded-xl px-3 py-2.5 tq-input uppercase focus:outline-hidden"
+                  />
+                </div>
               </div>
 
               <button
                 type="submit"
-                className="w-full py-3 tq-btn-gradient font-bold text-sm rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+                className="w-full py-2.5 tq-btn-gradient font-bold text-sm rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
                 <UserCheck className="w-4 h-4" />
                 <span>Entrar a Mis Evaluaciones</span>
@@ -479,7 +477,7 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
             </form>
           )
         ) : (
-          <form onSubmit={handleCloudListLogin} className="space-y-4">
+          <form onSubmit={handleCloudListLogin} className="space-y-2.5">
             <div>
               <div className="flex items-center justify-between gap-2 mb-1">
                 <label className="text-xs font-bold tq-text-2">
@@ -492,165 +490,154 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
                   className="text-[11px] font-bold tq-text-accent hover:opacity-80 flex items-center gap-1 cursor-pointer disabled:opacity-50"
                 >
                   <RefreshCw className={`w-3 h-3 ${isLoadingCourses ? 'animate-spin' : ''}`} />
-                  <span>{isLoadingCourses ? 'Actualizando...' : 'Actualizar cursos'}</span>
+                  <span>{isLoadingCourses ? 'Actualizando...' : 'Actualizar'}</span>
                 </button>
               </div>
 
               {isLoadingCourses && availableDirectories.length === 0 ? (
-                <div className="p-3 tq-subtle border tq-border rounded-xl text-xs tq-text-muted text-center">
+                <div className="p-2.5 tq-subtle border tq-border rounded-xl text-xs tq-text-muted text-center">
                   Cargando listas de cursos disponibles...
                 </div>
               ) : availableDirectories.length === 0 ? (
-                <div className="p-3.5 tq-subtle border tq-border rounded-xl text-xs tq-text-muted text-center space-y-1">
+                <div className="p-3 tq-subtle border tq-border rounded-xl text-xs tq-text-muted text-center space-y-0.5">
                   <p className="font-bold tq-text">No hay listas de curso disponibles aún</p>
                   <p className="text-[11px]">
                     Pídele a tu profesor(a) que cargue la lista de tu curso desde su Panel Profesor.
                   </p>
                 </div>
               ) : (
-                <div className="space-y-1.5">
-                  <select
-                    value={selectedJoinCode}
-                    onChange={e => {
-                      setSelectedJoinCode(e.target.value);
-                      setSelectedAccessCodeFromDir('');
-                      setNameSearchQuery('');
-                      setPin('');
-                      setErrorMessage('');
-                    }}
-                    className="w-full text-xs font-bold border rounded-xl p-3 tq-input focus:outline-hidden"
-                  >
-                    <option value="">-- Elige tu curso de la lista --</option>
-                    {availableDirectories.map(dir => (
-                      <option key={dir.joinCode} value={dir.joinCode}>
-                        {dir.courseSection} · Prof. {dir.teacherName} ({dir.studentsPreview.length} al.)
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-[11px] tq-text-muted leading-snug">
-                    Solo aparecen los cursos cuya lista ya fue cargada en la nube por un docente desde «Panel Profesor → Lista de curso (1° a 8°)».
-                  </p>
-                </div>
+                <select
+                  value={selectedJoinCode}
+                  onChange={e => {
+                    setSelectedJoinCode(e.target.value);
+                    setSelectedAccessCodeFromDir('');
+                    setNameSearchQuery('');
+                    setPin('');
+                    setErrorMessage('');
+                  }}
+                  className="w-full text-xs font-bold border rounded-xl px-3 py-2 tq-input focus:outline-hidden"
+                >
+                  <option value="">-- Elige tu curso de la lista --</option>
+                  {availableDirectories.map(dir => (
+                    <option key={dir.joinCode} value={dir.joinCode}>
+                      {dir.courseSection} · Prof. {dir.teacherName} ({dir.studentsPreview.length} al.)
+                    </option>
+                  ))}
+                </select>
               )}
             </div>
 
             {activeCloudDirectory && (
               <>
-                <div className="p-2.5 tq-tint border rounded-xl flex items-center justify-between text-xs">
-                  <span className="font-bold tq-text">
-                    {activeCloudDirectory.courseSection} · Prof. {activeCloudDirectory.teacherName}
-                  </span>
-                  <span className="text-[10px] tq-text-muted font-mono">
-                    {activeCloudDirectory.studentsPreview.length} al.
-                  </span>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-xs font-bold tq-text-2">
-                    2. Busca y selecciona tu Nombre:
-                  </label>
-                  <div className="relative">
-                    <Search className="w-3.5 h-3.5 tq-text-muted absolute left-3 top-2.5" />
-                    <input
-                      type="text"
-                      value={nameSearchQuery}
-                      onChange={e => {
-                        const q = e.target.value;
-                        setNameSearchQuery(q);
-                        setErrorMessage('');
-                        const needle = q.trim().toLowerCase();
-                        if (needle.length >= 2) {
-                          const matches = (activeCloudDirectory.studentsPreview || []).filter(st =>
-                            st.name.toLowerCase().includes(needle)
-                          );
-                          if (matches.length === 1) {
-                            setSelectedAccessCodeFromDir(matches[0].accessCode);
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-xs font-bold tq-text-2">
+                      2. Busca y selecciona tu Nombre:
+                    </label>
+                    <span className="text-[10px] tq-text-muted font-mono">
+                      {activeCloudDirectory.studentsPreview.length} alumnos
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 tq-text-muted absolute left-2.5 top-2.5" />
+                      <input
+                        type="text"
+                        value={nameSearchQuery}
+                        onChange={e => {
+                          const q = e.target.value;
+                          setNameSearchQuery(q);
+                          setErrorMessage('');
+                          const needle = q.trim().toLowerCase();
+                          if (needle.length >= 2) {
+                            const matches = (activeCloudDirectory.studentsPreview || []).filter(st =>
+                              st.name.toLowerCase().includes(needle)
+                            );
+                            if (matches.length === 1) {
+                              setSelectedAccessCodeFromDir(matches[0].accessCode);
+                            }
                           }
-                        }
+                        }}
+                        placeholder="Filtrar nombre..."
+                        className="w-full pl-8 pr-2.5 py-2 text-xs border rounded-xl tq-input focus:outline-hidden"
+                      />
+                    </div>
+                    <select
+                      value={selectedAccessCodeFromDir}
+                      onChange={e => {
+                        setSelectedAccessCodeFromDir(e.target.value);
+                        setPin('');
+                        setErrorMessage('');
                       }}
-                      placeholder="Escribir nombre o apellido para filtrar..."
-                      className="w-full pl-8 pr-3 py-2 text-xs border rounded-xl tq-input focus:outline-hidden"
-                    />
+                      className="w-full text-xs font-bold border rounded-xl px-2.5 py-2 tq-input focus:outline-hidden"
+                    >
+                      <option value="">
+                        {filteredCloudStudents.length === 0
+                          ? '-- Sin coincidencias --'
+                          : '-- Elige tu nombre --'}
+                      </option>
+                      {filteredCloudStudents.map(st => (
+                        <option key={st.studentId} value={st.accessCode}>
+                          {st.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   {cleanNameFilter.length >= 1 && (
                     <span className="text-[11px] tq-text-muted block">
                       {filteredCloudStudents.length === 1
-                        ? `1 coincidencia encontrada (${filteredCloudStudents[0].name})`
-                        : `${filteredCloudStudents.length} coincidencias — elige tu nombre abajo`}
+                        ? `1 coincidencia: ${filteredCloudStudents[0].name}`
+                        : `${filteredCloudStudents.length} coincidencias`}
                     </span>
                   )}
-                  <select
-                    value={selectedAccessCodeFromDir}
-                    onChange={e => {
-                      setSelectedAccessCodeFromDir(e.target.value);
-                      setPin('');
-                      setErrorMessage('');
-                    }}
-                    className="w-full text-xs font-bold border rounded-xl p-3 tq-input focus:outline-hidden"
-                  >
-                    <option value="">
-                      {filteredCloudStudents.length === 0
-                        ? '-- No se encontraron nombres con ese filtro --'
-                        : '-- Elige tu nombre de la lista --'}
-                    </option>
-                    {filteredCloudStudents.map(st => (
-                      <option key={st.studentId} value={st.accessCode}>
-                        {st.name}
-                      </option>
-                    ))}
-                  </select>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold tq-text-2 mb-1">
-                    3. Clave de Acceso (entregada por tu docente):
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPin ? 'text' : 'password'}
-                      inputMode="numeric"
-                      maxLength={16}
-                      value={pin}
-                      onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
-                      placeholder="••••"
-                      autoComplete="off"
-                      className="w-full text-center text-xl font-mono font-bold tracking-widest border rounded-xl p-3 pr-10 tq-input focus:outline-hidden"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPin(prev => !prev)}
-                      className="absolute right-3 top-3.5 tq-text-muted hover:tq-text p-0.5 cursor-pointer"
-                      title={showPin ? 'Ocultar clave' : 'Ver clave ingresada'}
-                    >
-                      {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-xs font-bold tq-text-2 mb-1">
+                      3. Clave / PIN:
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPin ? 'text' : 'password'}
+                        inputMode="numeric"
+                        maxLength={16}
+                        value={pin}
+                        onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
+                        placeholder="••••"
+                        autoComplete="off"
+                        className="w-full text-center text-base font-mono font-bold tracking-widest border rounded-xl py-2 pl-3 pr-9 tq-input focus:outline-hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPin(prev => !prev)}
+                        className="absolute right-2.5 top-2.5 tq-text-muted hover:tq-text p-0.5 cursor-pointer"
+                        title={showPin ? 'Ocultar clave' : 'Ver clave ingresada'}
+                      >
+                        {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
-                  <span className="text-[11px] tq-text-muted mt-1 block">
-                    Ingresa tu clave numérica (sin espacios). Una vez dentro, podrás cambiarla por una clave personal.
-                  </span>
-                </div>
 
-                <div>
-                  <label className="flex items-center gap-1.5 text-xs font-bold tq-text-2 mb-1">
-                    <FileText className="w-3.5 h-3.5 tq-text-accent" />
-                    <span>4. Código de Evaluación (Opcional):</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={quizDirectCode}
-                    onChange={e => setQuizDirectCode(e.target.value)}
-                    placeholder="Ej: QUIZ-701"
-                    className="w-full font-mono text-xs border rounded-xl p-2.5 tq-input uppercase focus:outline-hidden"
-                  />
-                  <span className="text-[11px] tq-text-muted mt-1 block">
-                    Si tu profesor(a) te dio un código directo de prueba, ingrésalo aquí para abrirla al instante.
-                  </span>
+                  <div>
+                    <label className="flex items-center gap-1 text-xs font-bold tq-text-2 mb-1">
+                      <FileText className="w-3.5 h-3.5 tq-text-accent shrink-0" />
+                      <span className="truncate">4. Cód. Prueba (Opcional):</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={quizDirectCode}
+                      onChange={e => setQuizDirectCode(e.target.value)}
+                      placeholder="Ej: QUIZ-701"
+                      className="w-full font-mono text-xs border rounded-xl px-3 py-2.5 tq-input uppercase focus:outline-hidden"
+                    />
+                  </div>
                 </div>
 
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full py-3 tq-btn-gradient disabled:opacity-50 font-bold text-sm rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  className="w-full py-2.5 tq-btn-gradient disabled:opacity-50 font-bold text-sm rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
                 >
                   <UserCheck className="w-4 h-4" />
                   <span>{isSubmitting ? 'Verificando...' : 'Entrar a Mis Evaluaciones'}</span>
@@ -661,51 +648,41 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
         )
       )}
 
-      {/* Subtle Local Demo Toggle for single-device offline testing */}
-      <div className="mt-4 text-center">
-        <button
-          type="button"
-          onClick={() => {
-            setUseLocalFallback(prev => !prev);
-            setErrorMessage('');
-          }}
-          className="text-[11px] tq-text-muted hover:tq-text underline cursor-pointer"
-        >
-          {useLocalFallback
-            ? 'Volver al acceso en la nube'
-            : 'Usar en modo demo local (sin nube ni sincronización)'}
-        </button>
-      </div>
-
-      {/* Theme Palette Configurator right from Student Entry */}
-      <div className="mt-5">
+      {/* Subtle Local Demo Toggle + Theme Palette + Bottom Links */}
+      <div className="mt-3 pt-2.5 border-t tq-border space-y-2.5">
         <ThemePaletteSelector
-          variant="compact"
-          title="Paleta de colores"
-          subtitle="Puedes mantener la paleta estándar o elegir otra desde tu ingreso."
+          variant="inline-bar"
+          title="Paleta"
         />
-      </div>
 
-      {/* Open Free Practice CTA (No login needed) */}
-      <div className="mt-5 pt-4 border-t tq-border space-y-3">
-        <button
-          type="button"
-          onClick={() => setRole('practice')}
-          className="w-full py-2.5 px-4 tq-tint border rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
-        >
-          <PlayCircle className="w-4 h-4 tq-text-accent" />
-          <span className="tq-text">¿Solo quieres ejercitar sin iniciar sesión? Ir a Práctica Libre</span>
-        </button>
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
+          <button
+            type="button"
+            onClick={() => setRole('practice')}
+            className="px-3 py-1.5 tq-tint border rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <PlayCircle className="w-3.5 h-3.5 tq-text-accent" />
+            <span className="tq-text">Práctica Libre (sin sesión)</span>
+          </button>
 
-        {/* Teacher switch link */}
-        <div className="text-center">
           <button
             type="button"
             onClick={() => setRole('teacher')}
-            className="text-xs font-bold tq-text-accent hover:opacity-80 transition-opacity inline-flex items-center gap-1.5 cursor-pointer"
+            className="text-[11px] font-bold tq-text-accent hover:opacity-80 transition-opacity inline-flex items-center gap-1 cursor-pointer"
           >
             <UserCheck className="w-3.5 h-3.5" />
-            <span>¿Eres docente? Ir al Acceso de Profesores</span>
+            <span>Acceso Docentes</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setUseLocalFallback(prev => !prev);
+              setErrorMessage('');
+            }}
+            className="text-[11px] tq-text-muted hover:tq-text underline cursor-pointer"
+          >
+            {useLocalFallback ? 'Volver a Nube' : 'Modo demo local'}
           </button>
         </div>
       </div>

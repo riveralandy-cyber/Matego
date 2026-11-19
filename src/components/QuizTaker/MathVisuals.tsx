@@ -14,7 +14,7 @@ export const MathVisuals: React.FC<MathVisualsProps> = ({ visualType, visualData
     const items = Array.from({ length: denominator }, (_, i) => i < numerator);
 
     return (
-      <div className="my-4 flex flex-col items-center">
+      <div className="my-2 flex flex-col items-center">
         <div className="flex border-2 border-slate-700 bg-white rounded overflow-hidden max-w-sm w-full h-12 shadow-sm">
           {items.map((isFilled, idx) => (
             <div
@@ -40,7 +40,7 @@ export const MathVisuals: React.FC<MathVisualsProps> = ({ visualType, visualData
     const displayCols = Math.min(cols, 10);
 
     return (
-      <div className="my-4 flex flex-col items-center">
+      <div className="my-2 flex flex-col items-center">
         <div className="inline-block p-3 bg-slate-50 dark:bg-slate-100 border tq-border rounded-lg">
           <div
             className="grid gap-1.5"
@@ -67,10 +67,10 @@ export const MathVisuals: React.FC<MathVisualsProps> = ({ visualType, visualData
     const { shape, width, height, radius, legA, legB, unit = 'cm' } = visualData;
 
     return (
-      <div className="my-4 flex flex-col items-center">
+      <div className="my-2 flex flex-col items-center">
         <svg
           viewBox="0 0 240 140"
-          className="w-64 h-36 border border-slate-200 bg-slate-50 rounded-lg shadow-xs"
+          className="w-56 sm:w-64 h-28 sm:h-32 border border-slate-200 bg-slate-50 rounded-lg shadow-xs"
         >
           {shape === 'cuadrado' && (
             <g>
@@ -122,7 +122,7 @@ export const MathVisuals: React.FC<MathVisualsProps> = ({ visualType, visualData
   if (visualType === 'number_line') {
     const { start = 0, end = 20, numbers, missing } = visualData;
     return (
-      <div className="my-4 flex flex-col items-center w-full max-w-md">
+      <div className="my-2 flex flex-col items-center w-full max-w-md">
         <svg viewBox="0 0 320 60" className="w-full h-16 bg-slate-50 border border-slate-200 rounded-lg p-2">
           {/* Main axis line with arrows */}
           <line x1="20" y1="35" x2="300" y2="35" stroke="#334155" strokeWidth="2.5" />
@@ -184,8 +184,8 @@ export const MathVisuals: React.FC<MathVisualsProps> = ({ visualType, visualData
           : 'Balanza en equilibrio (=)';
 
     return (
-      <div className="my-4 flex flex-col items-center">
-        <svg viewBox="0 0 280 125" className="w-72 h-32 bg-slate-50 border border-slate-200 rounded-lg">
+      <div className="my-2 flex flex-col items-center">
+        <svg viewBox="0 0 280 125" className="w-64 sm:w-72 h-28 bg-slate-50 border border-slate-200 rounded-lg">
           {/* Base & Pivot Stand */}
           <polygon points="140,80 120,112 160,112" fill="#64748b" />
           <line x1="140" y1="45" x2="140" y2="82" stroke="#64748b" strokeWidth="3.5" />
@@ -222,12 +222,12 @@ export const MathVisuals: React.FC<MathVisualsProps> = ({ visualType, visualData
     const barColors = ['#0284c7', '#4f46e5', '#0d9488', '#d97706', '#e11d48'];
 
     return (
-      <div className="my-4 flex flex-col items-center w-full">
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 w-full max-w-md shadow-xs text-slate-900">
-          <div className="text-xs font-bold text-center text-slate-800 mb-3">
+      <div className="my-2 flex flex-col items-center w-full">
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 sm:p-3 w-full max-w-md shadow-xs text-slate-900">
+          <div className="text-xs font-bold text-center text-slate-800 mb-1.5">
             {title} {unit ? `(${unit})` : ''}
           </div>
-          <svg viewBox="0 0 320 155" className="w-full h-40">
+          <svg viewBox="0 0 320 155" className="w-full h-32 sm:h-36">
             {/* Horizontal grid lines */}
             {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
               const y = 120 - ratio * 95;
@@ -298,7 +298,7 @@ export const MathVisuals: React.FC<MathVisualsProps> = ({ visualType, visualData
       rows: string[][];
     };
     return (
-      <div className="my-4 flex flex-col items-center w-full">
+      <div className="my-2 flex flex-col items-center w-full">
         <div className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden shadow-xs max-w-md w-full text-slate-900">
           {title && (
             <div className="bg-slate-200/70 px-3 py-1.5 text-xs font-bold text-slate-800 text-center border-b border-slate-200">
@@ -342,7 +342,7 @@ export const MathVisuals: React.FC<MathVisualsProps> = ({ visualType, visualData
   if (visualType === 'angle_figure') {
     const { kind, degrees = 143, label, a = 52, b = 68, acute = 65 } = visualData;
     return (
-      <div className="my-4 flex flex-col items-center">
+      <div className="my-2 flex flex-col items-center">
         <svg viewBox="0 0 280 140" className="w-72 h-36 bg-slate-50 border border-slate-200 rounded-xl shadow-xs">
           {kind === 'angle_arc' && (
             <g>
@@ -395,7 +395,7 @@ export const MathVisuals: React.FC<MathVisualsProps> = ({ visualType, visualData
   if (visualType === 'cube_prism') {
     const { kind = 'prism', length = 5, width = 4, height = 3, radius = 3, unit = 'cm' } = visualData;
     return (
-      <div className="my-4 flex flex-col items-center">
+      <div className="my-2 flex flex-col items-center">
         <svg viewBox="0 0 260 140" className="w-64 h-36 bg-slate-50 border border-slate-200 rounded-xl shadow-xs">
           {kind === 'cylinder' ? (
             <g>

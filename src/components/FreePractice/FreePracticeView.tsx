@@ -422,47 +422,47 @@ export const FreePracticeView: React.FC<FreePracticeViewProps> = ({ onStartPract
   ];
 
   return (
-    <div className="max-w-[1320px] mx-auto py-4 md:py-6 space-y-6 font-sans">
+    <div className="max-w-[1320px] mx-auto py-1 sm:py-2 space-y-3.5 font-sans min-w-0">
       {/* Header Banner */}
-      <div className="tq-card border rounded-2xl p-6 shadow-2xs space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-xs font-medium tq-text-accent">
-              <Sparkles className="w-3.5 h-3.5" />
+      <div className="tq-card border rounded-2xl p-3.5 sm:p-4 shadow-2xs space-y-2.5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+          <div className="space-y-0.5 min-w-0">
+            <div className="flex items-center gap-1.5 text-[11px] font-medium tq-text-accent">
+              <Sparkles className="w-3.5 h-3.5 shrink-0" />
               <span>Acceso Abierto · Sin inicio de sesión ni registro de notas</span>
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight tq-text">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight tq-text leading-tight">
               Práctica Libre MateClic
             </h1>
-            <p className="text-sm tq-text-2 max-w-2xl">
-              Elige cualquier contenido matemático de 1° a 8° Básico, ajusta el largo, el nivel y el tiempo, ejercita libremente y obtén tu nota inmediata para seguir practicando.
+            <p className="text-xs tq-text-2 max-w-2xl">
+              Elige cualquier contenido matemático de 1° a 8° Básico, ajusta largo, dificultad y tiempo para ejercitar libremente.
             </p>
           </div>
 
-          <div className="flex items-center gap-4 text-xs tq-text-2 shrink-0 border-t md:border-t-0 pt-3 md:pt-0 tq-border">
+          <div className="flex items-center gap-3 text-xs tq-text-2 shrink-0 border-t md:border-t-0 pt-2 md:pt-0 tq-border">
             <div>
-              <span className="block tq-text-muted">Escala de nota</span>
+              <span className="block text-[11px] tq-text-muted">Escala de nota</span>
               <strong className="tq-text font-mono tabular-nums">1.0 a 7.0 (60%)</strong>
             </div>
             <span className="tq-text-muted opacity-40" aria-hidden="true">|</span>
             <div>
-              <span className="block tq-text-muted">Cobertura curricular</span>
+              <span className="block text-[11px] tq-text-muted">Cobertura</span>
               <strong className="tq-text tabular-nums">{MINEDUC_OBJECTIVES.length} OAs MINEDUC</strong>
             </div>
           </div>
         </div>
 
         {/* Palette switcher right on Free Practice entry */}
-        <div className="pt-3 border-t tq-border">
-          <ThemePaletteSelector variant="inline-bar" title="Paleta de colores" />
+        <div className="pt-2 border-t tq-border">
+          <ThemePaletteSelector variant="inline-bar" title="Paleta" />
         </div>
       </div>
 
       {/* Main Two-Zone Sandbox Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start min-w-0">
         {/* Left Zone (8 cols): Topic / OA Picker */}
-        <section className="lg:col-span-8 tq-card border rounded-2xl p-5 md:p-6 shadow-2xs space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b tq-border pb-4">
+        <section className="lg:col-span-8 tq-card border rounded-2xl p-3.5 sm:p-4 shadow-2xs space-y-3.5 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b tq-border pb-3">
             <div>
               <h2 className="text-base font-bold tq-text">
                 1. Selecciona el contenido que quieres ejercitar
@@ -600,17 +600,17 @@ export const FreePracticeView: React.FC<FreePracticeViewProps> = ({ onStartPract
               </div>
             </div>
           ) : browseTab === 'topics' ? (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {categorySections.map(cat => {
                 const items = QUICK_TOPICS.filter(t => t.category === cat.key);
                 return (
-                  <div key={cat.key} className="space-y-2.5">
+                  <div key={cat.key} className="space-y-2">
                     <div className="flex items-center gap-2 text-xs font-bold tq-text-2">
                       {cat.icon}
                       <span>{cat.title}</span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
                       {items.map(topic => {
                         const isSelected =
                           selectedGrade === topic.grade && selectedOACode === topic.oaCode;
@@ -619,7 +619,7 @@ export const FreePracticeView: React.FC<FreePracticeViewProps> = ({ onStartPract
                             key={topic.id}
                             type="button"
                             onClick={() => handleSelectQuickTopic(topic)}
-                            className={`text-left p-3.5 rounded-xl border transition-all cursor-pointer flex items-start justify-between gap-2 ${
+                            className={`text-left p-2.5 rounded-xl border transition-all cursor-pointer flex items-start justify-between gap-2 ${
                               isSelected
                                 ? 'tq-tint border-[var(--tq-accent)] ring-1 ring-[var(--tq-accent)]/30'
                                 : 'tq-subtle border-[var(--tq-border)] hover:border-[var(--tq-border-strong)] hover:bg-[var(--tq-card-bg)]'
@@ -629,7 +629,7 @@ export const FreePracticeView: React.FC<FreePracticeViewProps> = ({ onStartPract
                               <div className={`text-xs font-bold leading-snug ${isSelected ? 'tq-text-accent' : 'tq-text'}`}>
                                 {topic.label}
                               </div>
-                              <div className="text-[11px] tq-text-muted mt-1">
+                              <div className="text-[11px] tq-text-muted mt-0.5">
                                 {topic.subtitle}
                               </div>
                             </div>
@@ -708,7 +708,7 @@ export const FreePracticeView: React.FC<FreePracticeViewProps> = ({ onStartPract
               </div>
 
               {/* OA List */}
-              <div className="space-y-2 max-h-[430px] overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1">
                 {filteredObjectives.map(oa => {
                   const isSelected = activeOA.code === oa.code && activeOA.grade === oa.grade;
                   return (
@@ -747,43 +747,43 @@ export const FreePracticeView: React.FC<FreePracticeViewProps> = ({ onStartPract
         </section>
 
         {/* Right Zone (4 cols): ThatQuiz Practice Configurator */}
-        <aside className="lg:col-span-4 tq-card border rounded-2xl p-5 md:p-6 shadow-2xs space-y-5 lg:sticky lg:top-20">
-          <div className="flex items-center gap-2 border-b tq-border pb-3">
+        <aside className="lg:col-span-4 tq-card border rounded-2xl p-3.5 sm:p-4 shadow-2xs space-y-3 lg:sticky lg:top-16 min-w-0">
+          <div className="flex items-center gap-2 border-b tq-border pb-2">
             <SlidersHorizontal className="w-4 h-4 tq-text-accent" />
-            <h2 className="text-base font-bold tq-text">
+            <h2 className="text-sm font-bold tq-text">
               2. Configura tu Práctica
             </h2>
           </div>
 
           {/* Selected Content Summary */}
-          <div className="p-3.5 rounded-xl tq-subtle border space-y-1">
+          <div className="p-2.5 rounded-xl tq-subtle border space-y-0.5">
             {browseTab === 'simce' ? (
               <>
-                <div className="flex flex-wrap items-center gap-1.5 text-xs tq-text-accent font-semibold">
+                <div className="flex flex-wrap items-center gap-1.5 text-[11px] tq-text-accent font-semibold">
                   <span>{formatGradeLevelName(simceGrade)}</span>
                   <span aria-hidden="true">·</span>
-                  <span className="font-mono">Formato SIMCE A/B/C/D</span>
+                  <span className="font-mono">SIMCE A/B/C/D</span>
                 </div>
-                <div className="text-sm font-bold tq-text leading-snug">
+                <div className="text-xs font-bold tq-text leading-snug">
                   {simceAxis === 'all' ? 'Ensayo Integral SIMCE (Todos los ejes)' : `SIMCE · ${formatAxisName(simceAxis)}`}
                 </div>
-                <p className="text-xs tq-text-2">
-                  Preguntas estandarizadas con puntaje simulado (escala 150–350 pts) y nota chilena al finalizar.
+                <p className="text-[11px] tq-text-2 line-clamp-2">
+                  Preguntas estandarizadas con puntaje simulado (150–350 pts) y nota chilena.
                 </p>
               </>
             ) : (
               <>
-                <div className="flex flex-wrap items-center gap-1.5 text-xs tq-text-accent font-semibold">
+                <div className="flex flex-wrap items-center gap-1.5 text-[11px] tq-text-accent font-semibold">
                   <span>{formatGradeLevelName(activeOA.grade)}</span>
                   <span aria-hidden="true">·</span>
                   <span className="font-mono">{activeOA.code}</span>
                   <span aria-hidden="true">·</span>
                   <span className="tq-text-2">{formatAxisName(activeOA.axis)}</span>
                 </div>
-                <div className="text-sm font-bold tq-text leading-snug">
+                <div className="text-xs font-bold tq-text leading-snug">
                   {activeOA.title}
                 </div>
-                <p className="text-xs tq-text-2 line-clamp-3">
+                <p className="text-[11px] tq-text-2 line-clamp-2">
                   {activeOA.description}
                 </p>
               </>
@@ -791,11 +791,11 @@ export const FreePracticeView: React.FC<FreePracticeViewProps> = ({ onStartPract
           </div>
 
           {/* Largo (Cantidad de ejercicios) */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs">
               <label className="font-bold tq-text flex items-center gap-1.5">
                 <BookOpen className="w-3.5 h-3.5 tq-text-muted" />
-                <span>Largo (Cantidad de ejercicios)</span>
+                <span>Largo</span>
               </label>
               <span className="font-mono font-bold tq-text-accent tabular-nums">
                 {browseTab === 'simce' ? Math.min(lengthCount, simcePool.length) : lengthCount} preguntas
@@ -813,7 +813,7 @@ export const FreePracticeView: React.FC<FreePracticeViewProps> = ({ onStartPract
                     type="button"
                     disabled={disabled}
                     onClick={() => setLengthCount(num)}
-                    className={`py-2.5 rounded-xl border font-mono text-xs font-bold tabular-nums transition-colors cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed ${
+                    className={`py-1.5 rounded-lg border font-mono text-xs font-bold tabular-nums transition-colors cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed ${
                       active
                         ? 'tq-btn-primary border-[var(--tq-accent)] shadow-2xs'
                         : 'tq-subtle tq-text-2 hover:bg-[var(--tq-card-bg)] hover:border-[var(--tq-border-strong)]'
@@ -827,13 +827,13 @@ export const FreePracticeView: React.FC<FreePracticeViewProps> = ({ onStartPract
           </div>
 
           {/* Nivel de Dificultad */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <label className="text-xs font-bold tq-text flex items-center gap-1.5">
               <BarChart3 className="w-3.5 h-3.5 tq-text-muted" />
               <span>Nivel de dificultad</span>
             </label>
 
-            <div className="grid grid-cols-1 gap-1.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
               {DIFFICULTY_OPTIONS.map(opt => {
                 const active = difficulty === opt.id;
                 return (
@@ -841,17 +841,18 @@ export const FreePracticeView: React.FC<FreePracticeViewProps> = ({ onStartPract
                     key={opt.id}
                     type="button"
                     onClick={() => setDifficulty(opt.id)}
-                    className={`w-full text-left px-3.5 py-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                    className={`w-full text-left px-2.5 py-1.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-1.5 ${
                       active
                         ? 'tq-tint border-[var(--tq-accent)] tq-text'
                         : 'tq-subtle border-[var(--tq-border)] tq-text-2 hover:bg-[var(--tq-card-bg)] hover:border-[var(--tq-border-strong)]'
                     }`}
+                    title={opt.desc}
                   >
-                    <div>
-                      <div className="text-xs font-bold">{opt.label}</div>
-                      <div className="text-[11px] tq-text-muted">{opt.desc}</div>
+                    <div className="min-w-0">
+                      <div className="text-[11px] font-bold truncate">{opt.label}</div>
+                      <div className="text-[10px] tq-text-muted truncate">{opt.desc}</div>
                     </div>
-                    {active && <Check className="w-4 h-4 tq-text-accent shrink-0" />}
+                    {active && <Check className="w-3.5 h-3.5 tq-text-accent shrink-0" />}
                   </button>
                 );
               })}
@@ -859,7 +860,7 @@ export const FreePracticeView: React.FC<FreePracticeViewProps> = ({ onStartPract
           </div>
 
           {/* Duración / Tiempo */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs">
               <label className="font-bold tq-text flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5 tq-text-muted" />
@@ -878,7 +879,7 @@ export const FreePracticeView: React.FC<FreePracticeViewProps> = ({ onStartPract
                     key={opt.minutes}
                     type="button"
                     onClick={() => setTimeLimitMinutes(opt.minutes)}
-                    className={`py-2 px-1 rounded-xl border text-[11px] font-bold transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                    className={`py-1.5 px-1 rounded-lg border text-[11px] font-bold transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                       active
                         ? 'tq-btn-primary border-[var(--tq-accent)]'
                         : 'tq-subtle tq-text-2 hover:bg-[var(--tq-card-bg)] hover:border-[var(--tq-border-strong)]'
@@ -892,11 +893,11 @@ export const FreePracticeView: React.FC<FreePracticeViewProps> = ({ onStartPract
           </div>
 
           {/* Start CTA */}
-          <div className="pt-2 border-t tq-border space-y-2.5">
+          <div className="pt-2 border-t tq-border space-y-1.5">
             <button
               type="button"
               onClick={handleStart}
-              className="w-full py-3.5 px-5 tq-btn-primary font-bold text-sm rounded-xl shadow-xs flex items-center justify-center gap-2 transition-colors cursor-pointer whitespace-nowrap"
+              className="w-full py-2.5 px-4 tq-btn-primary font-bold text-xs sm:text-sm rounded-xl shadow-xs flex items-center justify-center gap-2 transition-colors cursor-pointer whitespace-nowrap"
             >
               <Play className="w-4 h-4 fill-current" />
               <span>
@@ -906,8 +907,8 @@ export const FreePracticeView: React.FC<FreePracticeViewProps> = ({ onStartPract
               </span>
             </button>
 
-            <p className="text-[11px] tq-text-muted text-center leading-relaxed">
-              Al terminar verás tu nota (1.0 a 7.0) y la corrección paso a paso. No se guarda ningún registro.
+            <p className="text-[11px] tq-text-muted text-center leading-snug">
+              Nota inmediata (1.0 a 7.0) y corrección paso a paso.
             </p>
           </div>
         </aside>

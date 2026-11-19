@@ -95,11 +95,11 @@ export const ThatQuizGradeMatrix: React.FC<ThatQuizGradeMatrixProps> = ({ onSele
       apellido = '';
     }
 
-    // Student's grades map
+    // Student's grades map (preserve the earliest/first completed official attempt)
     const studentAttempts = teacherAttempts.filter(a => a.studentId === st.id);
     const gradesByQuizId: Record<string, number> = {};
     const attemptIdsByQuizId: Record<string, string[]> = {};
-    studentAttempts.forEach(att => {
+    [...studentAttempts].reverse().forEach(att => {
       if (gradesByQuizId[att.quizId] === undefined) {
         gradesByQuizId[att.quizId] = att.chileanGrade;
       }
@@ -228,11 +228,11 @@ export const ThatQuizGradeMatrix: React.FC<ThatQuizGradeMatrixProps> = ({ onSele
   };
 
   return (
-    <div className="space-y-4 font-sans">
+    <div className="space-y-3.5 font-sans min-w-0">
       {/* Main Container */}
-      <div className="tq-card p-5 sm:p-6 rounded-2xl border shadow-sm tq-text">
+      <div className="tq-card p-3.5 sm:p-4 rounded-2xl border shadow-sm tq-text min-w-0">
         {/* Top ThatQuiz Header Controls Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b tq-border">
+        <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b tq-border">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2 tq-subtle px-3 py-1.5 rounded-xl border">
               <span className="font-bold text-xs tq-text-2">Período:</span>
@@ -688,7 +688,7 @@ export const ThatQuizGradeMatrix: React.FC<ThatQuizGradeMatrixProps> = ({ onSele
                 </h3>
                 <span className="text-xs tq-text-muted font-mono">
                   {selectedStudentDetail.rut ? `RUN: ${selectedStudentDetail.rut} · ` : ''}
-                  Código: {selectedStudentDetail.accessCode} · PIN: {selectedStudentDetail.pin}
+                  PIN: {selectedStudentDetail.pin}
                 </span>
               </div>
               <button

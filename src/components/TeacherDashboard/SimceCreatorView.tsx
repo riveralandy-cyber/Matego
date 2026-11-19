@@ -235,25 +235,25 @@ export const SimceCreatorView: React.FC = () => {
   const currentQ = questions[activePreviewIndex];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3.5 min-w-0">
       {/* Top Header & Level Switcher (4°, 6°, 8°) */}
-      <div className="tq-card border rounded-xl p-5 shadow-xs space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-xs font-bold tq-text-accent">
-              <Award className="w-4 h-4" />
-              <span>Banco Oficial SIMCE Chile · Preguntas Liberadas y Cuadernillos Estandarizados</span>
+      <div className="tq-card border rounded-xl p-3.5 sm:p-4 shadow-xs space-y-2.5">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="space-y-0.5 min-w-0">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold tq-text-accent">
+              <Award className="w-3.5 h-3.5 shrink-0" />
+              <span>Banco Oficial SIMCE Chile · Preguntas Liberadas</span>
             </div>
-            <h1 className="text-xl font-bold tq-text">
+            <h1 className="text-lg font-bold tq-text leading-tight">
               Sección Especial SIMCE · 4°, 6° y 8° Básico
             </h1>
             <p className="text-xs tq-text-muted max-w-2xl">
-              Crea evaluaciones en formato oficial SIMCE (selección múltiple A, B, C, D) con ítems reales de la Agencia de Calidad y ensayos chilenos para asignar a tus cursos o ejercitar en conjunto.
+              Crea evaluaciones formato SIMCE (A, B, C, D) con ítems reales para asignar a tus cursos o proyectar en clases.
             </p>
           </div>
 
           {/* 3 SIMCE Grade Buttons */}
-          <div className="flex items-center gap-1.5 p-1 tq-muted rounded-xl shrink-0">
+          <div className="flex items-center gap-1 p-1 tq-muted rounded-xl shrink-0">
             {SIMCE_GRADES.map(g => {
               const active = simceGrade === g.id;
               return (
@@ -261,7 +261,7 @@ export const SimceCreatorView: React.FC = () => {
                   key={g.id}
                   type="button"
                   onClick={() => setSimceGrade(g.id)}
-                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap shrink-0 cursor-pointer ${
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap shrink-0 cursor-pointer ${
                     active
                       ? 'tq-btn-primary shadow-2xs'
                       : 'tq-text-2 hover:tq-text hover:bg-[var(--tq-card-bg)]'
@@ -275,18 +275,18 @@ export const SimceCreatorView: React.FC = () => {
         </div>
 
         {/* Grade Spec Strip */}
-        <div className="p-3 tq-subtle border rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div className="px-3 py-2 tq-subtle border rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs">
           <span className="tq-text-2 font-medium">{activeGradeInfo.targetDesc}</span>
           <span className="font-mono font-bold tq-text-accent shrink-0">
-            {fullBankForGrade.length} ítems reales en banco ({simceGrade.replace('_basico', '° Básico')})
+            {fullBankForGrade.length} ítems reales ({simceGrade.replace('_basico', '° Básico')})
           </span>
         </div>
       </div>
 
       {/* Main Two-Column Creator */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start min-w-0">
         {/* Left Config Panel (5 cols) */}
-        <div className="lg:col-span-5 tq-card border rounded-xl p-5 shadow-xs space-y-4">
+        <div className="lg:col-span-5 tq-card border rounded-xl p-4 shadow-xs space-y-3 min-w-0">
           <h2 className="text-sm font-bold tq-text border-b tq-border pb-2">
             1. Configuración del Ensayo SIMCE ({activeGradeInfo.label})
           </h2>
@@ -477,7 +477,7 @@ export const SimceCreatorView: React.FC = () => {
         </div>
 
         {/* Right Booklet Preview & Inspector (7 cols) */}
-        <div className="lg:col-span-7 tq-card border rounded-xl p-5 shadow-xs flex flex-col justify-between">
+        <div className="lg:col-span-7 tq-card border rounded-xl p-4 shadow-xs flex flex-col justify-between min-w-0">
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b tq-border pb-3">
               <div>

@@ -72,19 +72,19 @@ export const StatisticsView: React.FC<StatisticsViewProps> = ({ onSelectStudentF
   const alertStudents = studentRows.filter(r => r.needsReinforcement || (r.averageGrade !== null && r.averageGrade < 4.5));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3.5 min-w-0">
       {/* Top Filter and Course Selection */}
-      <div className="tq-card border rounded-xl p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tq-text">
+      <div className="tq-card border rounded-xl p-3.5 sm:p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-lg font-bold tq-text">
             Seguimiento de Progreso e Indicadores Pedagógicos
           </h1>
-          <p className="text-xs tq-text-muted mt-1">
-            Métricas de rendimiento alineadas con los estándares de aprendizaje MINEDUC (Escala 1.0 a 7.0 al 60% de exigencia).
+          <p className="text-xs tq-text-muted mt-0.5">
+            Métricas alineadas con estándares MINEDUC (Escala 1.0 a 7.0 al 60% de exigencia).
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
           <div>
             <label className="block text-[10px] uppercase font-bold tq-text-muted mb-0.5">
               Curso:
@@ -92,7 +92,7 @@ export const StatisticsView: React.FC<StatisticsViewProps> = ({ onSelectStudentF
             <select
               value={selectedCourseId}
               onChange={e => setSelectedCourseId(e.target.value)}
-              className="text-xs font-semibold tq-input border rounded-lg px-3 py-1.5 focus:outline-hidden"
+              className="text-xs font-semibold tq-input border rounded-lg px-2.5 py-1.5 focus:outline-hidden"
             >
               {courses.map(c => (
                 <option key={c.id} value={c.id}>
@@ -109,7 +109,7 @@ export const StatisticsView: React.FC<StatisticsViewProps> = ({ onSelectStudentF
             <select
               value={selectedOaFilter}
               onChange={e => setSelectedOaFilter(e.target.value)}
-              className="text-xs font-semibold tq-input border rounded-lg px-3 py-1.5 focus:outline-hidden"
+              className="text-xs font-semibold tq-input border rounded-lg px-2.5 py-1.5 focus:outline-hidden"
             >
               <option value="all">Todos los OAs evaluados</option>
               {distinctOAs.map(oa => (
@@ -123,9 +123,9 @@ export const StatisticsView: React.FC<StatisticsViewProps> = ({ onSelectStudentF
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 min-w-0">
         {/* Promedio General */}
-        <div className="tq-card border rounded-xl p-5 shadow-xs">
+        <div className="tq-card border rounded-xl p-3.5 shadow-xs">
           <span className="text-xs font-semibold tq-text-muted uppercase tracking-wider block">
             Promedio del Curso
           </span>
@@ -145,7 +145,7 @@ export const StatisticsView: React.FC<StatisticsViewProps> = ({ onSelectStudentF
         </div>
 
         {/* Tasa de Aprobación */}
-        <div className="tq-card border rounded-xl p-5 shadow-xs">
+        <div className="tq-card border rounded-xl p-3.5 shadow-xs">
           <span className="text-xs font-semibold tq-text-muted uppercase tracking-wider block">
             Tasa de Aprobación (≥ 4.0)
           </span>
@@ -161,7 +161,7 @@ export const StatisticsView: React.FC<StatisticsViewProps> = ({ onSelectStudentF
         </div>
 
         {/* Distribución MINEDUC */}
-        <div className="tq-card border rounded-xl p-5 shadow-xs">
+        <div className="tq-card border rounded-xl p-3.5 shadow-xs">
           <span className="text-xs font-semibold tq-text-muted uppercase tracking-wider block mb-2">
             Niveles de Logro MINEDUC
           </span>
@@ -182,7 +182,7 @@ export const StatisticsView: React.FC<StatisticsViewProps> = ({ onSelectStudentF
         </div>
 
         {/* Alerta de Refuerzo */}
-        <div className="tq-card border rounded-xl p-5 shadow-xs">
+        <div className="tq-card border rounded-xl p-3.5 shadow-xs">
           <span className="text-xs font-semibold tq-text-muted uppercase tracking-wider block">
             Alerta Pedagógica
           </span>
@@ -200,7 +200,7 @@ export const StatisticsView: React.FC<StatisticsViewProps> = ({ onSelectStudentF
       </div>
 
       {/* Heatmap Matrix: Student vs Learning Objectives (OAs) */}
-      <div className="tq-card border rounded-xl shadow-xs overflow-hidden">
+      <div className="tq-card border rounded-xl shadow-xs overflow-hidden min-w-0">
         <div className="p-4 border-b tq-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 className="text-base font-bold tq-text flex items-center gap-2">
@@ -255,9 +255,11 @@ export const StatisticsView: React.FC<StatisticsViewProps> = ({ onSelectStudentF
                           <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" title="Requiere refuerzo" />
                         )}
                       </div>
-                      <span className="text-[11px] tq-text-muted font-mono">
-                        {row.student.accessCode} · RUN: {row.student.rut}
-                      </span>
+                      {row.student.rut && (
+                        <span className="text-[11px] tq-text-muted font-mono">
+                          RUN: {row.student.rut}
+                        </span>
+                      )}
                     </td>
                     <td className="py-3 px-3 text-center font-mono">
                       {row.attemptsCount}

@@ -8,6 +8,7 @@ interface QuizResultSummaryProps {
   attempt: QuizAttempt;
   onRetry: () => void;
   onExit: () => void;
+  onPracticeSameTopic?: () => void;
   isFreePractice?: boolean;
 }
 
@@ -15,6 +16,7 @@ export const QuizResultSummary: React.FC<QuizResultSummaryProps> = ({
   attempt,
   onRetry,
   onExit,
+  onPracticeSameTopic,
   isFreePractice = false,
 }) => {
   const gradeStyles = getGradeColorClass(attempt.chileanGrade);
@@ -118,11 +120,11 @@ export const QuizResultSummary: React.FC<QuizResultSummaryProps> = ({
                   : 'Se requiere refuerzo pedagógico en este contenido curricular. Revisa las explicaciones paso a paso a continuación.'}
               </span>
               <p className="tq-text-2 mt-0.5">
-                {attempt.isSimce
-                  ? 'Este ensayo replica el formato de selección múltiple A/B/C/D de la Agencia de Calidad. Revisa abajo la explicación de cada pregunta y los distractores habituales.'
-                  : isFreePractice
+                {isFreePractice
                   ? 'Esta nota es solo referencial para tu práctica libre y no queda guardada en ningún registro.'
-                  : 'Escala de evaluación según normativa nacional con 60% de exigencia (nota 4.0 de aprobación).'}
+                  : attempt.isSimce
+                  ? 'Este ensayo replica el formato A/B/C/D de la Agencia de Calidad. Tu primera calificación quedó guardada; si sigues practicando será en modo Práctica sin afectar tu nota.'
+                  : 'Escala de evaluación con 60% de exigencia (nota 4.0 de aprobación). Tu primera calificación oficial quedó guardada y no cambia al seguir practicando.'}
               </p>
             </div>
           </div>
@@ -140,11 +142,13 @@ export const QuizResultSummary: React.FC<QuizResultSummaryProps> = ({
 
             <button
               type="button"
-              onClick={onRetry}
+              onClick={isFreePractice ? onRetry : (onPracticeSameTopic || onRetry)}
               className="px-4 py-2 text-sm font-medium tq-btn-primary rounded-lg flex items-center gap-2 transition-colors cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" />
-              {isFreePractice ? 'Practicar otra vez (nuevos ejercicios)' : 'Reintentar prueba con nuevos ejercicios'}
+              {isFreePractice
+                ? 'Practicar otra vez (nuevos ejercicios)'
+                : 'Seguir practicando este tema (sin nota)'}
             </button>
           </div>
         </div>

@@ -509,7 +509,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         onAssignments: list => {
           setCloudStudentAssignments(list);
           setCloudSyncStatus('synced');
-          setCloudSyncMessage(`Nube activa · ${currentStudent.accessCode}`);
+          setCloudSyncMessage(`Nube activa · ${currentStudent.name}`);
         },
         onAttempts: list => {
           setCloudStudentAttempts(list);
@@ -520,7 +520,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
 
     return () => unsub();
-  }, [isCloudStudent, firebaseUser, currentStudent?.ownerUid, currentStudent?.courseId, currentStudent?.accessCode]);
+  }, [isCloudStudent, firebaseUser, currentStudent?.ownerUid, currentStudent?.courseId, currentStudent?.name]);
 
   // Handle direct quiz code navigation after cloud assignments arrive
   useEffect(() => {
@@ -529,10 +529,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       a => a.code.toUpperCase() === pendingDirectQuizCode.toUpperCase()
     );
     if (match) {
-      setActiveQuizTaking(match);
+      const existingAttempt = cloudStudentAttempts.find(
+        att => att.quizId === match.id && att.studentId === currentStudent.id
+      );
+      if (existingAttempt) {
+        setLatestCompletedAttempt(existingAttempt);
+      } else {
+        setActiveQuizTaking(match);
+      }
       setPendingDirectQuizCode(null);
     }
-  }, [pendingDirectQuizCode, cloudStudentAssignments, currentStudent]);
+  }, [pendingDirectQuizCode, cloudStudentAssignments, cloudStudentAttempts, currentStudent]);
 
   // Unified collections depending on active mode (Cloud Teacher, Cloud Student, or Local Demo)
   const sortByNameES = <T extends { name: string }>(arr: T[]): T[] =>
@@ -1302,6 +1309,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const recordQuizAttempt = (attempt: QuizAttempt) => {
+    // Preserve the first official attempt: never overwrite or duplicate if the student already completed this quiz
+    const existingOfficial = attempts.find(
+      a => a.quizId === attempt.quizId && a.studentId === attempt.studentId
+    );
+    if (existingOfficial) {
+      setLatestCompletedAttempt(existingOfficial);
+      return;
+    }
+
     const targetQuiz = assignments.find(q => q.id === attempt.quizId);
     const ownerUid = targetQuiz?.ownerUid || currentStudent?.ownerUid || (isCloudTeacher && firebaseUser ? firebaseUser.uid : undefined);
 

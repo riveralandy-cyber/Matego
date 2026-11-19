@@ -58,29 +58,29 @@ export const ParentReportView: React.FC<ParentReportViewProps> = ({ initialStude
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 min-w-0">
       {/* Control Bar (Hidden when printing) */}
-      <div className="tq-card border rounded-xl p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
-        <div className="flex items-center gap-3">
+      <div className="tq-card border rounded-xl p-3.5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 print:hidden">
+        <div className="flex items-center gap-2.5 min-w-0">
           <button
             type="button"
             onClick={onBack}
-            className="p-1.5 tq-text-muted hover:tq-text hover:bg-[var(--tq-muted-bg)] rounded-md transition-colors cursor-pointer"
+            className="p-1.5 tq-text-muted hover:tq-text hover:bg-[var(--tq-muted-bg)] rounded-md transition-colors cursor-pointer shrink-0"
             title="Volver"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <div>
-            <h1 className="text-base font-bold tq-text">
+          <div className="min-w-0">
+            <h1 className="text-base font-bold tq-text truncate">
               Generador de Informes Pedagógicos para Apoderados
             </h1>
-            <p className="text-xs tq-text-muted">
+            <p className="text-xs tq-text-muted truncate">
               Documento formal alineado con los estándares MINEDUC listo para imprimir o exportar en PDF.
             </p>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
           <div>
             <label className="block text-[10px] uppercase font-bold tq-text-muted mb-0.5">
               Estudiante:
@@ -88,11 +88,11 @@ export const ParentReportView: React.FC<ParentReportViewProps> = ({ initialStude
             <select
               value={selectedStudentId}
               onChange={e => setSelectedStudentId(e.target.value)}
-              className="text-xs font-semibold tq-input border rounded-lg px-3 py-1.5 focus:outline-hidden"
+              className="text-xs font-semibold tq-input border rounded-lg px-2.5 py-1.5 focus:outline-hidden"
             >
               {courseStudents.map(st => (
                 <option key={st.id} value={st.id}>
-                  {st.name} ({st.accessCode})
+                  {st.name}
                 </option>
               ))}
             </select>
@@ -101,7 +101,7 @@ export const ParentReportView: React.FC<ParentReportViewProps> = ({ initialStude
           <button
             type="button"
             onClick={handlePrint}
-            className="px-4 py-2 tq-btn-primary text-xs font-semibold rounded-lg shadow-xs flex items-center gap-1.5 transition-colors self-end md:self-auto cursor-pointer"
+            className="px-3.5 py-2 tq-btn-primary text-xs font-semibold rounded-lg shadow-xs flex items-center gap-1.5 transition-colors self-end md:self-auto cursor-pointer"
           >
             <Printer className="w-4 h-4" />
             <span>Imprimir / Guardar en PDF</span>
@@ -110,7 +110,7 @@ export const ParentReportView: React.FC<ParentReportViewProps> = ({ initialStude
       </div>
 
       {/* Printable Sheet (Standard A4 / Letter format) */}
-      <div className="max-w-4xl mx-auto bg-white border border-slate-300 rounded-xl shadow-lg p-8 md:p-12 text-slate-800 print:border-none print:shadow-none print:p-0 print:m-0 font-serif">
+      <div className="max-w-4xl mx-auto bg-white border border-slate-300 rounded-xl shadow-lg p-5 sm:p-8 text-slate-800 print:border-none print:shadow-none print:p-0 print:m-0 font-serif">
         {/* Official Header */}
         <div className="border-b-2 border-slate-800 pb-5 mb-6">
           <div className="flex items-start justify-between gap-4">
@@ -222,7 +222,7 @@ export const ParentReportView: React.FC<ParentReportViewProps> = ({ initialStude
             Detalle de Evaluaciones y Objetivos de Aprendizaje (OA)
           </h4>
 
-          <div className="border border-slate-300 rounded-lg overflow-hidden">
+          <div className="border border-slate-300 rounded-lg overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-100 border-b border-slate-300 text-slate-700 font-bold">

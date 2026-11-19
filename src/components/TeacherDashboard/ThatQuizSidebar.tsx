@@ -32,110 +32,152 @@ export const ThatQuizSidebar: React.FC = () => {
   ];
 
   return (
-    <aside className="w-full md:w-64 shrink-0 tq-sidebar border-r p-4 font-sans text-xs flex flex-col justify-between gap-4 print:hidden shadow-xs">
-      <div className="space-y-5">
-        {/* MateClic Logo & Teacher Branding */}
-        <div className="p-3 tq-tint rounded-2xl border text-center md:text-left shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span
-              translate="no"
-              className="notranslate text-lg font-black tracking-widest lowercase tq-text-accent font-mono"
-            >
-              mateclic
-            </span>
-          </div>
-          <div className="mt-1 flex items-center justify-between gap-1">
-            <span className="text-sm font-bold tq-text truncate">
-              {currentTeacher?.name || selectedCourse?.teacherName || 'Docente'}
-            </span>
-            <button
-              type="button"
-              onClick={() => setIsTeacherLoginModalOpen(true)}
-              className="text-[10px] tq-text-accent font-bold shrink-0 tq-card hover:opacity-90 px-2 py-0.5 rounded border flex items-center gap-1 cursor-pointer"
-              title="Cambiar clave docente, apariencia o cambiar de usuario"
-            >
-              <KeyRound className="w-2.5 h-2.5" />
-              <span>Cuenta</span>
-            </button>
-          </div>
-          <div className="text-[11px] tq-text-2 font-medium truncate mt-0.5" title="Escuela Ricardo Silva Arriagada">
-            {currentTeacher?.schoolName || selectedCourse?.schoolName || 'Escuela Ricardo Silva Arriagada'}
-          </div>
-          <div className="text-[10px] tq-text-muted font-medium mt-0.5">
-            {currentTeacher?.commune || 'SLEP Chinchorro · Arica'}
-          </div>
-          <div className="mt-2 pt-2 border-t tq-border flex items-center justify-between text-[10px] tq-text-accent font-semibold">
-            <span>{coursesWithMyListsCount} lista(s)</span>
-            <span>·</span>
-            <span>{teacherAssignments.length} examen(es)</span>
-          </div>
-          <button
-            type="button"
-            onClick={logoutTeacher}
-            className="mt-2.5 w-full py-1.5 px-2.5 bg-white/90 dark:bg-rose-950/60 hover:bg-rose-50 dark:hover:bg-rose-900/70 text-rose-700 dark:text-rose-200 border border-rose-200 dark:border-rose-800 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Cerrar sesión</span>
-          </button>
-        </div>
-
-        {/* Section: Clases */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-bold tq-text-2 tracking-wider">
-              Curso Activo
-            </label>
-            <span className="text-[10px] px-2 py-0.5 tq-accent-soft font-bold rounded-full">
-              {courses.length} niveles
-            </span>
-          </div>
-
+    <>
+      {/* Compact Mobile/Tablet Bar (< md) so content is immediately visible on screen */}
+      <div className="md:hidden w-full tq-sidebar border-b p-2.5 space-y-2 print:hidden">
+        <div className="flex items-center gap-2">
           <select
             value={selectedCourseId}
             onChange={e => setSelectedCourseId(e.target.value)}
-            className="w-full tq-input border text-xs font-bold px-3 py-2 rounded-xl shadow-2xs focus:outline-hidden transition-all"
+            className="flex-1 min-w-0 tq-input border text-xs font-bold px-2.5 py-1.5 rounded-lg focus:outline-hidden"
           >
             {courses.map(c => {
               const count = teacherStudents.filter(s => s.courseId === c.id).length;
               return (
                 <option key={c.id} value={c.id}>
-                  {c.section.replace('° Básico ', '°')} ({c.section}){count > 0 ? ` · ${count} al.` : ''}
+                  {c.section}{count > 0 ? ` (${count} al.)` : ''}
                 </option>
               );
             })}
           </select>
-
-          {/* Navigation links */}
-          <div className="space-y-1 pt-1">
-            {navItems.map(item => {
-              const Icon = item.icon;
-              const active = activeTeacherTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setActiveTeacherTab(item.id)}
-                  className={`w-full text-left px-3 py-2 rounded-xl transition-all flex items-center gap-2.5 cursor-pointer ${
-                    active
-                      ? 'tq-accent-soft font-bold shadow-2xs'
-                      : 'hover:bg-[var(--tq-muted-bg)] tq-text-2'
-                  }`}
-                >
-                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${item.chip}`}>
-                    <Icon className="w-3.5 h-3.5" />
-                  </div>
-                  <span className="font-medium truncate">{item.label}</span>
-                </button>
-              );
-            })}
-          </div>
+          <button
+            type="button"
+            onClick={() => setIsTeacherLoginModalOpen(true)}
+            className="px-2.5 py-1.5 text-[11px] font-bold tq-accent-soft border border-[var(--tq-border-strong)] rounded-lg shrink-0 flex items-center gap-1 cursor-pointer"
+          >
+            <KeyRound className="w-3 h-3" />
+            <span>Cuenta</span>
+          </button>
+        </div>
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+          {navItems.map(item => {
+            const Icon = item.icon;
+            const active = activeTeacherTab === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setActiveTeacherTab(item.id)}
+                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap shrink-0 flex items-center gap-1.5 border transition-colors cursor-pointer ${
+                  active
+                    ? 'tq-btn-primary border-[var(--tq-accent)] shadow-2xs'
+                    : 'tq-subtle tq-text-2 tq-border'
+                }`}
+              >
+                <Icon className="w-3 h-3" />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Theme Palette Switcher in Sidebar */}
-      <div className="pt-2 border-t tq-border">
-        <ThemePaletteSelector variant="compact" title="Paleta de colores" />
-      </div>
-    </aside>
+      {/* Desktop Left Sidebar (md+) compactly sized to fit inside single screen */}
+      <aside className="hidden md:flex w-56 lg:w-60 shrink-0 tq-sidebar border-r p-3 font-sans text-xs flex-col justify-between gap-2.5 md:h-full md:overflow-y-auto print:hidden shadow-xs">
+        <div className="space-y-3">
+          {/* MateClic Logo & Teacher Branding */}
+          <div className="p-2.5 tq-tint rounded-xl border shadow-2xs space-y-1.5">
+            <div className="flex items-center justify-between gap-1">
+              <span
+                translate="no"
+                className="notranslate text-sm font-black tracking-widest lowercase tq-text-accent font-mono"
+              >
+                mateclic
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsTeacherLoginModalOpen(true)}
+                className="text-[10px] tq-text-accent font-bold shrink-0 tq-card hover:opacity-90 px-2 py-0.5 rounded border flex items-center gap-1 cursor-pointer"
+                title="Cambiar clave docente, apariencia o cambiar de usuario"
+              >
+                <KeyRound className="w-2.5 h-2.5" />
+                <span>Cuenta</span>
+              </button>
+            </div>
+            <div className="text-xs font-bold tq-text truncate">
+              {currentTeacher?.name || selectedCourse?.teacherName || 'Docente'}
+            </div>
+            <div className="flex items-center justify-between text-[10px] tq-text-muted font-semibold">
+              <span>{coursesWithMyListsCount} lista(s) · {teacherAssignments.length} exám.</span>
+              <button
+                type="button"
+                onClick={logoutTeacher}
+                className="text-rose-700 dark:text-rose-300 hover:underline font-bold flex items-center gap-0.5 cursor-pointer"
+              >
+                <LogOut className="w-2.5 h-2.5" />
+                <span>Salir</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Section: Clases */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-bold tq-text-2 tracking-wider">
+                Curso Activo
+              </label>
+              <span className="text-[10px] px-1.5 py-0.5 tq-accent-soft font-bold rounded-full">
+                {courses.length} niveles
+              </span>
+            </div>
+
+            <select
+              value={selectedCourseId}
+              onChange={e => setSelectedCourseId(e.target.value)}
+              className="w-full tq-input border text-xs font-bold px-2.5 py-1.5 rounded-lg shadow-2xs focus:outline-hidden transition-all"
+            >
+              {courses.map(c => {
+                const count = teacherStudents.filter(s => s.courseId === c.id).length;
+                return (
+                  <option key={c.id} value={c.id}>
+                    {c.section.replace('° Básico ', '°')} ({c.section}){count > 0 ? ` · ${count} al.` : ''}
+                  </option>
+                );
+              })}
+            </select>
+
+            {/* Navigation links */}
+            <div className="space-y-0.5 pt-1">
+              {navItems.map(item => {
+                const Icon = item.icon;
+                const active = activeTeacherTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setActiveTeacherTab(item.id)}
+                    className={`w-full text-left px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
+                      active
+                        ? 'tq-accent-soft font-bold shadow-2xs'
+                        : 'hover:bg-[var(--tq-muted-bg)] tq-text-2'
+                    }`}
+                  >
+                    <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${item.chip}`}>
+                      <Icon className="w-3 h-3" />
+                    </div>
+                    <span className="font-medium truncate">{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Theme Palette Switcher in Sidebar */}
+        <div className="pt-2 border-t tq-border">
+          <ThemePaletteSelector variant="compact" title="Paleta de colores" />
+        </div>
+      </aside>
+    </>
   );
 };

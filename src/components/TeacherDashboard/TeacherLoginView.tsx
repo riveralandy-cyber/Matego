@@ -84,53 +84,52 @@ export const TeacherLoginView: React.FC = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto my-8 p-7 tq-card border-2 rounded-3xl shadow-sm font-sans">
-      <div className="text-center mb-6">
-        <div className="w-16 h-16 tq-brand-badge border rounded-3xl flex items-center justify-center mx-auto mb-3 shadow-xs">
-          <Lock className="w-7 h-7" />
+    <div className="max-w-lg mx-auto my-1 sm:my-2 p-4 sm:p-5 tq-card border-2 rounded-2xl shadow-sm font-sans">
+      <div className="flex items-center gap-3 mb-3.5 pb-2.5 border-b tq-border">
+        <div className="w-11 h-11 tq-brand-badge border rounded-2xl flex items-center justify-center shrink-0 shadow-xs">
+          <Lock className="w-5 h-5" />
         </div>
-        <span className="text-[10px] font-bold uppercase tracking-wider tq-accent-soft px-2.5 py-0.5 rounded-full border tq-border">
-          Escuela Ricardo Silva Arriagada · SLEP Chinchorro
-        </span>
-        <h1 className="text-2xl font-black tq-text mt-2">
-          Acceso Docente en la Nube
-        </h1>
-        <p className="text-xs tq-text-muted mt-1">
-          Conecta tu cuenta Google para sincronizar tus listas, evaluaciones y calificaciones en tiempo real con todos tus estudiantes.
-        </p>
+        <div className="min-w-0">
+          <span className="text-[10px] font-bold uppercase tracking-wider tq-accent-soft px-2 py-0.5 rounded-full border tq-border inline-block">
+            SLEP Chinchorro · Ricardo Silva Arriagada
+          </span>
+          <h1 className="text-lg sm:text-xl font-black tq-text mt-0.5 leading-tight">
+            Acceso Docente en la Nube
+          </h1>
+        </div>
       </div>
 
       {errorMsg && (
-        <div className="mb-4 p-3 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs rounded-2xl font-semibold flex items-center gap-2">
+        <div className="mb-3 p-2.5 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs rounded-xl font-semibold flex items-center gap-2">
           <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
       {/* Primary Cloud Google Login */}
-      <div className="p-4 tq-tint border-2 border-[var(--tq-border-strong)] rounded-2xl space-y-3 mb-5">
+      <div className="p-3.5 tq-tint border-2 border-[var(--tq-border-strong)] rounded-2xl space-y-2 mb-3">
         <div className="flex items-center gap-2 text-xs font-bold tq-text">
           <Cloud className="w-4 h-4 tq-text-accent shrink-0" />
           <span>Sincronización en Tiempo Real (Recomendado)</span>
         </div>
-        <p className="text-[11px] tq-text-2 leading-relaxed">
-          Tus pruebas nuevas, eliminaciones de notas y listas de curso aparecerán al instante en los dispositivos de tus alumnos, y verás sus resultados apenas terminen.
+        <p className="text-[11px] tq-text-2 leading-snug">
+          Conecta tu cuenta Google para sincronizar listas de curso, evaluaciones y calificaciones al instante en todos los dispositivos.
         </p>
         <button
           type="button"
           onClick={handleGoogleLogin}
           disabled={isGoogleLoading}
-          className="w-full py-3.5 tq-btn-gradient disabled:opacity-50 font-bold text-sm rounded-2xl shadow-xs flex items-center justify-center gap-2.5 transition-all cursor-pointer"
+          className="w-full py-2.5 tq-btn-gradient disabled:opacity-50 font-bold text-sm rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
         >
           <Cloud className="w-4 h-4" />
           <span>
-            {isGoogleLoading ? 'Conectando con Google...' : 'Ingresar con Google (Base de Datos en la Nube)'}
+            {isGoogleLoading ? 'Conectando con Google...' : 'Ingresar con Google (Nube)'}
           </span>
         </button>
       </div>
 
       {/* Collapsible Local Demo Fallback */}
-      <div className="border tq-border rounded-2xl p-3.5 tq-subtle">
+      <div className="border tq-border rounded-xl p-2.5 tq-subtle">
         <button
           type="button"
           onClick={() => {
@@ -141,7 +140,7 @@ export const TeacherLoginView: React.FC = () => {
         >
           <span className="flex items-center gap-1.5">
             <KeyRound className="w-3.5 h-3.5 tq-text-muted" />
-            <span>Modo Local sin Nube (solo en este navegador)</span>
+            <span>Modo Local sin Nube (solo este navegador)</span>
           </span>
           <span className="text-[11px] tq-text-accent underline">
             {showLocalDemo ? 'Ocultar' : 'Abrir'}
@@ -149,16 +148,16 @@ export const TeacherLoginView: React.FC = () => {
         </button>
 
         {showLocalDemo && (
-          <div className="mt-4 pt-3 border-t tq-border">
+          <div className="mt-3 pt-2.5 border-t tq-border">
             {/* Mode Tabs */}
-            <div className="flex tq-muted p-1 rounded-2xl mb-4 border">
+            <div className="flex tq-muted p-1 rounded-xl mb-3 border">
               <button
                 type="button"
                 onClick={() => {
                   setMode('login');
                   setErrorMsg(null);
                 }}
-                className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   mode === 'login'
                     ? 'tq-card tq-text-accent shadow-xs'
                     : 'tq-text-muted hover:tq-text'
@@ -173,7 +172,7 @@ export const TeacherLoginView: React.FC = () => {
                   setMode('register');
                   setErrorMsg(null);
                 }}
-                className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   mode === 'register'
                     ? 'tq-card tq-text-accent shadow-xs'
                     : 'tq-text-muted hover:tq-text'
@@ -186,30 +185,27 @@ export const TeacherLoginView: React.FC = () => {
 
             {mode === 'login' ? (
               teachers.length === 0 ? (
-                <div className="p-4 tq-card border rounded-xl text-center space-y-2.5">
+                <div className="p-3 tq-card border rounded-xl text-center space-y-2">
                   <p className="text-xs tq-text-2 font-medium">
                     Aún no hay cuentas docentes locales creadas en este navegador.
-                  </p>
-                  <p className="text-[11px] tq-text-muted">
-                    Usa <strong>Ingresar con Google</strong> arriba (recomendado) o crea una cuenta local en la pestaña <strong>Nuevo Docente</strong>.
                   </p>
                   <button
                     type="button"
                     onClick={() => setMode('register')}
-                    className="px-3.5 py-2 tq-btn-primary rounded-xl text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                    className="px-3 py-1.5 tq-btn-primary rounded-lg text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
                   >
                     <UserPlus className="w-3.5 h-3.5" />
                     <span>Crear cuenta docente local</span>
                   </button>
                 </div>
               ) : (
-              <form onSubmit={handleLoginSubmit} className="space-y-3.5">
+              <form onSubmit={handleLoginSubmit} className="space-y-2.5">
                 <div>
                   <label className="block text-xs font-bold tq-text-2 mb-1">
                     Cuenta Docente Local:
                   </label>
                   <div className="relative">
-                    <User className="w-4 h-4 tq-text-muted absolute left-3.5 top-3" />
+                    <User className="w-4 h-4 tq-text-muted absolute left-3 top-2.5" />
                     <select
                       value={selectedTeacherId}
                       onChange={e => {
@@ -217,7 +213,7 @@ export const TeacherLoginView: React.FC = () => {
                         setPassword('');
                         setErrorMsg(null);
                       }}
-                      className="w-full pl-10 pr-3.5 py-2.5 text-xs font-bold border-2 tq-input rounded-xl focus:outline-hidden transition-all"
+                      className="w-full pl-9 pr-3 py-2 text-xs font-bold border tq-input rounded-xl focus:outline-hidden transition-all"
                     >
                       {teachers.map(t => (
                         <option key={t.id} value={t.id}>
@@ -233,19 +229,19 @@ export const TeacherLoginView: React.FC = () => {
                     Clave de Acceso Local:
                   </label>
                   <div className="relative">
-                    <KeyRound className="w-4 h-4 tq-text-muted absolute left-3.5 top-3" />
+                    <KeyRound className="w-4 h-4 tq-text-muted absolute left-3 top-2.5" />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={e => setPassword(e.target.value)}
                       placeholder="Ingresa tu clave"
                       autoComplete="current-password"
-                      className="w-full pl-10 pr-10 py-2.5 text-xs font-bold border-2 tq-input rounded-xl focus:outline-hidden transition-all"
+                      className="w-full pl-9 pr-9 py-2 text-xs font-bold border tq-input rounded-xl focus:outline-hidden transition-all"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(prev => !prev)}
-                      className="absolute right-3 top-2.5 tq-text-muted hover:tq-text p-0.5 cursor-pointer"
+                      className="absolute right-2.5 top-2 tq-text-muted hover:tq-text p-0.5 cursor-pointer"
                       title={showPassword ? 'Ocultar clave' : 'Ver clave'}
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -253,7 +249,7 @@ export const TeacherLoginView: React.FC = () => {
                   </div>
 
                   {selectedTeacherObj && selectedTeacherObj.hasCustomPassword === false && (
-                    <p className="text-[11px] text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2 mt-2 font-medium">
+                    <p className="text-[11px] text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 rounded-lg px-2.5 py-1.5 mt-1.5 font-medium">
                       Para que tus alumnos se conecten desde otros dispositivos, usa "Ingresar con Google" arriba.
                     </p>
                   )}
@@ -262,7 +258,7 @@ export const TeacherLoginView: React.FC = () => {
                 <button
                   type="submit"
                   disabled={!selectedTeacherId || !password.trim()}
-                  className="w-full py-3 tq-btn-primary disabled:opacity-40 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  className="w-full py-2.5 tq-btn-primary disabled:opacity-40 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
                 >
                   <ShieldCheck className="w-4 h-4" />
                   <span>Ingresar en Modo Local</span>
@@ -271,19 +267,19 @@ export const TeacherLoginView: React.FC = () => {
               </form>
               )
             ) : (
-              <form onSubmit={handleRegisterSubmit} className="space-y-3">
+              <form onSubmit={handleRegisterSubmit} className="space-y-2.5">
                 <div>
                   <label className="block text-xs font-bold tq-text-2 mb-1">
                     Nombre y Apellidos del Docente:
                   </label>
                   <div className="relative">
-                    <User className="w-4 h-4 tq-text-muted absolute left-3.5 top-2.5" />
+                    <User className="w-4 h-4 tq-text-muted absolute left-3 top-2" />
                     <input
                       type="text"
                       value={regName}
                       onChange={e => setRegName(e.target.value)}
                       placeholder="Ej: María José Rojas"
-                      className="w-full pl-10 pr-3.5 py-2 text-xs font-bold border-2 tq-input rounded-xl focus:outline-hidden"
+                      className="w-full pl-9 pr-3 py-1.5 text-xs font-bold border tq-input rounded-xl focus:outline-hidden"
                     />
                   </div>
                 </div>
@@ -293,13 +289,13 @@ export const TeacherLoginView: React.FC = () => {
                     Correo Electrónico (opcional):
                   </label>
                   <div className="relative">
-                    <Mail className="w-4 h-4 tq-text-muted absolute left-3.5 top-2.5" />
+                    <Mail className="w-4 h-4 tq-text-muted absolute left-3 top-2" />
                     <input
                       type="email"
                       value={regEmail}
                       onChange={e => setRegEmail(e.target.value)}
                       placeholder="nombre@slepchinchorro.cl"
-                      className="w-full pl-10 pr-3.5 py-2 text-xs font-medium border-2 tq-input rounded-xl focus:outline-hidden"
+                      className="w-full pl-9 pr-3 py-1.5 text-xs font-medium border tq-input rounded-xl focus:outline-hidden"
                     />
                   </div>
                 </div>
@@ -314,7 +310,7 @@ export const TeacherLoginView: React.FC = () => {
                       value={regPassword}
                       onChange={e => setRegPassword(e.target.value)}
                       placeholder="Clave secreta"
-                      className="w-full px-3 py-2 text-xs font-bold border-2 tq-input rounded-xl focus:outline-hidden"
+                      className="w-full px-3 py-1.5 text-xs font-bold border tq-input rounded-xl focus:outline-hidden"
                     />
                   </div>
                   <div>
@@ -326,7 +322,7 @@ export const TeacherLoginView: React.FC = () => {
                       value={regConfirmPassword}
                       onChange={e => setRegConfirmPassword(e.target.value)}
                       placeholder="Repetir clave"
-                      className="w-full px-3 py-2 text-xs font-bold border-2 tq-input rounded-xl focus:outline-hidden"
+                      className="w-full px-3 py-1.5 text-xs font-bold border tq-input rounded-xl focus:outline-hidden"
                     />
                   </div>
                 </div>
@@ -334,7 +330,7 @@ export const TeacherLoginView: React.FC = () => {
                 <button
                   type="submit"
                   disabled={!regName.trim() || regPassword.trim().length < 4}
-                  className="w-full py-3 tq-btn-primary disabled:opacity-40 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  className="w-full py-2.5 tq-btn-primary disabled:opacity-40 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
                 >
                   <UserPlus className="w-4 h-4" />
                   <span>Crear Cuenta Local e Ingresar</span>
@@ -345,34 +341,32 @@ export const TeacherLoginView: React.FC = () => {
         )}
       </div>
 
-      {/* Theme Palette Configurator right from Teacher Entry */}
-      <div className="mt-5">
+      {/* Theme Palette Configurator + Links */}
+      <div className="mt-3 pt-2.5 border-t tq-border space-y-2.5">
         <ThemePaletteSelector
-          variant="compact"
-          title="Paleta de colores"
-          subtitle="Puedes mantener el tema estándar o elegir otro desde tu ingreso."
+          variant="inline-bar"
+          title="Paleta"
         />
-      </div>
 
-      {/* Links to Student Portal & Free Practice */}
-      <div className="mt-5 pt-4 border-t tq-border flex flex-col items-center gap-2.5 text-center">
-        <button
-          type="button"
-          onClick={() => setRole('student')}
-          className="text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:opacity-80 transition-opacity inline-flex items-center gap-1.5 cursor-pointer"
-        >
-          <GraduationCap className="w-4 h-4" />
-          <span>¿Eres estudiante? Ingresa al Portal de Alumnos aquí</span>
-        </button>
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-center">
+          <button
+            type="button"
+            onClick={() => setRole('student')}
+            className="text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:opacity-80 transition-opacity inline-flex items-center gap-1.5 cursor-pointer"
+          >
+            <GraduationCap className="w-4 h-4" />
+            <span>Portal de Estudiantes</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setRole('practice')}
-          className="text-xs font-bold tq-text-accent hover:opacity-80 transition-opacity inline-flex items-center gap-1.5 cursor-pointer"
-        >
-          <PlayCircle className="w-4 h-4" />
-          <span>Práctica Libre MateClic (ejercitar sin iniciar sesión)</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setRole('practice')}
+            className="text-xs font-bold tq-text-accent hover:opacity-80 transition-opacity inline-flex items-center gap-1.5 cursor-pointer"
+          >
+            <PlayCircle className="w-4 h-4" />
+            <span>Práctica Libre (sin sesión)</span>
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -20,11 +20,22 @@ export const Navigation: React.FC = () => {
 
   const showTeacherControls = role === 'teacher' && isTeacherAuthenticated;
 
+  const teacherTabLabels: Record<typeof activeTeacherTab, string> = {
+    matrix: 'Planilla de Notas',
+    courses: 'Lista de Curso (1° a 8°)',
+    curriculum: 'Objetivos MINEDUC',
+    quizzes: 'Exámenes Enviados',
+    create_quiz: 'Crear Evaluación',
+    simce: 'Ensayos SIMCE 4°·6°·8°',
+    stats: 'Progreso MINEDUC',
+    reports: 'Informes Apoderados (PDF)',
+  };
+
   return (
     <header className="w-full tq-header backdrop-blur-xs border-b sticky top-0 z-40 print:hidden shadow-xs">
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <div className="max-w-[1600px] mx-auto px-2.5 sm:px-4 h-14 flex items-center justify-between gap-2 sm:gap-3 min-w-0">
         {/* Zone 1: Brand wordmark */}
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2 min-w-0 shrink">
           <a
             href="/"
             onClick={e => {
@@ -35,104 +46,80 @@ export const Navigation: React.FC = () => {
               }
               setActiveQuizTaking(null);
             }}
-            className="flex items-center gap-2 group"
+            className="flex items-center gap-2 group min-w-0"
           >
-            <div className="w-9 h-9 rounded-xl tq-brand-badge flex items-center justify-center shadow-xs border border-white/60 dark:border-slate-700">
-              <span translate="no" className="notranslate font-mono font-black text-base">MC</span>
+            <div className="w-8 h-8 rounded-lg tq-brand-badge flex items-center justify-center shadow-xs border border-white/60 dark:border-slate-700 shrink-0">
+              <span translate="no" className="notranslate font-mono font-black text-sm">MC</span>
             </div>
-            <div className="flex flex-col">
-              <span className="text-base font-bold tracking-tight tq-text group-hover:tq-text-accent transition-colors whitespace-nowrap">
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs sm:text-sm font-bold tracking-tight tq-text group-hover:tq-text-accent transition-colors truncate max-w-[155px] sm:max-w-none">
                 Escuela Ricardo Silva Arriagada
               </span>
-              <span className="text-[11px] tq-text-muted font-medium whitespace-nowrap">
+              <span className="hidden sm:block text-[10px] tq-text-muted font-medium truncate">
                 SLEP Chinchorro · <span translate="no" className="notranslate">MateClic</span> Matemática
               </span>
             </div>
           </a>
         </div>
 
-        {/* Zone 2: Navigation Links (Authenticated Teacher only) */}
+        {/* Zone 2: Concise Context Label (no overflowing multi-button strips) */}
         {showTeacherControls ? (
-          <nav className="hidden lg:flex items-center gap-1.5 text-xs font-semibold tq-text-2">
-            {(
-              [
-                { id: 'matrix', label: 'Ver notas' },
-                { id: 'courses', label: 'Lista de curso (1° a 8°)' },
-                { id: 'curriculum', label: 'Objetivos MINEDUC' },
-                { id: 'quizzes', label: 'Exámenes' },
-                { id: 'create_quiz', label: 'Crear prueba' },
-                { id: 'stats', label: 'Progreso MINEDUC' },
-                { id: 'reports', label: 'Informe Apoderados (PDF)' },
-              ] as const
-            ).map(tabItem => {
-              const isActive = activeTeacherTab === tabItem.id;
-              return (
-                <button
-                  key={tabItem.id}
-                  type="button"
-                  onClick={() => setActiveTeacherTab(tabItem.id)}
-                  className={`px-3 py-1.5 rounded-lg transition-all whitespace-nowrap shrink-0 cursor-pointer ${
-                    isActive
-                      ? 'tq-accent-soft font-bold shadow-2xs'
-                      : 'tq-text-2 hover:bg-[var(--tq-muted-bg)] hover:tq-text'
-                  }`}
-                >
-                  {tabItem.label}
-                </button>
-              );
-            })}
-          </nav>
+          <div className="hidden xl:flex items-center gap-2 text-xs font-semibold px-3 py-1 tq-tint rounded-full border shadow-2xs shrink-0">
+            <span className="tq-text-accent">{teacherTabLabels[activeTeacherTab]}</span>
+          </div>
         ) : role === 'teacher' ? (
-          <div className="hidden sm:flex items-center gap-2 text-xs font-semibold px-3 py-1 tq-tint rounded-full border shadow-2xs">
+          <div className="hidden md:flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 tq-tint rounded-full border shadow-2xs shrink-0">
             <Lock className="w-3.5 h-3.5 tq-text-accent" />
-            <span className="tq-text">Acceso Docente Protegido con Clave</span>
+            <span className="tq-text">Acceso Docente</span>
           </div>
         ) : role === 'practice' ? (
-          <div className="hidden sm:flex items-center gap-2 text-xs font-semibold px-3 py-1 tq-tint rounded-full border shadow-2xs">
+          <div className="hidden md:flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 tq-tint rounded-full border shadow-2xs shrink-0">
             <PlayCircle className="w-3.5 h-3.5 tq-text-accent" />
-            <span className="tq-text">Práctica Libre · Sin inicio de sesión ni registro</span>
+            <span className="tq-text">Práctica Libre · Sin registro</span>
           </div>
         ) : (
-          <div className="hidden sm:flex items-center gap-2 text-xs font-semibold px-3 py-1 tq-tint rounded-full border shadow-2xs">
+          <div className="hidden md:flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 tq-tint rounded-full border shadow-2xs shrink-0">
             <Sparkles className="w-3.5 h-3.5 tq-text-accent" />
-            <span className="tq-text">Portal Escolar · Pruebas Virtuales Amigables</span>
+            <span className="tq-text">Portal Escolar</span>
           </div>
         )}
 
         {/* Zone 3: Actions */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {showTeacherControls && (
             <>
               {isCloudTeacher && (
                 <span
-                  className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800 whitespace-nowrap"
+                  className="hidden lg:inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800 whitespace-nowrap"
                   title="Base de datos en tiempo real conectada con Firebase Firestore"
                 >
-                  <Cloud className="w-3.5 h-3.5" />
-                  <span>{cloudSyncStatus === 'connecting' ? 'Sincronizando...' : 'Nube en vivo'}</span>
+                  <Cloud className="w-3 h-3" />
+                  <span>{cloudSyncStatus === 'connecting' ? 'Sincronizando...' : 'Nube'}</span>
                 </span>
               )}
 
               <button
                 type="button"
                 onClick={() => setIsTeacherLoginModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 tq-accent-soft rounded-xl text-xs font-bold transition-all border border-[var(--tq-border-strong)] shadow-2xs cursor-pointer"
+                className="flex items-center gap-1.5 px-2.5 py-1 tq-accent-soft rounded-lg text-xs font-bold transition-all border border-[var(--tq-border-strong)] shadow-2xs cursor-pointer"
                 title="Cambiar clave docente, apariencia o cambiar de usuario"
               >
                 <div className="w-5 h-5 rounded-full tq-btn-primary flex items-center justify-center text-[10px] font-black">
                   {currentTeacher?.name?.charAt(0) || 'P'}
                 </div>
-                <span className="hidden md:inline font-bold whitespace-nowrap">Prof. {currentTeacher?.name || 'Docente'}</span>
+                <span className="hidden md:inline font-bold whitespace-nowrap max-w-[120px] truncate">
+                  Prof. {currentTeacher?.name || 'Docente'}
+                </span>
               </button>
 
               <button
                 type="button"
                 onClick={logoutTeacher}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/70 text-rose-700 dark:text-rose-200 rounded-xl text-xs font-bold transition-all border border-rose-200 dark:border-rose-800 shadow-2xs cursor-pointer"
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/70 text-rose-700 dark:text-rose-200 rounded-lg text-xs font-bold transition-all border border-rose-200 dark:border-rose-800 shadow-2xs cursor-pointer"
                 title="Cerrar sesión de profesor"
               >
                 <LogOut className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline whitespace-nowrap">Cerrar sesión</span>
+                <span className="hidden lg:inline whitespace-nowrap">Salir</span>
               </button>
 
               {!isCloudTeacher && (
@@ -140,9 +127,9 @@ export const Navigation: React.FC = () => {
                   type="button"
                   onClick={resetDemoData}
                   title="Restablecer datos demo locales"
-                  className="p-2 tq-text-muted hover:tq-text hover:bg-[var(--tq-muted-bg)] rounded-lg transition-colors cursor-pointer"
+                  className="p-1.5 tq-text-muted hover:tq-text hover:bg-[var(--tq-muted-bg)] rounded-lg transition-colors cursor-pointer"
                 >
-                  <RotateCcw className="w-4 h-4" />
+                  <RotateCcw className="w-3.5 h-3.5" />
                 </button>
               )}
             </>
@@ -155,11 +142,12 @@ export const Navigation: React.FC = () => {
                 setActiveQuizTaking(null);
                 setRole('practice');
               }}
-              className="px-3 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all shadow-2xs border tq-subtle hover:border-[var(--tq-border-strong)] tq-text-accent whitespace-nowrap shrink-0 cursor-pointer"
+              className="px-2.5 py-1.5 text-xs font-bold rounded-lg flex items-center gap-1 transition-all shadow-2xs border tq-subtle hover:border-[var(--tq-border-strong)] tq-text-accent whitespace-nowrap shrink-0 cursor-pointer"
               title="Ejercitar libremente cualquier tema sin iniciar sesión"
             >
-              <PlayCircle className="w-4 h-4" />
-              <span>Práctica Libre</span>
+              <PlayCircle className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Práctica Libre</span>
+              <span className="sm:hidden">Práctica</span>
             </button>
           )}
 
@@ -170,10 +158,11 @@ export const Navigation: React.FC = () => {
                 setActiveQuizTaking(null);
                 setRole('student');
               }}
-              className="px-3.5 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all shadow-xs border tq-btn-gradient border-transparent whitespace-nowrap shrink-0 cursor-pointer"
+              className="px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-lg flex items-center gap-1 transition-all shadow-xs border tq-btn-gradient border-transparent whitespace-nowrap shrink-0 cursor-pointer"
             >
-              <GraduationCap className="w-4 h-4" />
-              <span>Ingreso Alumno</span>
+              <GraduationCap className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Ingreso Alumno</span>
+              <span className="sm:hidden">Alumno</span>
             </button>
           )}
 
@@ -184,10 +173,11 @@ export const Navigation: React.FC = () => {
                 setActiveQuizTaking(null);
                 setRole('teacher');
               }}
-              className="px-3.5 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all shadow-xs border tq-btn-gradient-alt border-transparent whitespace-nowrap shrink-0 cursor-pointer"
+              className="px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-lg flex items-center gap-1 transition-all shadow-xs border tq-btn-gradient-alt border-transparent whitespace-nowrap shrink-0 cursor-pointer"
             >
-              <UserCheck className="w-4 h-4" />
-              <span>Panel Profesor</span>
+              <UserCheck className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Panel Profesor</span>
+              <span className="sm:hidden">Profesor</span>
             </button>
           )}
         </div>
