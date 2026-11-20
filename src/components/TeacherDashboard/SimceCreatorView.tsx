@@ -235,7 +235,7 @@ export const SimceCreatorView: React.FC = () => {
   const currentQ = questions[activePreviewIndex];
 
   return (
-    <div className="space-y-3.5 min-w-0">
+    <div translate="no" className="notranslate space-y-3.5 min-w-0">
       {/* Top Header & Level Switcher (4°, 6°, 8°) */}
       <div className="tq-card border rounded-xl p-3.5 sm:p-4 shadow-xs space-y-2.5">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
@@ -523,7 +523,10 @@ export const SimceCreatorView: React.FC = () => {
 
             {/* Active SIMCE Item Card */}
             {currentQ && (
-              <div className="p-5 tq-subtle border rounded-2xl space-y-4">
+              <div
+                key={`sc-preview-${currentQ.id}-${activePreviewIndex}`}
+                className="p-5 tq-subtle border rounded-2xl space-y-4"
+              >
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs border-b tq-border pb-2.5">
                   <div className="flex flex-wrap items-center gap-2 tq-text-muted">
                     <span className="font-bold tq-text-accent">
@@ -534,10 +537,10 @@ export const SimceCreatorView: React.FC = () => {
                       {currentQ.axis ? formatAxisName(currentQ.axis) : 'Matemática'}
                     </span>
                     {currentQ.simceSkill && (
-                      <>
+                      <span key="skill" className="inline-flex items-center gap-2">
                         <span aria-hidden="true">·</span>
                         <span>Habilidad: <strong className="tq-text">{currentQ.simceSkill}</strong></span>
-                      </>
+                      </span>
                     )}
                     <span aria-hidden="true">·</span>
                     <span className="font-mono">{currentQ.oaCode}</span>
@@ -577,6 +580,7 @@ export const SimceCreatorView: React.FC = () => {
                 </div>
 
                 <MathVisuals
+                  key={`sc-vis-${currentQ.id}-${activePreviewIndex}`}
                   visualType={currentQ.visualType}
                   visualData={currentQ.visualData}
                 />

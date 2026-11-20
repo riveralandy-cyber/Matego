@@ -148,7 +148,7 @@ export const QuizCreator: React.FC = () => {
   };
 
   return (
-    <div className="space-y-3.5 min-w-0">
+    <div translate="no" className="notranslate space-y-3.5 min-w-0">
       {/* Top Title */}
       <div className="tq-card border rounded-xl p-3.5 sm:p-4 shadow-xs">
         <h1 className="text-lg font-bold tq-text">
@@ -449,7 +449,10 @@ export const QuizCreator: React.FC = () => {
 
             {/* Currently selected question card */}
             {generatedQuestions[activePreviewIndex] && (
-              <div className="p-5 border-2 tq-border rounded-2xl tq-card shadow-2xs space-y-4 min-h-[300px]">
+              <div
+                key={`qc-preview-${generatedQuestions[activePreviewIndex].id}-${activePreviewIndex}`}
+                className="p-5 border-2 tq-border rounded-2xl tq-card shadow-2xs space-y-4 min-h-[300px]"
+              >
                 {/* Header of the card */}
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs border-b tq-border pb-2.5">
                   <div className="flex items-center gap-2">
@@ -501,6 +504,7 @@ export const QuizCreator: React.FC = () => {
 
                 {/* Visual */}
                 <MathVisuals
+                  key={`qc-vis-${generatedQuestions[activePreviewIndex].id}-${activePreviewIndex}`}
                   visualType={generatedQuestions[activePreviewIndex].visualType}
                   visualData={generatedQuestions[activePreviewIndex].visualData}
                 />
@@ -508,18 +512,22 @@ export const QuizCreator: React.FC = () => {
                 {/* Multiple choice options preview if applicable */}
                 {generatedQuestions[activePreviewIndex].questionType === 'multiple_choice' && (
                   <div className="grid grid-cols-2 gap-2 max-w-sm mx-auto">
-                    {generatedQuestions[activePreviewIndex].options?.map((opt, oIdx) => (
-                      <div
-                        key={oIdx}
-                        className={`p-2 rounded-xl text-xs text-center border font-medium ${
-                          opt === generatedQuestions[activePreviewIndex].correctAnswer
-                            ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200 font-bold'
-                            : 'tq-subtle border tq-text-2'
-                        }`}
-                      >
-                        {opt} {opt === generatedQuestions[activePreviewIndex].correctAnswer ? '✓' : ''}
-                      </div>
-                    ))}
+                    {generatedQuestions[activePreviewIndex].options?.map((opt, oIdx) => {
+                      const isCorrect = opt === generatedQuestions[activePreviewIndex].correctAnswer;
+                      return (
+                        <div
+                          key={`${activePreviewIndex}-${oIdx}`}
+                          className={`p-2 rounded-xl text-xs text-center border font-medium ${
+                            isCorrect
+                              ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200 font-bold'
+                              : 'tq-subtle border tq-text-2'
+                          }`}
+                        >
+                          <span>{opt}</span>
+                          {isCorrect ? <span key="ok"> ✓</span> : null}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 

@@ -57,7 +57,9 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
               <AlertTriangle className="w-7 h-7" />
             </div>
             <h1 className="text-xl font-black tq-text">
-              Problema de Sincronización en la Nube
+              {this.state.errorMessage.includes('removeChild') || this.state.errorMessage.includes('Node')
+                ? 'Interrupción Visual del Navegador'
+                : 'Problema de Sincronización en la Nube'}
             </h1>
             <p className="text-xs tq-text-2 leading-relaxed">
               {this.getFriendlyMessage()}

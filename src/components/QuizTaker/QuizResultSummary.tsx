@@ -58,9 +58,9 @@ export const QuizResultSummary: React.FC<QuizResultSummaryProps> = ({
               </h1>
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 text-sm tq-text-2">
                 {isFreePractice ? (
-                  <span>Modalidad: <strong className="tq-text">Ejercitación Libre</strong></span>
+                  <span key="fp-mode">Modalidad: <strong className="tq-text">Ejercitación Libre</strong></span>
                 ) : (
-                  <span>Estudiante: <strong className="tq-text">{attempt.studentName}</strong></span>
+                  <span key="std-mode">Estudiante: <strong className="tq-text">{attempt.studentName}</strong></span>
                 )}
                 <span>·</span>
                 <span>OA: <strong className="tq-text">{attempt.oaCode}</strong></span>
@@ -137,7 +137,11 @@ export const QuizResultSummary: React.FC<QuizResultSummaryProps> = ({
               className="px-4 py-2 text-sm font-medium tq-text-2 tq-muted hover:opacity-85 rounded-lg flex items-center gap-2 transition-colors cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
-              {isFreePractice ? 'Cambiar tema o configuración' : 'Volver a mis evaluaciones'}
+              {isFreePractice ? (
+                <span key="fp-exit">Cambiar tema o configuración</span>
+              ) : (
+                <span key="std-exit">Volver a mis evaluaciones</span>
+              )}
             </button>
 
             <button
@@ -146,9 +150,11 @@ export const QuizResultSummary: React.FC<QuizResultSummaryProps> = ({
               className="px-4 py-2 text-sm font-medium tq-btn-primary rounded-lg flex items-center gap-2 transition-colors cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" />
-              {isFreePractice
-                ? 'Practicar otra vez (nuevos ejercicios)'
-                : 'Seguir practicando este tema (sin nota)'}
+              {isFreePractice ? (
+                <span key="fp-retry">Practicar otra vez (nuevos ejercicios)</span>
+              ) : (
+                <span key="std-practice">Seguir practicando este tema (sin nota)</span>
+              )}
             </button>
           </div>
         </div>
@@ -217,14 +223,14 @@ export const QuizResultSummary: React.FC<QuizResultSummaryProps> = ({
 
                   <div className="shrink-0">
                     {ans.isCorrect ? (
-                      <span className="flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-full">
+                      <span key="ans-correct" className="flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-full">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                        Correcta
+                        <span>Correcta</span>
                       </span>
                     ) : (
-                      <span className="flex items-center gap-1 text-xs font-semibold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 px-2.5 py-1 rounded-full">
+                      <span key="ans-wrong" className="flex items-center gap-1 text-xs font-semibold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 px-2.5 py-1 rounded-full">
                         <XCircle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-                        Errada
+                        <span>Errada</span>
                       </span>
                     )}
                   </div>

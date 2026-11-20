@@ -185,7 +185,7 @@ export const TeacherLoginView: React.FC = () => {
 
             {mode === 'login' ? (
               teachers.length === 0 ? (
-                <div className="p-3 tq-card border rounded-xl text-center space-y-2">
+                <div key="t-no-local" className="p-3 tq-card border rounded-xl text-center space-y-2">
                   <p className="text-xs tq-text-2 font-medium">
                     Aún no hay cuentas docentes locales creadas en este navegador.
                   </p>
@@ -199,7 +199,7 @@ export const TeacherLoginView: React.FC = () => {
                   </button>
                 </div>
               ) : (
-              <form onSubmit={handleLoginSubmit} className="space-y-2.5">
+              <form key="t-login-form" onSubmit={handleLoginSubmit} className="space-y-2.5">
                 <div>
                   <label className="block text-xs font-bold tq-text-2 mb-1">
                     Cuenta Docente Local:
@@ -267,7 +267,7 @@ export const TeacherLoginView: React.FC = () => {
               </form>
               )
             ) : (
-              <form onSubmit={handleRegisterSubmit} className="space-y-2.5">
+              <form key="t-register-form" onSubmit={handleRegisterSubmit} className="space-y-2.5">
                 <div>
                   <label className="block text-xs font-bold tq-text-2 mb-1">
                     Nombre y Apellidos del Docente:

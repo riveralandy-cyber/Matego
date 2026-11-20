@@ -512,7 +512,7 @@ export const FreePracticeView: React.FC<FreePracticeViewProps> = ({ onStartPract
           </div>
 
           {browseTab === 'simce' ? (
-            <div className="space-y-5">
+            <div key="fp-tab-simce" className="space-y-5">
               <div className="p-4 tq-tint border rounded-2xl space-y-1">
                 <div className="flex items-center gap-2 text-xs font-bold tq-text-accent">
                   <Award className="w-4 h-4" />
@@ -600,7 +600,7 @@ export const FreePracticeView: React.FC<FreePracticeViewProps> = ({ onStartPract
               </div>
             </div>
           ) : browseTab === 'topics' ? (
-            <div className="space-y-4">
+            <div key="fp-tab-topics" className="space-y-4">
               {categorySections.map(cat => {
                 const items = QUICK_TOPICS.filter(t => t.category === cat.key);
                 return (
@@ -645,7 +645,7 @@ export const FreePracticeView: React.FC<FreePracticeViewProps> = ({ onStartPract
               })}
             </div>
           ) : (
-            <div className="space-y-4">
+            <div key="fp-tab-curriculum" className="space-y-4">
               {/* Grade Selector Bar */}
               <div className="space-y-2">
                 <label className="block text-xs font-bold tq-text-2">
@@ -756,9 +756,9 @@ export const FreePracticeView: React.FC<FreePracticeViewProps> = ({ onStartPract
           </div>
 
           {/* Selected Content Summary */}
-          <div className="p-2.5 rounded-xl tq-subtle border space-y-0.5">
+          <div key={`fp-summary-${browseTab}`} className="p-2.5 rounded-xl tq-subtle border space-y-0.5">
             {browseTab === 'simce' ? (
-              <>
+              <div key="fp-sum-simce">
                 <div className="flex flex-wrap items-center gap-1.5 text-[11px] tq-text-accent font-semibold">
                   <span>{formatGradeLevelName(simceGrade)}</span>
                   <span aria-hidden="true">·</span>
@@ -770,9 +770,9 @@ export const FreePracticeView: React.FC<FreePracticeViewProps> = ({ onStartPract
                 <p className="text-[11px] tq-text-2 line-clamp-2">
                   Preguntas estandarizadas con puntaje simulado (150–350 pts) y nota chilena.
                 </p>
-              </>
+              </div>
             ) : (
-              <>
+              <div key="fp-sum-oa">
                 <div className="flex flex-wrap items-center gap-1.5 text-[11px] tq-text-accent font-semibold">
                   <span>{formatGradeLevelName(activeOA.grade)}</span>
                   <span aria-hidden="true">·</span>
@@ -786,7 +786,7 @@ export const FreePracticeView: React.FC<FreePracticeViewProps> = ({ onStartPract
                 <p className="text-[11px] tq-text-2 line-clamp-2">
                   {activeOA.description}
                 </p>
-              </>
+              </div>
             )}
           </div>
 

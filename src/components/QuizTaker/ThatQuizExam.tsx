@@ -235,7 +235,7 @@ export const ThatQuizExam: React.FC<ThatQuizExamProps> = ({
   };
 
   return (
-    <div className="min-h-dvh tq-page flex flex-col items-center justify-start p-2 sm:p-3 font-sans">
+    <div translate="no" className="notranslate min-h-dvh tq-page flex flex-col items-center justify-start p-2 sm:p-3 font-sans">
       {/* Scratchpad Modal */}
       <Scratchpad isOpen={isScratchpadOpen} onClose={() => setIsScratchpadOpen(false)} />
 
@@ -267,9 +267,9 @@ export const ThatQuizExam: React.FC<ThatQuizExamProps> = ({
             </div>
             <span className="text-[11px] tq-text-muted block truncate max-w-xs md:max-w-md">
               {isFreePractice ? (
-                <>Sin registro · <strong className="tq-text-2">{quiz.title}</strong></>
+                <span key="fp-sub">Sin registro · <strong className="tq-text-2">{quiz.title}</strong></span>
               ) : (
-                <>Estudiante: <strong className="tq-text">{student.name}</strong> · {quiz.title}</>
+                <span key="std-sub">Estudiante: <strong className="tq-text">{student.name}</strong> · {quiz.title}</span>
               )}
             </span>
           </div>
@@ -313,8 +313,8 @@ export const ThatQuizExam: React.FC<ThatQuizExamProps> = ({
 
       {/* Main ThatQuiz Exercise Card */}
       <main className="w-full max-w-4xl tq-card border rounded-2xl shadow-sm p-3.5 sm:p-5 flex flex-col justify-between">
-        {/* Question Header & Context */}
-        <div className="space-y-2.5">
+        {/* Question Header & Context (keyed per question so DOM transitions never collide) */}
+        <div key={`${currentQuestion.id}-${currentIndex}`} className="space-y-2.5">
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs tq-text-muted border-b tq-border pb-2">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="font-semibold tq-accent-soft px-2 py-0.5 rounded-full text-[11px]">
@@ -353,6 +353,7 @@ export const ThatQuizExam: React.FC<ThatQuizExamProps> = ({
 
           {/* Visual Diagram */}
           <MathVisuals
+            key={`visual-${currentQuestion.id}-${currentIndex}`}
             visualType={currentQuestion.visualType}
             visualData={currentQuestion.visualData}
           />
@@ -360,14 +361,14 @@ export const ThatQuizExam: React.FC<ThatQuizExamProps> = ({
           {/* Answer Input Section */}
           <div className={currentQuestion.questionType === 'multiple_choice' ? 'max-w-xl mx-auto pt-1' : 'max-w-sm mx-auto pt-1'}>
             {currentQuestion.questionType === 'multiple_choice' ? (
-              <div className="space-y-2">
+              <div key="mc-options" className="space-y-2">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {(currentQuestion.options || []).map((opt, oIdx) => {
                     const letter = String.fromCharCode(65 + oIdx); // A, B, C, D
                     const isSelected = currentAnswer === opt;
                     return (
                       <button
-                        key={oIdx}
+                        key={`${currentIndex}-${oIdx}`}
                         type="button"
                         onClick={() => {
                           setCurrentAnswer(opt);
@@ -390,9 +391,9 @@ export const ThatQuizExam: React.FC<ThatQuizExamProps> = ({
                           </span>
                           <span className="leading-snug">{opt}</span>
                         </div>
-                        {isSelected && (
+                        {isSelected ? (
                           <Check className="w-4 h-4 tq-text-accent shrink-0" />
-                        )}
+                        ) : null}
                       </button>
                     );
                   })}
@@ -404,7 +405,7 @@ export const ThatQuizExam: React.FC<ThatQuizExamProps> = ({
                 )}
               </div>
             ) : (
-              <div className="space-y-2.5">
+              <div key="numeric-input" className="space-y-2.5">
                 <div className="relative">
                   <input
                     ref={inputRef}
@@ -480,7 +481,11 @@ export const ThatQuizExam: React.FC<ThatQuizExamProps> = ({
             disabled={!currentAnswer.trim() && currentQuestion.questionType !== 'multiple_choice'}
             className="px-5 py-2 text-xs sm:text-sm font-bold tq-btn-primary disabled:opacity-40 rounded-xl shadow-xs flex items-center gap-2 transition-all cursor-pointer"
           >
-            <span>{currentIndex === questions.length - 1 ? 'Finalizar evaluación' : 'Responder y continuar'}</span>
+            {currentIndex === questions.length - 1 ? (
+              <span key="btn-finish">Finalizar evaluación</span>
+            ) : (
+              <span key="btn-next">Responder y continuar</span>
+            )}
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>

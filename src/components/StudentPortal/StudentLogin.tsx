@@ -328,11 +328,11 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
       {(isCloudSignedIn || useLocalFallback) && (
         useLocalFallback ? (
           activeCourseTeacherLists.length === 0 ? (
-            <div className="p-3.5 tq-subtle border tq-border rounded-xl text-center text-xs tq-text-muted">
+            <div key="st-no-local" className="p-3.5 tq-subtle border tq-border rounded-xl text-center text-xs tq-text-muted">
               Aún no hay listas de curso locales guardadas en este navegador.
             </div>
           ) : (
-            <form onSubmit={handleLocalListLogin} className="space-y-2.5">
+            <form key="st-local-form" onSubmit={handleLocalListLogin} className="space-y-2.5">
               <div>
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <label className="text-xs font-bold tq-text-2">
@@ -477,7 +477,7 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
             </form>
           )
         ) : (
-          <form onSubmit={handleCloudListLogin} className="space-y-2.5">
+          <form key="st-cloud-form" onSubmit={handleCloudListLogin} className="space-y-2.5">
             <div>
               <div className="flex items-center justify-between gap-2 mb-1">
                 <label className="text-xs font-bold tq-text-2">

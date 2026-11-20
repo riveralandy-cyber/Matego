@@ -154,6 +154,7 @@ const MainAppContent: React.FC = () => {
     const activeStudent = currentStudent || teacherPreviewStudent;
     return (
       <ThatQuizExam
+        key={activeQuizTaking.id}
         quiz={activeQuizTaking}
         student={activeStudent}
         isFreePractice={isTeacherSoloPreview}
@@ -199,10 +200,10 @@ const MainAppContent: React.FC = () => {
     }
 
     return (
-      <div className="min-h-screen tq-page flex flex-col font-sans">
+      <div translate="no" className="notranslate min-h-screen tq-page flex flex-col font-sans">
         <Navigation />
         <main className="flex-1 max-w-7xl w-full mx-auto p-2.5 sm:p-4 min-w-0">
-          <FreePracticeView onStartPractice={startPracticeSession} />
+          <FreePracticeView key="free-practice" onStartPractice={startPracticeSession} />
         </main>
       </div>
     );
@@ -228,18 +229,20 @@ const MainAppContent: React.FC = () => {
     }
 
     return (
-      <div className="min-h-screen tq-page flex flex-col font-sans">
+      <div translate="no" className="notranslate min-h-screen tq-page flex flex-col font-sans">
         <Navigation />
 
         <main className="flex-1 max-w-7xl w-full mx-auto p-2.5 sm:p-4 min-w-0">
           {!currentStudent ? (
             <StudentLogin
+              key="student-login"
               onLoginSuccess={() => {
                 // Handled in context
               }}
             />
           ) : latestCompletedAttempt ? (
             <QuizResultSummary
+              key={`summary-${latestCompletedAttempt.id}`}
               attempt={latestCompletedAttempt}
               onRetry={() => {
                 setLatestCompletedAttempt(null);
@@ -255,6 +258,7 @@ const MainAppContent: React.FC = () => {
             />
           ) : (
             <StudentDashboard
+              key={`student-dash-${currentStudent.id}`}
               onStartQuiz={(quiz: QuizAssignment) => {
                 setActiveQuizTaking(quiz);
               }}
@@ -272,10 +276,10 @@ const MainAppContent: React.FC = () => {
   // Teacher Login Gate: never expose student rosters, PINs, or grades without teacher password
   if (!isTeacherAuthenticated) {
     return (
-      <div className="min-h-screen tq-page flex flex-col font-sans">
+      <div translate="no" className="notranslate min-h-screen tq-page flex flex-col font-sans">
         <Navigation />
         <main className="flex-1 max-w-7xl w-full mx-auto p-2.5 sm:p-4 min-w-0">
-          <TeacherLoginView />
+          <TeacherLoginView key="teacher-login" />
         </main>
       </div>
     );
@@ -283,7 +287,7 @@ const MainAppContent: React.FC = () => {
 
   // Teacher view with authentic ThatQuiz layout (authenticated only)
   return (
-    <div className="min-h-screen md:h-screen tq-page flex flex-col font-sans md:overflow-hidden">
+    <div translate="no" className="notranslate min-h-screen md:h-screen tq-page flex flex-col font-sans md:overflow-hidden">
       <Navigation />
       <TeacherLoginModal />
 
