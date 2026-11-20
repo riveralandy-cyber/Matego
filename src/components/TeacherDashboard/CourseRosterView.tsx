@@ -109,15 +109,27 @@ export const CourseRosterView: React.FC = () => {
   const qrShareUrl = `${originUrl}/?curso=${encodeURIComponent(shareCourseCode)}&rol=estudiante`;
 
   const teacherDisplay = currentTeacher?.name ? `Prof. ${currentTeacher.name}` : 'Docente';
+  const schoolDisplay =
+    currentTeacher?.schoolName && currentTeacher.schoolName !== 'Mi Establecimiento'
+      ? currentTeacher.schoolName
+      : 'MateClic Escolar Chile';
+  const communeDisplay =
+    currentTeacher?.commune && currentTeacher.commune !== 'Chile'
+      ? currentTeacher.commune
+      : 'Educación Básica MINEDUC';
+  const isSchoolConfigured = Boolean(
+    currentTeacher?.schoolName && currentTeacher.schoolName !== 'Mi Establecimiento'
+  );
+
   const whatsAppShareText = [
-    `*Escuela Ricardo Silva Arriagada · SLEP Chinchorro*`,
-    `Acceso al curso *${selectedCourse?.section || ''}* (${teacherDisplay}) en la plataforma Matemática MateClic:`,
+    `*${schoolDisplay} · ${communeDisplay}*`,
+    `Acceso al curso *${selectedCourse?.section || ''}* (${teacherDisplay}) en Matemática MateClic:`,
     ``,
     `📲 Ingresa directo escaneando el QR o abriendo este enlace:`,
     qrShareUrl,
     ``,
-    `🔑 Código del curso: *${shareCourseCode}*`,
-    `Cada estudiante elige su curso, busca su nombre en la lista e ingresa su clave / PIN (sin necesidad de correo).`,
+    `🔑 O entra a "Ingreso Alumno" con el Código del curso: *${shareCourseCode}*`,
+    `Luego busca tu nombre en la lista e ingresa tu clave / PIN (sin necesidad de correo).`,
   ].join('\n');
   const whatsAppHref = `https://wa.me/?text=${encodeURIComponent(whatsAppShareText)}`;
 
@@ -196,8 +208,8 @@ export const CourseRosterView: React.FC = () => {
 
     ctx.textAlign = 'center';
     ctx.fillStyle = '#e0e7ff';
-    ctx.font = 'bold 16px system-ui, -apple-system, sans-serif';
-    ctx.fillText('ESCUELA RICARDO SILVA ARRIAGADA · SLEP CHINCHORRO', cardWidth / 2, 42);
+    ctx.font = 'bold 15px system-ui, -apple-system, sans-serif';
+    ctx.fillText(`${schoolDisplay.toUpperCase()} · ${communeDisplay.toUpperCase()}`.slice(0, 58), cardWidth / 2, 42);
 
     ctx.fillStyle = '#ffffff';
     ctx.font = '900 32px system-ui, -apple-system, sans-serif';
@@ -238,8 +250,8 @@ export const CourseRosterView: React.FC = () => {
 
     ctx.fillStyle = '#475569';
     ctx.font = '500 15px system-ui, -apple-system, sans-serif';
-    ctx.fillText('1. Escanea el código QR con la cámara de tu celular.', cardWidth / 2, 734);
-    ctx.fillText('2. Elige tu curso y selecciona tu nombre de la lista.', cardWidth / 2, 760);
+    ctx.fillText('1. Escanea el código QR o escribe el Código del Curso arriba.', cardWidth / 2, 734);
+    ctx.fillText('2. Busca y selecciona tu nombre de la lista del curso.', cardWidth / 2, 760);
     ctx.fillText('3. Ingresa la clave / PIN entregada por tu profesor(a).', cardWidth / 2, 786);
 
     const pngUrl = outCanvas.toDataURL('image/png');
@@ -257,9 +269,20 @@ export const CourseRosterView: React.FC = () => {
       <div className="tq-card border rounded-2xl p-3.5 sm:p-4 shadow-xs print:hidden min-w-0">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5 border-b tq-border pb-2.5">
           <div>
-            <span className="text-[10px] uppercase font-bold tq-text-accent tracking-wider">
-              {selectedCourse?.schoolName} · {selectedCourse?.commune}
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[10px] uppercase font-bold tq-text-accent tracking-wider">
+                {schoolDisplay} · {communeDisplay}
+              </span>
+              {!isSchoolConfigured && (
+                <button
+                  type="button"
+                  onClick={() => setIsTeacherLoginModalOpen(true)}
+                  className="text-[10px] font-bold px-2 py-0.5 rounded-full tq-accent-soft border tq-border hover:opacity-85 cursor-pointer"
+                >
+                  Configurar mi escuela
+                </button>
+              )}
+            </div>
             <h2 className="text-sm sm:text-base font-bold tq-text flex items-center gap-1.5 mt-0.5">
               <span>Niveles de Educación Básica</span>
               <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full tq-muted tq-text-2">
@@ -763,8 +786,8 @@ export const CourseRosterView: React.FC = () => {
             {/* Pinned Header (never scrolls out of view) */}
             <div className="px-5 py-3.5 border-b border-slate-200 flex items-start justify-between gap-3 shrink-0 bg-white">
               <div className="min-w-0">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-indigo-700 block">
-                  Escuela Ricardo Silva Arriagada · SLEP Chinchorro
+                <span className="text-[10px] uppercase font-bold tracking-wider text-indigo-700 block truncate">
+                  {schoolDisplay} · {communeDisplay}
                 </span>
                 <h3 className="text-lg font-black text-slate-900 leading-tight">
                   Acceso por QR · {selectedCourse?.section}
@@ -809,8 +832,8 @@ export const CourseRosterView: React.FC = () => {
               </div>
 
               <ol className="mt-3 text-xs text-slate-600 space-y-1 text-left bg-slate-50 border border-slate-200 rounded-2xl p-3 w-full">
-                <li><strong>1.</strong> Escanea el código QR con la cámara del celular o abre el enlace compartido.</li>
-                <li><strong>2.</strong> Elige tu curso y busca tu nombre en la lista (sin correo).</li>
+                <li><strong>1.</strong> Escanea el código QR con el celular o ingresa en <strong>Ingreso Alumno</strong> con el <strong>Código del Curso</strong>.</li>
+                <li><strong>2.</strong> Busca y elige tu nombre dentro de la lista del curso (sin correo).</li>
                 <li><strong>3.</strong> Ingresa la clave / PIN de 4 dígitos entregada por tu profesor(a).</li>
               </ol>
             </div>
@@ -883,7 +906,7 @@ export const CourseRosterView: React.FC = () => {
                   Tarjetas de Acceso MateClic - {selectedCourse?.section}
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Escuela Ricardo Silva Arriagada · SLEP Chinchorro
+                  {schoolDisplay} · {communeDisplay}
                 </p>
               </div>
 
@@ -932,11 +955,11 @@ export const CourseRosterView: React.FC = () => {
                   className="border-2 border-dashed border-indigo-200 p-4 rounded-xl bg-gradient-to-br from-white via-sky-50/30 to-indigo-50/20 flex flex-col justify-between text-xs space-y-2 break-inside-avoid shadow-2xs"
                 >
                   <div className="border-b border-indigo-100 pb-2">
-                    <span className="text-[10px] uppercase font-bold text-indigo-700 block">
-                      Escuela Ricardo Silva Arriagada
+                    <span className="text-[10px] uppercase font-bold text-indigo-700 block truncate">
+                      {schoolDisplay}
                     </span>
-                    <span className="text-[11px] font-semibold text-slate-600">
-                      SLEP Chinchorro · {selectedCourse?.section}
+                    <span className="text-[11px] font-semibold text-slate-600 block truncate">
+                      {communeDisplay} · {selectedCourse?.section}
                     </span>
                   </div>
 
@@ -950,14 +973,14 @@ export const CourseRosterView: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="bg-white border border-indigo-100 p-2.5 rounded-lg flex items-center justify-between shadow-2xs">
-                    <div>
-                      <span className="text-[9px] uppercase font-bold text-slate-400 block">Ingreso:</span>
-                      <span className="font-sans font-bold text-indigo-700 text-[11px]">
-                        Lista del curso
+                  <div className="bg-white border border-indigo-100 p-2.5 rounded-lg flex items-center justify-between gap-2 shadow-2xs">
+                    <div className="min-w-0">
+                      <span className="text-[9px] uppercase font-bold text-slate-400 block">Cód. Curso:</span>
+                      <span className="font-mono font-bold text-indigo-700 text-[10px] break-all">
+                        {shareCourseCode}
                       </span>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right shrink-0">
                       <span className="text-[9px] uppercase font-bold text-slate-400 block">
                         {st.hasCustomPin ? 'PIN Personal:' : 'Clave / PIN:'}
                       </span>
@@ -969,8 +992,8 @@ export const CourseRosterView: React.FC = () => {
 
                   <div className="text-[9px] text-slate-500 text-center pt-1 border-t border-indigo-50">
                     {st.hasCustomPin
-                      ? 'Elige tu curso, busca tu nombre e ingresa tu PIN personal'
-                      : 'Elige tu curso, busca tu nombre e ingresa este PIN'}
+                      ? 'Escanea el QR o ingresa el Código del Curso, busca tu nombre e ingresa tu PIN personal'
+                      : 'Escanea el QR o ingresa el Código del Curso, busca tu nombre e ingresa este PIN'}
                   </div>
                 </div>
               ))}

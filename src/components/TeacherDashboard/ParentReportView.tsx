@@ -119,26 +119,24 @@ export const ParentReportView: React.FC<ParentReportViewProps> = ({ initialStude
                 República de Chile · Ministerio de Educación
               </span>
               <h2 className="text-xl font-bold tracking-tight text-slate-900 uppercase font-sans">
-                {selectedCourse?.schoolName}
+                {currentTeacher?.schoolName && currentTeacher.schoolName !== 'Mi Establecimiento'
+                  ? currentTeacher.schoolName
+                  : 'Establecimiento Educacional'}
               </h2>
               <div className="text-xs text-slate-600 font-sans flex flex-wrap gap-x-3 gap-y-0.5">
-                <span>RBD: {selectedCourse?.rbd}</span>
+                <span>RBD: {currentTeacher?.rbd && currentTeacher.rbd !== '-' ? currentTeacher.rbd : '-'}</span>
                 <span>·</span>
-                <span>Comuna: {selectedCourse?.commune}</span>
+                <span>Comuna / Territorio: {currentTeacher?.commune && currentTeacher.commune !== 'Chile' ? currentTeacher.commune : 'Chile'}</span>
                 <span>·</span>
-                <span>Año Escolar: {selectedCourse?.academicYear}</span>
+                <span>Año Escolar: {selectedCourse?.academicYear || new Date().getFullYear()}</span>
               </div>
             </div>
 
-            <div className="w-16 h-16 shrink-0 rounded-full border border-slate-300 bg-slate-50 flex items-center justify-center overflow-hidden">
+            <div className="w-16 h-16 shrink-0 rounded-2xl border border-slate-300 bg-white p-1 flex items-center justify-center overflow-hidden">
               <img
-                src="/src/assets/images/chile_school_crest_1790701788269.jpg"
-                alt="Escudo Institucional"
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  // Fallback if image fails
-                  e.currentTarget.style.display = 'none';
-                }}
+                src="/assets/aistudio/Logo_Mateclic___19_Nov_2026__11.16_am_fde2aa63.png"
+                alt="Logo MateClic"
+                className="w-full h-full object-contain"
               />
             </div>
           </div>
@@ -309,7 +307,9 @@ export const ParentReportView: React.FC<ParentReportViewProps> = ({ initialStude
                 Docente de Educación Matemática
               </span>
               <span className="text-[10px] text-slate-400 block mt-0.5">
-                {selectedCourse?.schoolName}
+                {currentTeacher?.schoolName && currentTeacher.schoolName !== 'Mi Establecimiento'
+                  ? currentTeacher.schoolName
+                  : selectedCourse?.schoolName || 'Establecimiento Educacional'}
               </span>
             </div>
           </div>

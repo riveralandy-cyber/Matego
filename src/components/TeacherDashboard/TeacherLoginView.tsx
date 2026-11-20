@@ -14,6 +14,8 @@ import {
   KeyRound,
   PlayCircle,
   Cloud,
+  School,
+  MapPin,
 } from 'lucide-react';
 import { ThemePaletteSelector } from '../ThemePaletteSelector';
 
@@ -41,6 +43,8 @@ export const TeacherLoginView: React.FC = () => {
   // Register fields
   const [regName, setRegName] = useState<string>('');
   const [regEmail, setRegEmail] = useState<string>('');
+  const [regSchoolName, setRegSchoolName] = useState<string>('');
+  const [regCommune, setRegCommune] = useState<string>('');
   const [regPassword, setRegPassword] = useState<string>('');
   const [regConfirmPassword, setRegConfirmPassword] = useState<string>('');
 
@@ -77,7 +81,10 @@ export const TeacherLoginView: React.FC = () => {
       setErrorMsg('Las claves ingresadas no coinciden.');
       return;
     }
-    const res = registerTeacher(regName, regPassword, regEmail);
+    const res = registerTeacher(regName, regPassword, regEmail, {
+      schoolName: regSchoolName,
+      commune: regCommune,
+    });
     if (!res.ok) {
       setErrorMsg(res.error || 'No se pudo registrar la cuenta docente.');
     }
@@ -86,12 +93,16 @@ export const TeacherLoginView: React.FC = () => {
   return (
     <div className="max-w-lg mx-auto my-1 sm:my-2 p-4 sm:p-5 tq-card border-2 rounded-2xl shadow-sm font-sans">
       <div className="flex items-center gap-3 mb-3.5 pb-2.5 border-b tq-border">
-        <div className="w-11 h-11 tq-brand-badge border rounded-2xl flex items-center justify-center shrink-0 shadow-xs">
-          <Lock className="w-5 h-5" />
+        <div className="w-12 h-12 rounded-2xl bg-white p-0.5 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 shadow-xs overflow-hidden">
+          <img
+            src="/assets/aistudio/Logo_Mateclic___19_Nov_2026__11.16_am_fde2aa63.png"
+            alt="Logo MateClic"
+            className="w-full h-full object-contain"
+          />
         </div>
         <div className="min-w-0">
           <span className="text-[10px] font-bold uppercase tracking-wider tq-accent-soft px-2 py-0.5 rounded-full border tq-border inline-block">
-            SLEP Chinchorro · Ricardo Silva Arriagada
+            Plataforma Nacional · 1° a 8° Básico MINEDUC
           </span>
           <h1 className="text-lg sm:text-xl font-black tq-text mt-0.5 leading-tight">
             Acceso Docente en la Nube
@@ -284,6 +295,39 @@ export const TeacherLoginView: React.FC = () => {
                   </div>
                 </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs font-bold tq-text-2 mb-1">
+                      Escuela / Liceo:
+                    </label>
+                    <div className="relative">
+                      <School className="w-3.5 h-3.5 tq-text-muted absolute left-2.5 top-2" />
+                      <input
+                        type="text"
+                        value={regSchoolName}
+                        onChange={e => setRegSchoolName(e.target.value)}
+                        placeholder="Ej: Escuela Gabriela Mistral"
+                        className="w-full pl-8 pr-2.5 py-1.5 text-xs font-bold border tq-input rounded-xl focus:outline-hidden"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold tq-text-2 mb-1">
+                      Comuna / Región:
+                    </label>
+                    <div className="relative">
+                      <MapPin className="w-3.5 h-3.5 tq-text-muted absolute left-2.5 top-2" />
+                      <input
+                        type="text"
+                        value={regCommune}
+                        onChange={e => setRegCommune(e.target.value)}
+                        placeholder="Ej: La Serena · Coquimbo"
+                        className="w-full pl-8 pr-2.5 py-1.5 text-xs font-semibold border tq-input rounded-xl focus:outline-hidden"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-xs font-bold tq-text-2 mb-1">
                     Correo Electrónico (opcional):
@@ -294,7 +338,7 @@ export const TeacherLoginView: React.FC = () => {
                       type="email"
                       value={regEmail}
                       onChange={e => setRegEmail(e.target.value)}
-                      placeholder="nombre@slepchinchorro.cl"
+                      placeholder="nombre@escuela.cl"
                       className="w-full pl-9 pr-3 py-1.5 text-xs font-medium border tq-input rounded-xl focus:outline-hidden"
                     />
                   </div>

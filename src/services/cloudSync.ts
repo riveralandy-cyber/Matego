@@ -58,6 +58,7 @@ export interface CourseJoinCodeDirectory {
   ownerUid: string;
   teacherId: string;
   teacherName: string;
+  schoolName?: string;
   courseId: string;
   courseSection: string;
   studentsPreview: CourseJoinPreviewStudent[];
@@ -123,9 +124,9 @@ export async function ensureTeacherProfileCloud(params: {
         teacherId: data.teacherId,
         name: data.name || params.name,
         email: data.email || params.email,
-        schoolName: data.schoolName || 'Escuela Ricardo Silva Arriagada',
-        commune: data.commune || 'SLEP Chinchorro · Arica',
-        rbd: data.rbd || '102-4',
+        schoolName: data.schoolName || 'Mi Establecimiento',
+        commune: data.commune || 'Chile',
+        rbd: data.rbd || '-',
         activeTheme: normalizeTheme(data.activeTheme),
         seededInitialData: Boolean(data.seededInitialData),
       };
@@ -136,9 +137,9 @@ export async function ensureTeacherProfileCloud(params: {
       teacherId: params.uid,
       name: clampStr(params.name, 120, 'Docente'),
       email: clampStr(params.email, 160, ''),
-      schoolName: 'Escuela Ricardo Silva Arriagada',
-      commune: 'SLEP Chinchorro · Arica',
-      rbd: '102-4',
+      schoolName: 'Mi Establecimiento',
+      commune: 'Chile',
+      rbd: '-',
       activeTheme: normalizeTheme(params.activeTheme),
       seededInitialData: false,
     };
@@ -165,6 +166,67 @@ export async function updateTeacherThemeCloud(uid: string, activeTheme: ThemePal
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, `teachers/${uid}`);
   }
+}
+
+export async function updateTeacherProfileCloud(
+  uid: string,
+  updates: {
+    name: string;
+    schoolName: string;
+    commune: string;
+    rbd: string;
+  }
+): Promise<void> {
+  const cleanName = clampStr(updates.name, 120, 'Docente');
+  const cleanSchool = clampStr(updates.schoolName, 160, 'Mi Establecimiento');
+  const cleanCommune = clampStr(updates.commune, 120, 'Chile');
+  const cleanRbd = clampStr(updates.rbd, 24, '-');
+
+  const ops: BatchOp[] = [
+    batch =>
+      batch.update(doc(db, 'teachers', uid), {
+        name: cleanName,
+        schoolName: cleanSchool,
+        commune: cleanCommune,
+        rbd: cleanRbd,
+        serverUpdatedAt: serverTimestamp(),
+      }),
+  ];
+
+  try {
+    const joinSnap = await getDocs(
+      query(collection(db, 'courseJoinCodes'), where('ownerUid', '==', uid))
+    );
+    joinSnap.docs.forEach(d => {
+      ops.push(batch =>
+        batch.update(d.ref, {
+          teacherName: cleanName,
+          schoolName: cleanSchool,
+          serverUpdatedAt: serverTimestamp(),
+        })
+      );
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, 'courseJoinCodes');
+  }
+
+  try {
+    const dirSnap = await getDocs(
+      query(collection(db, 'studentDirectory'), where('ownerUid', '==', uid))
+    );
+    dirSnap.docs.forEach(d => {
+      ops.push(batch =>
+        batch.update(d.ref, {
+          teacherName: cleanName,
+          serverUpdatedAt: serverTimestamp(),
+        })
+      );
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, 'studentDirectory');
+  }
+
+  await commitBatchOpsInChunks(ops, OperationType.UPDATE, `teachers/${uid}`);
 }
 
 async function resolveUniqueAccessCode(desiredCode: string, ownerUid: string): Promise<string> {
@@ -231,23 +293,50 @@ export async function clearAllTeacherCloudData(ownerUid: string): Promise<void> 
   }
 }
 
+async function resolveCourseJoinRef(
+  ownerUid: string,
+  courseId: string
+): Promise<{ joinCode: string; joinRef: ReturnType<typeof doc>; exists: boolean }> {
+  const mcCode = makeCourseJoinCode(ownerUid, courseId, 'MC');
+  const mcRef = doc(db, 'courseJoinCodes', mcCode);
+  try {
+    const mcSnap = await getDoc(mcRef);
+    if (mcSnap.exists()) {
+      return { joinCode: mcCode, joinRef: mcRef, exists: true };
+    }
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, `courseJoinCodes/${mcCode}`);
+  }
+
+  // Backward compatibility for courses created earlier under RSA- prefix
+  const rsaCode = makeCourseJoinCode(ownerUid, courseId, 'RSA');
+  if (rsaCode !== mcCode) {
+    const rsaRef = doc(db, 'courseJoinCodes', rsaCode);
+    try {
+      const rsaSnap = await getDoc(rsaRef);
+      if (rsaSnap.exists()) {
+        return { joinCode: rsaCode, joinRef: rsaRef, exists: true };
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, `courseJoinCodes/${rsaCode}`);
+    }
+  }
+
+  return { joinCode: mcCode, joinRef: mcRef, exists: false };
+}
+
 export async function addStudentsCloud(
   ownerUid: string,
   teacherName: string,
+  schoolName: string,
   courseId: string,
   courseSection: string,
   newStudents: Student[],
   allCourseStudentsAfter: Student[]
 ): Promise<void> {
   const cleanTeacherName = clampStr(teacherName, 120, 'Docente');
-  const joinCode = makeCourseJoinCode(ownerUid, courseId);
-  const joinRef = doc(db, 'courseJoinCodes', joinCode);
-  let joinExists = false;
-  try {
-    joinExists = (await getDoc(joinRef)).exists();
-  } catch (error) {
-    handleFirestoreError(error, OperationType.GET, `courseJoinCodes/${joinCode}`);
-  }
+  const cleanSchoolName = clampStr(schoolName, 160, 'Mi Establecimiento');
+  const { joinCode, joinRef, exists: joinExists } = await resolveCourseJoinRef(ownerUid, courseId);
 
   const resolvedStudents: (Student & { uniqueCode: string; pinHash: string; docId: string })[] = [];
   for (const st of newStudents) {
@@ -317,6 +406,7 @@ export async function addStudentsCloud(
     ops.push(batch =>
       batch.update(joinRef, {
         teacherName: cleanTeacherName,
+        schoolName: cleanSchoolName,
         courseSection: clampStr(courseSection, 64),
         studentsPreview: preview,
         serverUpdatedAt: serverTimestamp(),
@@ -329,6 +419,7 @@ export async function addStudentsCloud(
         ownerUid,
         teacherId: ownerUid,
         teacherName: cleanTeacherName,
+        schoolName: cleanSchoolName,
         courseId,
         courseSection: clampStr(courseSection, 64),
         studentsPreview: preview,
@@ -344,6 +435,7 @@ export async function addStudentsCloud(
 export async function removeStudentsCloud(
   ownerUid: string,
   teacherName: string,
+  schoolName: string,
   courseId: string,
   courseSection: string,
   studentsToRemove: Student[],
@@ -351,14 +443,7 @@ export async function removeStudentsCloud(
 ): Promise<void> {
   if (studentsToRemove.length === 0) return;
 
-  const joinCode = makeCourseJoinCode(ownerUid, courseId);
-  const joinRef = doc(db, 'courseJoinCodes', joinCode);
-  let joinExists = false;
-  try {
-    joinExists = (await getDoc(joinRef)).exists();
-  } catch (error) {
-    handleFirestoreError(error, OperationType.GET, `courseJoinCodes/${joinCode}`);
-  }
+  const { joinRef, exists: joinExists } = await resolveCourseJoinRef(ownerUid, courseId);
 
   const ops: BatchOp[] = [];
   for (const st of studentsToRemove) {
@@ -376,6 +461,7 @@ export async function removeStudentsCloud(
       ops.push(batch =>
         batch.update(joinRef, {
           teacherName: clampStr(teacherName, 120, 'Docente'),
+          schoolName: clampStr(schoolName, 160, 'Mi Establecimiento'),
           courseSection: clampStr(courseSection, 64),
           studentsPreview: [...remainingCourseStudents]
             .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }))
@@ -415,27 +501,20 @@ export async function unlinkStudentGoogleCloud(ownerUid: string, student: Studen
 export async function updateStudentNameCloud(params: {
   ownerUid: string;
   teacherName: string;
+  schoolName: string;
   courseId: string;
   courseSection: string;
   student: Student;
   newName: string;
   allCourseStudentsAfter: Student[];
 }): Promise<void> {
-  const { ownerUid, teacherName, courseId, courseSection, student, newName, allCourseStudentsAfter } = params;
+  const { ownerUid, teacherName, schoolName, courseId, courseSection, student, newName, allCourseStudentsAfter } = params;
   const cleanName = clampStr(newName, 120);
   if (cleanName.length < 2) return;
 
   const docId = makeStudentDocId(ownerUid, student.id);
   const accessCode = sanitizeFirestoreId(student.accessCode.toUpperCase(), 32);
-  const joinCode = makeCourseJoinCode(ownerUid, courseId);
-  const joinRef = doc(db, 'courseJoinCodes', joinCode);
-
-  let joinExists = false;
-  try {
-    joinExists = (await getDoc(joinRef)).exists();
-  } catch (error) {
-    handleFirestoreError(error, OperationType.GET, `courseJoinCodes/${joinCode}`);
-  }
+  const { joinRef, exists: joinExists } = await resolveCourseJoinRef(ownerUid, courseId);
 
   const ops: BatchOp[] = [
     batch =>
@@ -458,6 +537,7 @@ export async function updateStudentNameCloud(params: {
     ops.push(batch =>
       batch.update(joinRef, {
         teacherName: clampStr(teacherName, 120, 'Docente'),
+        schoolName: clampStr(schoolName, 160, 'Mi Establecimiento'),
         courseSection: clampStr(courseSection, 64),
         studentsPreview: allCourseStudentsAfter
           .map(s => ({
@@ -725,44 +805,6 @@ export async function lookupCourseJoinCodeCloud(
   }
 }
 
-const ALL_VALID_COURSE_IDS = [
-  'course-1a', 'course-1b',
-  'course-2a', 'course-2b',
-  'course-3a', 'course-3b',
-  'course-4a', 'course-4b',
-  'course-5a', 'course-5b',
-  'course-6a', 'course-6b',
-  'course-7a', 'course-7b',
-  'course-8a', 'course-8b',
-];
-
-export async function listAvailableCourseDirectoriesCloud(): Promise<CourseJoinCodeDirectory[]> {
-  try {
-    const snap = await getDocs(
-      query(collection(db, 'courseJoinCodes'), where('courseId', 'in', ALL_VALID_COURSE_IDS))
-    );
-    const list = snap.docs
-      .map(d => {
-        const raw = d.data() as CourseJoinCodeDirectory;
-        return {
-          ...raw,
-          studentsPreview: [...(raw.studentsPreview || [])].sort((a, b) =>
-            a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })
-          ),
-        };
-      })
-      .filter(d => d.studentsPreview.length > 0);
-    list.sort((a, b) =>
-      `${a.courseId} ${a.teacherName}`.localeCompare(`${b.courseId} ${b.teacherName}`, 'es', {
-        sensitivity: 'base',
-      })
-    );
-    return list;
-  } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, 'courseJoinCodes');
-  }
-}
-
 export async function claimStudentWithAccessCodeCloud(params: {
   accessCode: string;
   pin: string;
@@ -871,6 +913,7 @@ export function subscribeTeacherWorkspaceCloud(
     onAssignments: (assignments: QuizAssignment[]) => void;
     onAttempts: (attempts: QuizAttempt[]) => void;
     onProfile?: (profile: CloudTeacherProfile) => void;
+    onJoinCodes?: (joinCodeMap: Record<string, string>) => void;
     onError: (err: Error) => void;
   }
 ): Unsubscribe {
@@ -884,6 +927,29 @@ export function subscribeTeacherWorkspaceCloud(
     error => {
       try {
         handleFirestoreError(error, OperationType.GET, `teachers/${ownerUid}`);
+      } catch (wrapped) {
+        callbacks.onError(wrapped instanceof Error ? wrapped : new Error(String(wrapped)));
+      }
+    }
+  );
+
+  const unsubJoinCodes = onSnapshot(
+    query(collection(db, 'courseJoinCodes'), where('ownerUid', '==', ownerUid)),
+    snap => {
+      if (callbacks.onJoinCodes) {
+        const map: Record<string, string> = {};
+        snap.docs.forEach(d => {
+          const raw = d.data() as CourseJoinCodeDirectory;
+          if (raw.courseId && raw.joinCode) {
+            map[raw.courseId] = raw.joinCode;
+          }
+        });
+        callbacks.onJoinCodes(map);
+      }
+    },
+    error => {
+      try {
+        handleFirestoreError(error, OperationType.LIST, 'courseJoinCodes');
       } catch (wrapped) {
         callbacks.onError(wrapped instanceof Error ? wrapped : new Error(String(wrapped)));
       }
@@ -940,6 +1006,7 @@ export function subscribeTeacherWorkspaceCloud(
 
   return () => {
     unsubProfile();
+    unsubJoinCodes();
     unsubStudents();
     unsubAssignments();
     unsubAttempts();
@@ -1080,9 +1147,9 @@ export async function listAllCloudTeachers(): Promise<CloudTeacherProfile[]> {
         teacherId: data.teacherId,
         name: data.name || 'Docente',
         email: data.email || '',
-        schoolName: data.schoolName || 'Escuela Ricardo Silva Arriagada',
-        commune: data.commune || 'SLEP Chinchorro · Arica',
-        rbd: data.rbd || '102-4',
+        schoolName: data.schoolName || 'Mi Establecimiento',
+        commune: data.commune || 'Chile',
+        rbd: data.rbd || '-',
         activeTheme: normalizeTheme(data.activeTheme),
         seededInitialData: Boolean(data.seededInitialData),
       };

@@ -121,17 +121,18 @@ service cloud.firestore {
 
     function isValidCourseJoinCode(data) {
       return data.keys().hasAll([
-          'joinCode', 'ownerUid', 'teacherId', 'teacherName', 'courseId',
+          'joinCode', 'ownerUid', 'teacherId', 'teacherName', 'schoolName', 'courseId',
           'courseSection', 'studentsPreview', 'serverCreatedAt', 'serverUpdatedAt'
         ])
         && data.keys().hasOnly([
-          'joinCode', 'ownerUid', 'teacherId', 'teacherName', 'courseId',
+          'joinCode', 'ownerUid', 'teacherId', 'teacherName', 'schoolName', 'courseId',
           'courseSection', 'studentsPreview', 'serverCreatedAt', 'serverUpdatedAt'
         ])
         && isValidId(data.joinCode) && data.joinCode.size() >= 4 && data.joinCode.size() <= 48
         && isValidId(data.ownerUid)
         && isValidId(data.teacherId)
         && isStringRange(data.teacherName, 2, 120)
+        && isStringRange(data.schoolName, 1, 160)
         && isValidId(data.courseId) && data.courseId.size() <= 64
         && isStringRange(data.courseSection, 2, 64)
         && data.studentsPreview is list
@@ -394,18 +395,12 @@ service cloud.firestore {
         && (existing().ownerUid == request.auth.uid || isAdmin());
     }
 
-    // 4. Course Join Codes (Class directory without PII)
+    // 4. Course Join Codes (Private class directory fetched strictly by exact joinCode or QR)
     match /courseJoinCodes/{joinCode} {
       allow get: if isSignedIn() && isValidId(joinCode);
       allow list: if isSignedIn() && (
         existing().ownerUid == request.auth.uid
         || isAdmin()
-        || existing().courseId in [
-          'course-1a', 'course-1b', 'course-2a', 'course-2b',
-          'course-3a', 'course-3b', 'course-4a', 'course-4b',
-          'course-5a', 'course-5b', 'course-6a', 'course-6b',
-          'course-7a', 'course-7b', 'course-8a', 'course-8b'
-        ]
       );
       allow create: if isVerifiedUser()
         && isValidId(joinCode)
@@ -425,7 +420,7 @@ service cloud.firestore {
         && incoming().serverCreatedAt == existing().serverCreatedAt
         && incoming().serverUpdatedAt == request.time
         && incoming().diff(existing()).affectedKeys().hasOnly([
-          'teacherName', 'courseSection', 'studentsPreview', 'serverUpdatedAt'
+          'teacherName', 'schoolName', 'courseSection', 'studentsPreview', 'serverUpdatedAt'
         ]);
       allow delete: if isVerifiedUser()
         && isValidId(joinCode)

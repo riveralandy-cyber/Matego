@@ -102,10 +102,10 @@ export function makeCourseMemberId(ownerUid: string, courseId: string, studentUi
   return sanitizeFirestoreId(`${ownerUid}__${courseId}__${studentUid}`);
 }
 
-export function makeCourseJoinCode(ownerUid: string, courseId: string): string {
+export function makeCourseJoinCode(ownerUid: string, courseId: string, prefix: 'MC' | 'RSA' = 'MC'): string {
   const courseToken = courseId.replace(/^course-/, '').toUpperCase();
   const uidTag = ownerUid.replace(/[^a-zA-Z0-9]/g, '').slice(0, 6).toUpperCase() || 'CLOUD';
-  return sanitizeFirestoreId(`RSA-${courseToken}-${uidTag}`, 48);
+  return sanitizeFirestoreId(`${prefix}-${courseToken}-${uidTag}`, 48);
 }
 
 export async function sha256Hex(value: string): Promise<string> {

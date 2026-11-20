@@ -95,7 +95,9 @@ export const CurriculumView: React.FC = () => {
                 Currículum Nacional MINEDUC
               </span>
               <span className="text-[11px] font-semibold tq-text-muted">
-                Escuela Ricardo Silva Arriagada · SLEP Chinchorro
+                {currentTeacher?.schoolName && currentTeacher.schoolName !== 'Mi Establecimiento'
+                  ? `${currentTeacher.schoolName}${currentTeacher?.commune && currentTeacher.commune !== 'Chile' ? ` · ${currentTeacher.commune}` : ''}`
+                  : 'Bases Curriculares Chile · 1° a 8° Básico'}
               </span>
             </div>
             <h1 className="text-lg sm:text-xl font-black tq-text mt-1 flex items-center gap-2">

@@ -17,6 +17,7 @@ import { ParentReportView } from './components/TeacherDashboard/ParentReportView
 import { CurriculumView } from './components/TeacherDashboard/CurriculumView';
 import { TeacherLoginModal } from './components/TeacherDashboard/TeacherLoginModal';
 import { TeacherLoginView } from './components/TeacherDashboard/TeacherLoginView';
+import { TeacherSchoolOnboarding } from './components/TeacherDashboard/TeacherSchoolOnboarding';
 import { SimceCreatorView } from './components/TeacherDashboard/SimceCreatorView';
 import { StudentLogin } from './components/StudentPortal/StudentLogin';
 import { StudentDashboard } from './components/StudentPortal/StudentDashboard';
@@ -42,6 +43,9 @@ const MainAppContent: React.FC = () => {
     role,
     setRole,
     isTeacherAuthenticated,
+    isCloudTeacher,
+    cloudProfileReady,
+    needsSchoolSetup,
     activeTeacherTab,
     setActiveTeacherTab,
     currentStudent,
@@ -294,6 +298,42 @@ const MainAppContent: React.FC = () => {
         <Navigation />
         <main className="flex-1 max-w-7xl w-full mx-auto p-2.5 sm:p-4 min-w-0">
           <TeacherLoginView key="teacher-login" />
+        </main>
+      </div>
+    );
+  }
+
+  // While cloud profile is resolving from Firestore, avoid flashing unconfigured views
+  if (isCloudTeacher && !cloudProfileReady) {
+    return (
+      <div translate="no" className="notranslate min-h-screen tq-page flex flex-col font-sans">
+        <Navigation />
+        <main className="flex-1 max-w-2xl w-full mx-auto p-4 sm:p-6 flex items-center justify-center">
+          <div className="w-full p-6 tq-card border-2 rounded-3xl shadow-sm text-center space-y-2.5">
+            <div className="w-12 h-12 mx-auto rounded-2xl bg-white p-1 border border-slate-200 dark:border-slate-700 overflow-hidden shadow-xs">
+              <img
+                src="/assets/aistudio/Logo_Mateclic___19_Nov_2026__11.16_am_fde2aa63.png"
+                alt="Logo MateClic"
+                className="w-full h-full object-contain"
+              />
+            </div>
+            <p className="text-sm font-bold tq-text">Conectando con tu perfil docente...</p>
+            <p className="text-xs tq-text-muted">
+              Verificando establecimiento y cursos en la nube de MateClic.
+            </p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // First-time teacher onboarding: require setting school/commune before entering workspace
+  if (needsSchoolSetup) {
+    return (
+      <div translate="no" className="notranslate min-h-screen tq-page flex flex-col font-sans">
+        <Navigation />
+        <main className="flex-1 max-w-7xl w-full mx-auto p-2.5 sm:p-4 min-w-0">
+          <TeacherSchoolOnboarding />
         </main>
       </div>
     );

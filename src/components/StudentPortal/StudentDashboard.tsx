@@ -27,6 +27,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     assignments,
     attempts,
     teachers,
+    studentSchoolName,
     logoutStudent,
   } = useApp();
   const [isChangePinOpen, setIsChangePinOpen] = useState(false);
@@ -132,7 +133,13 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
               )}
             </div>
             <p className="text-xs tq-text-muted mt-1">
-              {course?.section} · Prof. {resolvedTeacherName} · {course?.schoolName} {currentStudent.rut ? `· RUN: ${currentStudent.rut}` : ''}
+              {course?.section} · Prof. {resolvedTeacherName}
+              {studentSchoolName
+                ? ` · ${studentSchoolName}`
+                : studentTeacher?.schoolName && studentTeacher.schoolName !== 'Mi Establecimiento'
+                ? ` · ${studentTeacher.schoolName}`
+                : ''}
+              {currentStudent.rut ? ` · RUN: ${currentStudent.rut}` : ''}
             </p>
           </div>
         </div>

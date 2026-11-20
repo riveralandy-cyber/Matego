@@ -8,6 +8,8 @@ export const Navigation: React.FC = () => {
     setRole,
     isTeacherAuthenticated,
     isCloudTeacher,
+    cloudProfileReady,
+    needsSchoolSetup,
     cloudSyncStatus,
     logoutTeacher,
     activeTeacherTab,
@@ -18,7 +20,8 @@ export const Navigation: React.FC = () => {
     setIsTeacherLoginModalOpen,
   } = useApp();
 
-  const showTeacherControls = role === 'teacher' && isTeacherAuthenticated;
+  const isOnboardingOrLoading = (isCloudTeacher && !cloudProfileReady) || needsSchoolSetup;
+  const showTeacherControls = role === 'teacher' && isTeacherAuthenticated && !isOnboardingOrLoading;
 
   const teacherTabLabels: Record<typeof activeTeacherTab, string> = {
     matrix: 'Planilla de Notas',
@@ -34,8 +37,8 @@ export const Navigation: React.FC = () => {
   return (
     <header className="w-full tq-header backdrop-blur-xs border-b sticky top-0 z-40 print:hidden shadow-xs">
       <div className="max-w-[1600px] mx-auto px-2.5 sm:px-4 h-14 flex items-center justify-between gap-2 sm:gap-3 min-w-0">
-        {/* Zone 1: Brand wordmark */}
-        <div className="flex items-center gap-2 min-w-0 shrink">
+        {/* Zone 1: Brand logo & wordmark */}
+        <div className="flex items-center gap-2.5 min-w-0 shrink">
           <a
             href="/"
             onClick={e => {
@@ -46,18 +49,43 @@ export const Navigation: React.FC = () => {
               }
               setActiveQuizTaking(null);
             }}
-            className="flex items-center gap-2 group min-w-0"
+            className="flex items-center gap-2.5 group min-w-0"
           >
-            <div className="w-8 h-8 rounded-lg tq-brand-badge flex items-center justify-center shadow-xs border border-white/60 dark:border-slate-700 shrink-0">
-              <span translate="no" className="notranslate font-mono font-black text-sm">MC</span>
+            <div className="w-10 h-10 rounded-xl bg-white p-0.5 flex items-center justify-center shadow-xs border border-slate-200/90 dark:border-slate-700 shrink-0 overflow-hidden">
+              <img
+                src="/assets/aistudio/Logo_Mateclic___19_Nov_2026__11.16_am_fde2aa63.png"
+                alt="Logo MateClic"
+                className="w-full h-full object-contain"
+              />
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-xs sm:text-sm font-bold tracking-tight tq-text group-hover:tq-text-accent transition-colors truncate max-w-[155px] sm:max-w-none">
-                Escuela Ricardo Silva Arriagada
-              </span>
-              <span className="hidden sm:block text-[10px] tq-text-muted font-medium truncate">
-                SLEP Chinchorro · <span translate="no" className="notranslate">MateClic</span> Matemática
-              </span>
+              {showTeacherControls ? (
+                <>
+                  <span className="text-xs sm:text-sm font-bold tracking-tight tq-text group-hover:tq-text-accent transition-colors truncate max-w-[165px] sm:max-w-[280px] lg:max-w-none">
+                    {currentTeacher?.schoolName && currentTeacher.schoolName !== 'Mi Establecimiento'
+                      ? currentTeacher.schoolName
+                      : 'MateClic Matemática'}
+                  </span>
+                  <span className="hidden sm:block text-[10px] tq-text-muted font-medium truncate">
+                    {currentTeacher?.commune && currentTeacher.commune !== 'Chile'
+                      ? `${currentTeacher.commune} · `
+                      : ''}
+                    <span translate="no" className="notranslate">MateClic</span> Escolar · 1° a 8° Básico MINEDUC
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span
+                    translate="no"
+                    className="notranslate text-sm sm:text-base font-black tracking-tight tq-text group-hover:tq-text-accent transition-colors truncate"
+                  >
+                    MateClic
+                  </span>
+                  <span className="hidden sm:block text-[10px] tq-text-muted font-medium truncate">
+                    Matemática Escolar 1° a 8° Básico · Chile MINEDUC
+                  </span>
+                </>
+              )}
             </div>
           </a>
         </div>
@@ -86,6 +114,17 @@ export const Navigation: React.FC = () => {
 
         {/* Zone 3: Actions */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {role === 'teacher' && isTeacherAuthenticated && isOnboardingOrLoading && (
+            <button
+              type="button"
+              onClick={logoutTeacher}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/70 text-rose-700 dark:text-rose-200 rounded-lg text-xs font-bold transition-all border border-rose-200 dark:border-rose-800 shadow-2xs cursor-pointer"
+              title="Cerrar sesión de profesor"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline whitespace-nowrap">Salir</span>
+            </button>
+          )}
           {showTeacherControls && (
             <>
               {isCloudTeacher && (

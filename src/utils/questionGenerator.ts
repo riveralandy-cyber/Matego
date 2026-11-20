@@ -111,7 +111,7 @@ const CHILEAN_PLACES = [
   'la feria libre del barrio',
   'el almacén Don Pedro',
   'el Valle de Azapa',
-  'la biblioteca de la Escuela Ricardo Silva Arriagada',
+  'la biblioteca de la escuela',
   'el patio techado de la escuela',
   'la librería del centro',
   'el quiosco escolar'
@@ -702,7 +702,7 @@ const TOPIC_GENERATORS: Record<TopicKey, TopicGenerator> = {
       const ansOrd = pool.find(o => o.pos === ansPos)!;
       const stories = [
         {
-          prompt: `En la carrera escolar de la Escuela Ricardo Silva Arriagada compitieron ${total} estudiantes. ${name} llegó a la meta justo ${before ? 'antes' : 'después'} del ${refOrd.word} (${refOrd.num}) lugar. ¿En qué lugar llegó ${name}?`,
+          prompt: `En la carrera escolar del colegio compitieron ${total} estudiantes. ${name} llegó a la meta justo ${before ? 'antes' : 'después'} del ${refOrd.word} (${refOrd.num}) lugar. ¿En qué lugar llegó ${name}?`,
           ans: ansOrd.word,
           exp: `El lugar inmediatamente ${before ? 'anterior' : 'posterior'} al ${refOrd.word} (${refOrd.num}) es el ${ansOrd.word} (${ansOrd.num}).`
         },
@@ -915,7 +915,7 @@ const TOPIC_GENERATORS: Record<TopicKey, TopicGenerator> = {
           exp: `"${safeWords}" escrito en cifras es ${safeN}.`
         },
         {
-          prompt: `El número de entrada para la rifa de la Escuela Ricardo Silva Arriagada de ${name} es el sucesor de "${safeWords}". ¿Cuál es el número de su boleto en cifras?`,
+          prompt: `El número de entrada para la rifa de la escuela de ${name} es el sucesor de "${safeWords}". ¿Cuál es el número de su boleto en cifras?`,
           ans: safeN + 1,
           exp: `"${safeWords}" es ${safeN}, y su sucesor es ${safeN} + 1 = ${safeN + 1}.`
         },
@@ -2860,7 +2860,7 @@ const TOPIC_GENERATORS: Record<TopicKey, TopicGenerator> = {
           exp: `${b} vueltas × ${a} metros = ${prod} metros.`
         },
         {
-          prompt: `En la biblioteca de la Escuela Ricardo Silva Arriagada hay ${b} estantes grandes, y en cada estante se ordenaron ${a} libros. ¿Cuántos libros hay en total en esos estantes?`,
+          prompt: `En la biblioteca de la escuela hay ${b} estantes grandes, y en cada estante se ordenaron ${a} libros. ¿Cuántos libros hay en total en esos estantes?`,
           exp: `${b} estantes × ${a} libros = ${prod} libros.`
         },
         {
@@ -3472,7 +3472,7 @@ const TOPIC_GENERATORS: Record<TopicKey, TopicGenerator> = {
       const name = randChoice(CHILEAN_NAMES);
       const scenarios = [
         {
-          prompt: `Dos buses escolares salen de la Escuela Ricardo Silva Arriagada. La micro A sale cada ${a} minutos y la micro B cada ${b} minutos. Si salieron juntos a las 08:00, ¿en cuántos minutos volverán a coincidir en la salida?`,
+          prompt: `Dos buses escolares salen de la escuela. La micro A sale cada ${a} minutos y la micro B cada ${b} minutos. Si salieron juntos a las 08:00, ¿en cuántos minutos volverán a coincidir en la salida?`,
           ans: lcm,
           exp: `El mínimo común múltiplo de ${a} y ${b} es ${lcm} minutos.`
         },
@@ -4779,7 +4779,7 @@ const TOPIC_GENERATORS: Record<TopicKey, TopicGenerator> = {
       const name = randChoice(CHILEAN_NAMES);
       const scenarios = [
         {
-          prompt: `El patio de juegos de la Escuela Ricardo Silva Arriagada tiene forma cuadrada y su área total es de ${area} m². ¿Cuánto mide cada uno de sus lados?`,
+          prompt: `El patio de juegos de la escuela tiene forma cuadrada y su área total es de ${area} m². ¿Cuánto mide cada uno de sus lados?`,
           ans: lado,
           exp: `Como el área del cuadrado es lado², calculamos la raíz cuadrada: √${area} = ${lado} metros.`
         },
@@ -7625,7 +7625,7 @@ const TOPIC_GENERATORS: Record<TopicKey, TopicGenerator> = {
       const ladoHex = randInt(4, 12);
       const scenarios = [
         {
-          prompt: `La escuela Ricardo Silva Arriagada desea colocar una reja alrededor de una zona rectangular de ${a} m de largo por ${b} m de ancho. ¿Cuántos metros de reja se deben comprar?`,
+          prompt: `La escuela desea colocar una reja alrededor de una zona rectangular de ${a} m de largo por ${b} m de ancho. ¿Cuántos metros de reja se deben comprar?`,
           ans: perimRec,
           exp: `Se calcula el perímetro del rectángulo: 2 × (${a} + ${b}) = ${perimRec} metros.`
         },

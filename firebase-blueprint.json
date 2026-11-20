@@ -690,7 +690,7 @@
     },
     "/courseJoinCodes/{joinCode}": {
       "schema": { "$ref": "#/entities/CourseJoinCode" },
-      "description": "Class join directory exposing non-PII student display names for class dropdown login."
+      "description": "Private class join directory looked up strictly by exact joinCode (QR or teacher-shared code), never publicly listed across schools."
     },
     "/courseMembers/{memberDocId}": {
       "schema": { "$ref": "#/entities/CourseMember" },

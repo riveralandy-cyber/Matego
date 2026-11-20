@@ -947,7 +947,9 @@ export const ThatQuizGradeMatrix: React.FC<ThatQuizGradeMatrixProps> = ({ onSele
               Configuración de Escala MateClic
             </h3>
             <p className="text-xs tq-text-muted mb-4">
-              Escuela Ricardo Silva Arriagada · SLEP Chinchorro
+              {currentTeacher?.schoolName && currentTeacher.schoolName !== 'Mi Establecimiento'
+                ? `${currentTeacher.schoolName}${currentTeacher?.commune && currentTeacher.commune !== 'Chile' ? ` · ${currentTeacher.commune}` : ''}`
+                : 'Sistema Nacional de Evaluación Matemática · Chile'}
             </p>
 
             <div className="space-y-3 text-xs tq-text-2 tq-subtle p-4 rounded-xl border">
@@ -965,7 +967,7 @@ export const ThatQuizGradeMatrix: React.FC<ThatQuizGradeMatrixProps> = ({ onSele
               </div>
               <div className="flex justify-between">
                 <span>Establecimiento:</span>
-                <strong className="tq-text">Escuela Ricardo Silva Arriagada</strong>
+                <strong className="tq-text">{currentTeacher?.schoolName || 'Mi Establecimiento'}</strong>
               </div>
             </div>
 

@@ -1,7 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
 import {
-  KeyRound,
   UserCheck,
   ShieldAlert,
   PlayCircle,
@@ -13,6 +12,8 @@ import {
   Eye,
   EyeOff,
   Cloud,
+  ArrowRight,
+  School,
 } from 'lucide-react';
 import { ThemePaletteSelector } from '../ThemePaletteSelector';
 import { CourseJoinCodeDirectory } from '../../services/cloudSync';
@@ -31,7 +32,6 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
     isAuthReady,
     studentCloudError,
     ensureStudentSession,
-    listAvailableCourseDirectories,
     lookupCourseJoinCode,
     loginStudentCloudByAccessCode,
     setCurrentStudent,
@@ -41,7 +41,7 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
     clearUrlCourseJoinCode,
   } = useApp();
 
-  // Build unique (courseId, teacherId) lists for local demo fallback
+  // Build unique (courseId, teacherId) lists strictly for local browser demo fallback
   const activeCourseTeacherLists = React.useMemo(() => {
     const map = new Map<string, { key: string; courseId: string; teacherId: string; count: number }>();
     students.forEach(s => {
@@ -58,11 +58,11 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
 
   const [useLocalFallback, setUseLocalFallback] = useState(false);
 
-  // Cloud available courses directory state
-  const [availableDirectories, setAvailableDirectories] = useState<CourseJoinCodeDirectory[]>([]);
-  const [selectedJoinCode, setSelectedJoinCode] = useState<string>('');
+  // Private Course-Code Cloud Directory state (never lists all schools/courses)
+  const [courseCodeInput, setCourseCodeInput] = useState<string>(urlCourseJoinCode || '');
+  const [activeCloudDirectory, setActiveCloudDirectory] = useState<CourseJoinCodeDirectory | null>(null);
   const [selectedAccessCodeFromDir, setSelectedAccessCodeFromDir] = useState<string>('');
-  const [isLoadingCourses, setIsLoadingCourses] = useState(false);
+  const [isLookingUpCourse, setIsLookingUpCourse] = useState(false);
   const autoLookedUpQrRef = React.useRef<string | null>(null);
 
   // Local fallback selector state
@@ -99,46 +99,49 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
 
   const isCloudSignedIn = Boolean(isAuthReady && firebaseUser);
 
-  const loadCloudCourses = useCallback(async () => {
-    if (!isCloudSignedIn || useLocalFallback) return;
-    setIsLoadingCourses(true);
-    try {
-      const list = await listAvailableCourseDirectories();
-      let mergedList = list;
-
-      if (urlCourseJoinCode && autoLookedUpQrRef.current !== urlCourseJoinCode) {
-        autoLookedUpQrRef.current = urlCourseJoinCode;
-        const qrRes = await lookupCourseJoinCode(urlCourseJoinCode);
-        if (qrRes.ok && qrRes.directory) {
-          const qrDir = qrRes.directory;
-          if (!mergedList.some(d => d.joinCode === qrDir.joinCode)) {
-            mergedList = [qrDir, ...mergedList];
+  const handleLookupCourseCode = useCallback(
+    async (rawCode: string) => {
+      const cleanCode = rawCode.trim().toUpperCase();
+      if (!cleanCode || cleanCode.length < 4) {
+        setErrorMessage('Ingresa el Código del Curso entregado por tu profesor(a) (ej: MC-7A-...).');
+        return;
+      }
+      setErrorMessage('');
+      setIsLookingUpCourse(true);
+      try {
+        if (!firebaseUser) {
+          const sessionRes = await ensureStudentSession();
+          if (!sessionRes.ok) {
+            setErrorMessage(sessionRes.error || 'No se pudo conectar con la nube de MateClic.');
+            return;
           }
-          setSelectedJoinCode(qrDir.joinCode);
-          setSelectedAccessCodeFromDir('');
-        } else if (qrRes.error) {
-          setErrorMessage(qrRes.error);
         }
+        const res = await lookupCourseJoinCode(cleanCode);
+        if (!res.ok || !res.directory) {
+          setActiveCloudDirectory(null);
+          setErrorMessage(
+            res.error || `No se encontró el curso con código "${cleanCode}". Revisa con tu docente.`
+          );
+          return;
+        }
+        setActiveCloudDirectory(res.directory);
+        setCourseCodeInput(res.directory.joinCode);
+        setSelectedAccessCodeFromDir('');
+        setNameSearchQuery('');
+        setPin('');
+      } catch (err) {
+        setActiveCloudDirectory(null);
+        setErrorMessage(
+          err instanceof Error ? err.message : 'No se pudo buscar el código del curso en la nube.'
+        );
+      } finally {
+        setIsLookingUpCourse(false);
       }
+    },
+    [firebaseUser, ensureStudentSession, lookupCourseJoinCode]
+  );
 
-      setAvailableDirectories(mergedList);
-
-      if (!urlCourseJoinCode) {
-        setSelectedJoinCode(prev => {
-          if (prev && mergedList.some(d => d.joinCode === prev)) return prev;
-          return mergedList.length === 1 ? mergedList[0].joinCode : '';
-        });
-      }
-    } catch (err) {
-      setErrorMessage(
-        err instanceof Error ? err.message : 'No se pudieron cargar las listas de cursos disponibles.'
-      );
-    } finally {
-      setIsLoadingCourses(false);
-    }
-  }, [isCloudSignedIn, useLocalFallback, listAvailableCourseDirectories, lookupCourseJoinCode, urlCourseJoinCode]);
-
-  // Auto-load course lists when cloud session is ready
+  // Auto-load course ONLY if arrived via teacher's QR link (?curso=...)
   React.useEffect(() => {
     if (useLocalFallback) {
       if (urlCourseJoinCode) {
@@ -152,12 +155,25 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
       return;
     }
 
-    if (isCloudSignedIn) {
-      void loadCloudCourses();
+    if (isCloudSignedIn && urlCourseJoinCode && autoLookedUpQrRef.current !== urlCourseJoinCode) {
+      autoLookedUpQrRef.current = urlCourseJoinCode;
+      setCourseCodeInput(urlCourseJoinCode);
+      void handleLookupCourseCode(urlCourseJoinCode);
     }
-  }, [isCloudSignedIn, useLocalFallback, urlCourseJoinCode, activeCourseTeacherLists, loadCloudCourses]);
+  }, [isCloudSignedIn, useLocalFallback, urlCourseJoinCode, activeCourseTeacherLists, handleLookupCourseCode]);
 
-  const activeCloudDirectory = availableDirectories.find(d => d.joinCode === selectedJoinCode) || null;
+  const handleChangeCourseCode = () => {
+    setActiveCloudDirectory(null);
+    setSelectedAccessCodeFromDir('');
+    setNameSearchQuery('');
+    setPin('');
+    setErrorMessage('');
+    if (urlCourseJoinCode) {
+      clearUrlCourseJoinCode();
+    }
+    setCourseCodeInput('');
+  };
+
   const cleanNameFilter = nameSearchQuery.trim().toLowerCase();
 
   const filteredCloudStudents = (activeCloudDirectory?.studentsPreview || []).filter(
@@ -167,11 +183,16 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
     st => !cleanNameFilter || st.name.toLowerCase().includes(cleanNameFilter)
   );
 
+  const handleCloudCourseSearchSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await handleLookupCourseCode(courseCodeInput);
+  };
+
   const handleCloudListLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
-    if (!selectedJoinCode) {
-      setErrorMessage('Primero selecciona tu curso de la lista.');
+    if (!activeCloudDirectory) {
+      setErrorMessage('Primero ingresa y busca el Código del Curso de tu profesor(a).');
       return;
     }
     if (!selectedAccessCodeFromDir) {
@@ -187,7 +208,8 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
       const res = await loginStudentCloudByAccessCode(
         selectedAccessCodeFromDir,
         pin,
-        quizDirectCode
+        quizDirectCode,
+        activeCloudDirectory.schoolName
       );
       if (!res.ok) {
         setErrorMessage(res.error || 'Clave incorrecta.');
@@ -252,13 +274,17 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
   return (
     <div className="max-w-lg mx-auto my-1 sm:my-2 p-4 sm:p-5 tq-card border-2 rounded-2xl shadow-sm">
       <div className="flex items-center gap-3 mb-3 pb-2.5 border-b tq-border">
-        <div className="w-10 h-10 tq-brand-badge border rounded-xl flex items-center justify-center shrink-0 shadow-2xs">
-          <KeyRound className="w-5 h-5" />
+        <div className="w-11 h-11 rounded-xl bg-white p-0.5 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 shadow-2xs overflow-hidden">
+          <img
+            src="/assets/aistudio/Logo_Mateclic___19_Nov_2026__11.16_am_fde2aa63.png"
+            alt="Logo MateClic"
+            className="w-full h-full object-contain"
+          />
         </div>
         <div className="min-w-0">
           <h1 className="text-lg sm:text-xl font-bold tq-text leading-tight">¡Hola estudiante!</h1>
           <p className="text-[11px] tq-text-muted font-medium truncate">
-            Elige tu curso, busca tu nombre e ingresa tu clave (sin correo)
+            Ingresa el Código de tu Curso (o QR), busca tu nombre e ingresa tu PIN
           </p>
         </div>
       </div>
@@ -272,7 +298,7 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
               <span className="font-bold text-indigo-950 dark:text-indigo-100 block truncate">
                 {activeCloudDirectory
                   ? `Curso QR: ${activeCloudDirectory.courseSection}`
-                  : 'Ingresando desde enlace QR del curso'}
+                  : 'Cargando curso desde enlace QR...'}
               </span>
               <span className="text-[11px] text-indigo-800/85 dark:text-indigo-200/80 block truncate">
                 Elige tu nombre e ingresa la clave entregada por tu docente.
@@ -281,9 +307,9 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
           </div>
           <button
             type="button"
-            onClick={clearUrlCourseJoinCode}
+            onClick={handleChangeCourseCode}
             className="p-1 rounded-lg hover:bg-indigo-200/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 cursor-pointer shrink-0"
-            title="Limpiar enlace QR"
+            title="Usar otro código de curso"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -324,7 +350,7 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
         </div>
       )}
 
-      {/* Unified Course List + Name + Password + Optional Quiz Code Login */}
+      {/* Course Code + Name + PIN Login */}
       {(isCloudSignedIn || useLocalFallback) && (
         useLocalFallback ? (
           activeCourseTeacherLists.length === 0 ? (
@@ -336,7 +362,7 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
               <div>
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <label className="text-xs font-bold tq-text-2">
-                    1. Selecciona tu Curso:
+                    1. Selecciona tu Curso Local:
                   </label>
                   {selectedCourseObj && (
                     <span className="text-[10px] tq-text-muted font-semibold truncate">
@@ -476,174 +502,193 @@ export const StudentLogin: React.FC<StudentLoginProps> = ({ onLoginSuccess }) =>
               </button>
             </form>
           )
-        ) : (
-          <form key="st-cloud-form" onSubmit={handleCloudListLogin} className="space-y-2.5">
-            <div>
-              <div className="flex items-center justify-between gap-2 mb-1">
-                <label className="text-xs font-bold tq-text-2">
-                  1. Selecciona tu Curso:
+        ) : !activeCloudDirectory ? (
+          <form key="st-cloud-code-form" onSubmit={handleCloudCourseSearchSubmit} className="space-y-3">
+            <div className="p-3.5 tq-tint border border-[var(--tq-border-strong)] rounded-2xl space-y-2.5">
+              <div>
+                <label className="block text-xs font-bold tq-text mb-1">
+                  1. Ingresa el Código del Curso:
                 </label>
-                <button
-                  type="button"
-                  onClick={() => void loadCloudCourses()}
-                  disabled={isLoadingCourses}
-                  className="text-[11px] font-bold tq-text-accent hover:opacity-80 flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-3 h-3 ${isLoadingCourses ? 'animate-spin' : ''}`} />
-                  <span>{isLoadingCourses ? 'Actualizando...' : 'Actualizar'}</span>
-                </button>
+                <p className="text-[11px] tq-text-muted leading-snug">
+                  Cada curso de Chile tiene su propio código privado. Pídeselo a tu profesor(a) o escanea el QR de tu sala.
+                </p>
               </div>
 
-              {isLoadingCourses && availableDirectories.length === 0 ? (
-                <div className="p-2.5 tq-subtle border tq-border rounded-xl text-xs tq-text-muted text-center">
-                  Cargando listas de cursos disponibles...
-                </div>
-              ) : availableDirectories.length === 0 ? (
-                <div className="p-3 tq-subtle border tq-border rounded-xl text-xs tq-text-muted text-center space-y-0.5">
-                  <p className="font-bold tq-text">No hay listas de curso disponibles aún</p>
-                  <p className="text-[11px]">
-                    Pídele a tu profesor(a) que cargue la lista de tu curso desde su Panel Profesor.
-                  </p>
-                </div>
-              ) : (
-                <select
-                  value={selectedJoinCode}
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="text"
+                  value={courseCodeInput}
                   onChange={e => {
-                    setSelectedJoinCode(e.target.value);
-                    setSelectedAccessCodeFromDir('');
-                    setNameSearchQuery('');
+                    setCourseCodeInput(e.target.value.toUpperCase());
+                    if (errorMessage) setErrorMessage('');
+                  }}
+                  placeholder="Ej: MC-7A-12AB34"
+                  autoComplete="off"
+                  className="flex-1 font-mono font-bold text-sm uppercase tracking-wider border-2 rounded-xl px-3 py-2.5 tq-input focus:outline-hidden"
+                />
+                <button
+                  type="submit"
+                  disabled={isLookingUpCourse || !courseCodeInput.trim()}
+                  className="px-4 py-2.5 tq-btn-gradient disabled:opacity-50 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                >
+                  {isLookingUpCourse ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <ArrowRight className="w-4 h-4" />
+                  )}
+                  <span>{isLookingUpCourse ? 'Buscando...' : 'Buscar Curso'}</span>
+                </button>
+              </div>
+            </div>
+          </form>
+        ) : (
+          <form key="st-cloud-form" onSubmit={handleCloudListLogin} className="space-y-2.5">
+            {/* Active Course Confirmation Card */}
+            <div className="p-2.5 tq-tint border border-[var(--tq-border-strong)] rounded-xl flex items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-lg tq-brand-badge border flex items-center justify-center shrink-0">
+                  <School className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-black tq-text truncate">
+                    {activeCloudDirectory.courseSection} · Prof. {activeCloudDirectory.teacherName}
+                  </div>
+                  <div className="text-[11px] tq-text-muted truncate flex items-center gap-1.5">
+                    {activeCloudDirectory.schoolName &&
+                      activeCloudDirectory.schoolName !== 'Mi Establecimiento' && (
+                        <>
+                          <span className="truncate">{activeCloudDirectory.schoolName}</span>
+                          <span>·</span>
+                        </>
+                      )}
+                    <span className="font-mono font-bold tq-text-accent">
+                      {activeCloudDirectory.joinCode}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleChangeCourseCode}
+                className="px-2.5 py-1 tq-card border tq-border rounded-lg text-[11px] font-bold tq-text-accent hover:opacity-85 shrink-0 cursor-pointer"
+              >
+                Cambiar curso
+              </button>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-xs font-bold tq-text-2">
+                  2. Busca y selecciona tu Nombre:
+                </label>
+                <span className="text-[10px] tq-text-muted font-mono">
+                  {activeCloudDirectory.studentsPreview.length} alumnos
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 tq-text-muted absolute left-2.5 top-2.5" />
+                  <input
+                    type="text"
+                    value={nameSearchQuery}
+                    onChange={e => {
+                      const q = e.target.value;
+                      setNameSearchQuery(q);
+                      setErrorMessage('');
+                      const needle = q.trim().toLowerCase();
+                      if (needle.length >= 2) {
+                        const matches = (activeCloudDirectory.studentsPreview || []).filter(st =>
+                          st.name.toLowerCase().includes(needle)
+                        );
+                        if (matches.length === 1) {
+                          setSelectedAccessCodeFromDir(matches[0].accessCode);
+                        }
+                      }
+                    }}
+                    placeholder="Filtrar nombre..."
+                    className="w-full pl-8 pr-2.5 py-2 text-xs border rounded-xl tq-input focus:outline-hidden"
+                  />
+                </div>
+                <select
+                  value={selectedAccessCodeFromDir}
+                  onChange={e => {
+                    setSelectedAccessCodeFromDir(e.target.value);
                     setPin('');
                     setErrorMessage('');
                   }}
-                  className="w-full text-xs font-bold border rounded-xl px-3 py-2 tq-input focus:outline-hidden"
+                  className="w-full text-xs font-bold border rounded-xl px-2.5 py-2 tq-input focus:outline-hidden"
                 >
-                  <option value="">-- Elige tu curso de la lista --</option>
-                  {availableDirectories.map(dir => (
-                    <option key={dir.joinCode} value={dir.joinCode}>
-                      {dir.courseSection} · Prof. {dir.teacherName} ({dir.studentsPreview.length} al.)
+                  <option value="">
+                    {filteredCloudStudents.length === 0
+                      ? '-- Sin coincidencias --'
+                      : '-- Elige tu nombre --'}
+                  </option>
+                  {filteredCloudStudents.map(st => (
+                    <option key={st.studentId} value={st.accessCode}>
+                      {st.name}
                     </option>
                   ))}
                 </select>
+              </div>
+              {cleanNameFilter.length >= 1 && (
+                <span className="text-[11px] tq-text-muted block">
+                  {filteredCloudStudents.length === 1
+                    ? `1 coincidencia: ${filteredCloudStudents[0].name}`
+                    : `${filteredCloudStudents.length} coincidencias`}
+                </span>
               )}
             </div>
 
-            {activeCloudDirectory && (
-              <>
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <label className="text-xs font-bold tq-text-2">
-                      2. Busca y selecciona tu Nombre:
-                    </label>
-                    <span className="text-[10px] tq-text-muted font-mono">
-                      {activeCloudDirectory.studentsPreview.length} alumnos
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div className="relative">
-                      <Search className="w-3.5 h-3.5 tq-text-muted absolute left-2.5 top-2.5" />
-                      <input
-                        type="text"
-                        value={nameSearchQuery}
-                        onChange={e => {
-                          const q = e.target.value;
-                          setNameSearchQuery(q);
-                          setErrorMessage('');
-                          const needle = q.trim().toLowerCase();
-                          if (needle.length >= 2) {
-                            const matches = (activeCloudDirectory.studentsPreview || []).filter(st =>
-                              st.name.toLowerCase().includes(needle)
-                            );
-                            if (matches.length === 1) {
-                              setSelectedAccessCodeFromDir(matches[0].accessCode);
-                            }
-                          }
-                        }}
-                        placeholder="Filtrar nombre..."
-                        className="w-full pl-8 pr-2.5 py-2 text-xs border rounded-xl tq-input focus:outline-hidden"
-                      />
-                    </div>
-                    <select
-                      value={selectedAccessCodeFromDir}
-                      onChange={e => {
-                        setSelectedAccessCodeFromDir(e.target.value);
-                        setPin('');
-                        setErrorMessage('');
-                      }}
-                      className="w-full text-xs font-bold border rounded-xl px-2.5 py-2 tq-input focus:outline-hidden"
-                    >
-                      <option value="">
-                        {filteredCloudStudents.length === 0
-                          ? '-- Sin coincidencias --'
-                          : '-- Elige tu nombre --'}
-                      </option>
-                      {filteredCloudStudents.map(st => (
-                        <option key={st.studentId} value={st.accessCode}>
-                          {st.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  {cleanNameFilter.length >= 1 && (
-                    <span className="text-[11px] tq-text-muted block">
-                      {filteredCloudStudents.length === 1
-                        ? `1 coincidencia: ${filteredCloudStudents[0].name}`
-                        : `${filteredCloudStudents.length} coincidencias`}
-                    </span>
-                  )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div>
+                <label className="block text-xs font-bold tq-text-2 mb-1">
+                  3. Clave / PIN:
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPin ? 'text' : 'password'}
+                    inputMode="numeric"
+                    maxLength={16}
+                    value={pin}
+                    onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
+                    placeholder="••••"
+                    autoComplete="off"
+                    className="w-full text-center text-base font-mono font-bold tracking-widest border rounded-xl py-2 pl-3 pr-9 tq-input focus:outline-hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPin(prev => !prev)}
+                    className="absolute right-2.5 top-2.5 tq-text-muted hover:tq-text p-0.5 cursor-pointer"
+                    title={showPin ? 'Ocultar clave' : 'Ver clave ingresada'}
+                  >
+                    {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
+              </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="block text-xs font-bold tq-text-2 mb-1">
-                      3. Clave / PIN:
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPin ? 'text' : 'password'}
-                        inputMode="numeric"
-                        maxLength={16}
-                        value={pin}
-                        onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
-                        placeholder="••••"
-                        autoComplete="off"
-                        className="w-full text-center text-base font-mono font-bold tracking-widest border rounded-xl py-2 pl-3 pr-9 tq-input focus:outline-hidden"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPin(prev => !prev)}
-                        className="absolute right-2.5 top-2.5 tq-text-muted hover:tq-text p-0.5 cursor-pointer"
-                        title={showPin ? 'Ocultar clave' : 'Ver clave ingresada'}
-                      >
-                        {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
+              <div>
+                <label className="flex items-center gap-1 text-xs font-bold tq-text-2 mb-1">
+                  <FileText className="w-3.5 h-3.5 tq-text-accent shrink-0" />
+                  <span className="truncate">4. Cód. Prueba (Opcional):</span>
+                </label>
+                <input
+                  type="text"
+                  value={quizDirectCode}
+                  onChange={e => setQuizDirectCode(e.target.value)}
+                  placeholder="Ej: QUIZ-701"
+                  className="w-full font-mono text-xs border rounded-xl px-3 py-2.5 tq-input uppercase focus:outline-hidden"
+                />
+              </div>
+            </div>
 
-                  <div>
-                    <label className="flex items-center gap-1 text-xs font-bold tq-text-2 mb-1">
-                      <FileText className="w-3.5 h-3.5 tq-text-accent shrink-0" />
-                      <span className="truncate">4. Cód. Prueba (Opcional):</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={quizDirectCode}
-                      onChange={e => setQuizDirectCode(e.target.value)}
-                      placeholder="Ej: QUIZ-701"
-                      className="w-full font-mono text-xs border rounded-xl px-3 py-2.5 tq-input uppercase focus:outline-hidden"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full py-2.5 tq-btn-gradient disabled:opacity-50 font-bold text-sm rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
-                >
-                  <UserCheck className="w-4 h-4" />
-                  <span>{isSubmitting ? 'Verificando...' : 'Entrar a Mis Evaluaciones'}</span>
-                </button>
-              </>
-            )}
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full py-2.5 tq-btn-gradient disabled:opacity-50 font-bold text-sm rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              <UserCheck className="w-4 h-4" />
+              <span>{isSubmitting ? 'Verificando...' : 'Entrar a Mis Evaluaciones'}</span>
+            </button>
           </form>
         )
       )}
