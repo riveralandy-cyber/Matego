@@ -4974,13 +4974,15 @@ export function buildSimceExamQuestions(params: {
   axisFilter: ThematicAxis | 'all';
   difficulty: DifficultyLevel;
   count: number;
+  excludePrompts?: Set<string> | string[];
 }): SimceBankQuestion[] {
-  const { grade, axisFilter, difficulty, count } = params;
+  const { grade, axisFilter, difficulty, count, excludePrompts } = params;
+  const excludedSet = new Set<string>(excludePrompts ? Array.from(excludePrompts) : []);
 
   const curatedPool = SIMCE_QUESTION_BANK.filter(
     q => q.grade === grade && (axisFilter === 'all' || q.axis === axisFilter)
   );
-  const rounds = axisFilter === 'all' ? 2 : Math.max(3, Math.ceil(count / 6));
+  const rounds = axisFilter === 'all' ? 3 : Math.max(5, Math.ceil(count / 4));
   const freshPool = generateFreshParametricSimceBatch({
     grade,
     axisFilter,
@@ -5013,18 +5015,22 @@ export function buildSimceExamQuestions(params: {
 
   const safeCount = Math.min(count, pool.length);
 
-  // Order or filter according to difficulty preference
-  let orderedCandidates: SimceBankQuestion[] = [];
-  if (difficulty === 'progresivo') {
-    const faciles = shuffleArray(pool.filter(q => q.difficulty === 'facil'));
-    const medios = shuffleArray(pool.filter(q => q.difficulty === 'medio'));
-    const dificiles = shuffleArray(pool.filter(q => q.difficulty === 'dificil'));
-    orderedCandidates = [...faciles, ...medios, ...dificiles];
-  } else {
-    const primary = shuffleArray(pool.filter(q => q.difficulty === difficulty));
-    const secondary = shuffleArray(pool.filter(q => q.difficulty !== difficulty));
-    orderedCandidates = [...primary, ...secondary];
-  }
+  const orderByDifficulty = (subset: SimceBankQuestion[]): SimceBankQuestion[] => {
+    if (difficulty === 'progresivo') {
+      const faciles = shuffleArray(subset.filter(q => q.difficulty === 'facil'));
+      const medios = shuffleArray(subset.filter(q => q.difficulty === 'medio'));
+      const dificiles = shuffleArray(subset.filter(q => q.difficulty === 'dificil'));
+      return [...faciles, ...medios, ...dificiles];
+    }
+    const primary = shuffleArray(subset.filter(q => q.difficulty === difficulty));
+    const secondary = shuffleArray(subset.filter(q => q.difficulty !== difficulty));
+    return [...primary, ...secondary];
+  };
+
+  // Prioritize items not seen in recent practice rounds
+  const unseenPool = pool.filter(q => !excludedSet.has(q.prompt.trim()));
+  const seenPool = pool.filter(q => excludedSet.has(q.prompt.trim()));
+  const orderedCandidates = [...orderByDifficulty(unseenPool), ...orderByDifficulty(seenPool)];
 
   // If Ensayo Integral ('all'), pick in round-robin across axes first so every axis is represented!
   if (axisFilter === 'all') {

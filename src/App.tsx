@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Navigation } from './components/Navigation';
@@ -59,6 +59,7 @@ const MainAppContent: React.FC = () => {
   const [activePracticeQuiz, setActivePracticeQuiz] = useState<QuizAssignment | null>(null);
   const [studentIndependentQuiz, setStudentIndependentQuiz] = useState<QuizAssignment | null>(null);
   const [studentIndependentConfig, setStudentIndependentConfig] = useState<FreePracticeConfig | null>(null);
+  const practiceHistoryRef = useRef<Map<string, string[]>>(new Map());
 
   const handleSelectStudentForReport = (studentId: string) => {
     setSelectedStudentForReport(studentId);
@@ -66,19 +67,32 @@ const MainAppContent: React.FC = () => {
   };
 
   const buildEphemeralPracticeQuiz = (config: FreePracticeConfig): QuizAssignment => {
+    const histKey = config.isSimce
+      ? `simce:${config.grade}:${config.simceAxisFilter || 'all'}:${config.difficulty}`
+      : `oa:${config.grade}:${config.oaCode}:${config.difficulty}`;
+    const recentHistory = practiceHistoryRef.current.get(histKey) || [];
+
     const questions = config.isSimce
       ? buildSimceExamQuestions({
           grade: config.grade as SimceGradeLevel,
           axisFilter: config.simceAxisFilter || 'all',
           difficulty: config.difficulty,
           count: config.count,
+          excludePrompts: recentHistory,
         })
       : generateQuestionsForOA({
           grade: config.grade,
           oaCode: config.oaCode,
           difficulty: config.difficulty,
           count: config.count,
+          excludeSignatures: recentHistory,
         });
+
+    const newSigs = config.isSimce
+      ? questions.map(q => q.prompt.trim())
+      : questions.map(q => `${q.prompt}::${q.context || ''}::${q.correctAnswer}`);
+    const mergedHistory = [...recentHistory, ...newSigs].slice(-150);
+    practiceHistoryRef.current.set(histKey, mergedHistory);
 
     return {
       id: `practice_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
